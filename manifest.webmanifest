@@ -1,0 +1,13 @@
+{
+  "name": "Bon Sauveur Sport",
+  "short_name": "BS Sport",
+  "description": "Association Sportive, Football, Escalade et Sport-Études Gymnastique du Bon Sauveur Saint-Lô",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8fc",
+  "theme_color": "#0757C9",
+  "icons": [
+    {"src":"assets/logo-as.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
