@@ -1,0 +1,12 @@
+/* V9 — icônes cohérentes + finitions mobile */
+.nav-ico,.big-icon{font-family:Arial,Helvetica,sans-serif!important}
+.v9-icon{width:24px;height:24px;display:inline-block;vertical-align:middle;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bottom-nav .v9-icon{width:23px;height:23px}.more-tile .v9-icon{width:34px;height:34px;color:#0757c9}
+.more-tile .big-icon{display:flex;align-items:center;justify-content:center}
+.v8-modal{overscroll-behavior:contain}.v8-modal .modal-head{top:-1px}
+.v8-conv-detail .detail-block{padding:14px 15px!important;min-height:0!important}
+.v8-conv-detail .detail-block.full{min-height:0!important}
+.v8-ed-btn{display:flex;width:100%;justify-content:center;margin-top:10px;padding:9px 12px}
+.v8-ed-btn img{width:30px;height:30px;border-radius:0}
+.v8-export-conv+.v8-export-conv,.v7-export-conv+.v8-export-conv{display:none!important}
+@media(max-width:720px){.v8-conv-head{gap:10px}.v8-conv-head h3{font-size:1.35rem}.v8-specialty{font-size:.68rem;padding:6px 9px}.v8-conv-detail{gap:9px!important}.v8-conv-detail .detail-block{padding:11px 12px!important}.v8-conv-detail .detail-block span{font-size:.68rem}.v8-conv-detail .detail-block strong{font-size:.92rem}.v8-ed-btn{font-size:.74rem}.v8-modal-actions{margin-top:12px;padding-top:11px}}
