@@ -1,7 +1,8 @@
-const CACHE = 'as-bon-sauveur-v4-20260907';
+const CACHE = 'as-bon-sauveur-v5-20260907-2';
 const ASSETS = [
-  './','./index.html','./v3.css','./v4.css','./v4.js','./config.js','./manifest.webmanifest',
-  './assets/logo-as.png','./assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png'
+  './','./index.html','./v3.css','./v4.css','./v5.css','./v4.js','./v5-patch.js','./config.js','./manifest.webmanifest',
+  './assets/logo-as.png','./assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png',
+  './assets/shop-tshirt-skyblue.webp','./assets/shop-sweat-sapphire.webp'
 ];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); });
 self.addEventListener('activate', e => e.waitUntil(Promise.all([
