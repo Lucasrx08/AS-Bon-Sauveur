@@ -1,6 +1,6 @@
-const CACHE = 'as-bon-sauveur-v7-20260907-2';
+const CACHE = 'as-bon-sauveur-v8-20260907-1';
 const ASSETS = [
-  './','./index.html','./v3.css','./v4.css','./v5.css','./v5-final.css','./v6.css','./v7.css','./v7-fix.css','./v4.js','./v5-preflight.js','./v5-patch.js','./v5-loop-fix.js','./v5-state-fix.js','./v5-final.js','./v6.js','./v7-observer-guard.js','./v7-core.js','./v7-exports.js','./v7-import.js','./config.js','./manifest.webmanifest',
+  './','./index.html','./v3.css','./v4.css','./v5.css','./v5-final.css','./v6.css','./v7.css','./v7-fix.css','./v8.css','./v4.js','./v5-preflight.js','./v5-patch.js','./v5-loop-fix.js','./v5-state-fix.js','./v5-final.js','./v6.js','./v7-observer-guard.js','./v7-core.js','./v7-exports.js','./v7-import.js','./v8-core.js','./v8-exports.js','./config.js','./manifest.webmanifest',
   './assets/logo-as.png','./assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png',
   './assets/shop-tshirt-skyblue.webp','./assets/shop-sweat-sapphire.webp'
 ];
