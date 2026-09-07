@@ -1,4 +1,4 @@
-const CACHE = 'as-bon-sauveur-v10-20260907-1';
+const CACHE = 'as-bon-sauveur-v10-20260907-2';
 const ASSETS = [
   './','./index.html','./config.js','./manifest.webmanifest',
   './v3.css','./v4.css','./v5.css','./v5-final.css','./v6.css','./v7.css','./v7-fix.css','./v8.css','./v9.css','./v10.css',
