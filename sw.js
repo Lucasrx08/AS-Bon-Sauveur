@@ -1,6 +1,6 @@
-const CACHE = 'as-bon-sauveur-v3b-20260907';
+const CACHE = 'as-bon-sauveur-v4-20260907';
 const ASSETS = [
-  './','./index.html','./v3.css','./v3.js','./v3-patch.js','./config.js','./manifest.webmanifest',
+  './','./index.html','./v3.css','./v4.css','./v4.js','./config.js','./manifest.webmanifest',
   './assets/logo-as.png','./assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png'
 ];
 self.addEventListener('install', e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); });
