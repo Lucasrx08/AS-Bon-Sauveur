@@ -5,7 +5,7 @@ const C={navy:[16,33,63],blue:[7,87,201],yellow:[255,210,26],ink:[19,33,58],mute
 const ac=s=>s==='Section Football'?C.football:s==='Option Escalade'?C.escalade:s==='Sport-études Gymnastique'?C.gym:C.as;
 function safe(t=''){return String(t??'')}
 function fit(doc,t,w,size=10,max=2){doc.setFontSize(size);return doc.splitTextToSize(safe(t),w).slice(0,max)}
-function text(doc,t,x,y,size=10,style='normal',color=C.ink,opts={}){doc.setFont('helvetica',style);doc.setFontSize(size);doc.setTextColor(...color);doc.text(safe(t),x,y,opts)}
+function text(doc,t,x,y,size=10,style='normal',color=C.ink,opts={}){doc.setFont('helvetica',style);doc.setFontSize(size);doc.setTextColor(...color);doc.text(Array.isArray(t)?t:safe(t),x,y,opts)}
 function box(doc,x,y,w,h,fill=C.white,stroke=C.line,r=4){doc.setFillColor(...fill);doc.setDrawColor(...stroke);doc.roundedRect(x,y,w,h,r,r,'FD')}
 function pill(doc,t,x,y,w,color){doc.setFillColor(...color);doc.roundedRect(x,y,w,6,3,3,'F');text(doc,t,x+w/2,y+4.1,6.5,'bold',C.white,{align:'center'})}
 async function logo(){try{return await V.logoData()}catch{return null}}
