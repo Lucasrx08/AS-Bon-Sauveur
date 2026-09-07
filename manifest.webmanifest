@@ -1,13 +1,15 @@
 {
   "name": "Bon Sauveur Sport",
   "short_name": "BS Sport",
-  "description": "Association Sportive, Football, Escalade et Sport-Études Gymnastique du Bon Sauveur Saint-Lô",
+  "description": "Application de l'Association Sportive du Bon Sauveur Saint-Lô : calendrier, convocations, documents, licences et actualité sportive.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f6f8fc",
+  "orientation": "any",
+  "background_color": "#f5f7fb",
   "theme_color": "#0757C9",
   "icons": [
-    {"src":"assets/logo-as.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+    {"src":"assets/logo-as.png","sizes":"1280x1280","type":"image/png","purpose":"any"},
+    {"src":"assets/logo-as.png","sizes":"1280x1280","type":"image/png","purpose":"maskable"}
   ]
 }
