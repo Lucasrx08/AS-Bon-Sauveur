@@ -1,0 +1,2 @@
+/* Correctifs de coexistence V6/V7 */
+.v6-calendar-page .v6-download:not(.v7-calendar-export){display:none!important}
