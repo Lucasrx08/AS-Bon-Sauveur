@@ -2,7 +2,7 @@
 'use strict';
 const V=window.ASV7;if(!V||!window.app)return;
 const VERSION='v8-20260907-1';
-const ED_LOGO="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAAIAAgDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUREiExQVFhof/EABUBAQEAAAAAAAAAAAAAAAAAAAME/8QAGREBAQEAAwAAAAAAAAAAAAAAAQIAAxEh/9oADAMBAAIRAxEAPwCdqd8V2oODPQjRqaF1oYgGQitHIJRsOkK7q4kWTICy+bi4ZvvAEknIwPmub97UCvWPBqHEf/Z";
+const ED_LOGO='data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0753a5"/><stop offset="1" stop-color="#02a9df"/></linearGradient></defs><rect width="100" height="100" rx="18" fill="#fff"/><path fill="url(#g)" d="M6 53C12 25 34 12 60 12c20 0 34 7 40 20 8 18-3 39-25 50-21 11-49 12-67 2 17 4 38 1 55-8 18-9 27-23 22-35-5-12-20-18-37-16-19 2-34 12-42 28Z"/><path fill="url(#g)" d="M36 27c8-3 22-3 31-1 5 1 7 4 6 8l-2 8H49l-2 8h17c5 0 8 3 7 7-1 4-4 6-9 6H44l-2 9c-1 4 1 6 6 6h18l-3 9H40c-10 0-15-5-13-14l9-46Z"/></svg>');
 
 function closeV8Modal(){document.getElementById('v8-modal')?.remove();}
 function modal(title,body,wide=true){
