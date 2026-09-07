@@ -1,6 +1,6 @@
-const CACHE = 'as-bon-sauveur-v5-20260907-3';
+const CACHE = 'as-bon-sauveur-v5-20260907-4';
 const ASSETS = [
-  './','./index.html','./v3.css','./v4.css','./v5.css','./v4.js','./v5-patch.js','./v5-loop-fix.js','./config.js','./manifest.webmanifest',
+  './','./index.html','./v3.css','./v4.css','./v5.css','./v4.js','./v5-preflight.js','./v5-patch.js','./v5-loop-fix.js','./config.js','./manifest.webmanifest',
   './assets/logo-as.png','./assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png',
   './assets/shop-tshirt-skyblue.webp','./assets/shop-sweat-sapphire.webp'
 ];
