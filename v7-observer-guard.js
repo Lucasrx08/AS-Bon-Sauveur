@@ -3,6 +3,7 @@
 const Native = window.MutationObserver;
 if (!Native || window.__AS_V7_OBSERVER_GUARD__) return;
 window.__AS_V7_OBSERVER_GUARD__ = true;
+window.__AS_PATCH_OBSERVERS__ = window.__AS_PATCH_OBSERVERS__ || [];
 class GuardedMutationObserver {
   constructor(callback) {
     this.callback = callback;
@@ -26,6 +27,7 @@ class GuardedMutationObserver {
         });
       }
     });
+    window.__AS_PATCH_OBSERVERS__.push(this);
   }
   observe(target, options) {
     this.target = target;
