@@ -1,12 +1,12 @@
 {
-  "name": "Bon Sauveur Sport",
-  "short_name": "BS Sport",
-  "description": "Application de l'Association Sportive du Bon Sauveur Saint-Lô : calendrier, convocations, documents, licences et actualité sportive.",
+  "name": "Association Sportive du Bon Sauveur",
+  "short_name": "AS Bon Sauveur",
+  "description": "Application de l'Association Sportive du Bon Sauveur Saint-Lô : convocations, calendrier, boutique, documents et suivi sportif.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#f5f7fb",
+  "background_color": "#f4f7fb",
   "theme_color": "#0757C9",
   "icons": [
     {"src":"assets/logo-as.png","sizes":"1280x1280","type":"image/png","purpose":"any"},
