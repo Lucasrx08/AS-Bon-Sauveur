@@ -3,8 +3,7 @@ window.APP_CONFIG = {
   supabaseUrl: "",
   supabaseAnonKey: "",
   demoMode: true,
-  instagramUrl: "",
+  instagramUrl: "https://www.instagram.com/as_bs50/",
   instagramFeedEndpoint: "",
-  languageToolUrl: "https://api.languagetool.org/v2/check",
-  appreciationsDeadline: "2026-11-30"
+  languageToolUrl: "https://api.languagetool.org/v2/check"
 };
