@@ -1,0 +1,59 @@
+/* V21.10 — fenêtres d'édition harmonisées */
+:root{--v2110-control-h:44px;--v2110-gap:12px}
+
+#v19-modal .v19-modal.wide{width:min(1180px,calc(100vw - 48px));max-width:1180px;max-height:calc(100dvh - 32px);display:flex;flex-direction:column}
+#v19-modal .v19-modal-head{padding:14px 22px;min-height:70px;flex:0 0 auto}
+#v19-modal .v19-modal-head h2{font-size:36px;line-height:1}
+#v19-modal .v19-modal-body{padding:16px 22px 18px;overflow:auto;min-height:0}
+#v19-modal .v19-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--v2110-gap) 14px;align-items:end}
+#v19-modal .v19-form>label,#v19-modal .v19-form>.full{min-width:0}
+#v19-modal .v19-form label>span,#v19-modal .v19-label{display:block;margin-bottom:5px;font-size:12px;line-height:1.15;font-weight:700}
+#v19-modal .v19-form input:not([type="checkbox"]),#v19-modal .v19-form select{height:var(--v2110-control-h);min-height:var(--v2110-control-h);padding:8px 12px;font-size:15px}
+#v19-modal .v19-form textarea{min-height:70px;height:70px;padding:10px 12px;font-size:15px;resize:none}
+#v19-modal .v19-modal-actions{margin-top:2px;gap:8px;align-items:center}
+#v19-modal .v19-modal-actions.full{grid-column:1/-1!important}
+
+/* Calendrier */
+#v19-event-form>label.full{grid-column:span 2!important}
+#v19-event-form>label:nth-child(1){grid-column:span 2}
+
+/* Licences */
+#v19-license-form>label.full{grid-column:span 2!important}
+#v19-license-form>label:nth-child(1){grid-column:span 2!important}
+
+/* Bilans */
+#v19-report-form>.full:nth-child(3){grid-column:1/-1!important}
+#v19-report-form>label.full{grid-column:1/-1!important}
+#v19-report-form .v19-teacher-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#v19-report-form .v19-teacher-picker label{min-height:48px;padding:8px 10px;border-radius:12px}
+#v19-report-form textarea{height:64px!important;min-height:64px!important}
+
+/* Convocations : 4 colonnes compactes pour garder tout dans la vue */
+#v19-conv-form>label.full{grid-column:span 2!important}
+#v19-conv-form>label:nth-child(2){grid-column:span 3!important}
+#v19-conv-form>div.full:not(.v19-modal-actions){grid-column:span 2!important;align-self:stretch}
+#v19-conv-form textarea{height:86px!important;min-height:86px!important}
+#v19-conv-form .v19-student-picker{max-height:132px;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:7px;border-radius:14px}
+#v19-conv-form .v19-student-picker>label{padding:7px 9px;min-height:44px;border-radius:10px}
+.v2110-picker-status{font-size:12px;font-weight:700;color:var(--blue);margin:0 0 6px}
+
+/* Fenêtres admin V20/V21 : mêmes contrôles */
+#v20-users-modal .v19-form,#v21-admin-modal .v19-form{gap:12px 14px}
+#v20-users-modal .v19-form input,#v20-users-modal .v19-form select,#v21-admin-modal .v19-form input,#v21-admin-modal .v19-form select{min-height:44px;height:44px}
+
+@media(min-width:700px) and (max-width:980px){
+ #v19-modal .v19-modal.wide{width:calc(100vw - 28px);max-height:calc(100dvh - 24px)}
+ #v19-modal .v19-form{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #v19-event-form>label:nth-child(1),#v19-event-form>label.full,#v19-license-form>label.full,#v19-license-form>label:nth-child(1),#v19-conv-form>label.full,#v19-conv-form>label:nth-child(2),#v19-conv-form>div.full:not(.v19-modal-actions){grid-column:span 2!important}
+ #v19-report-form .v19-teacher-picker{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #v19-conv-form .v19-student-picker{grid-template-columns:1fr}
+}
+
+@media(max-width:699px){
+ #v19-modal .v19-modal.wide{width:100%;max-height:94dvh;border-radius:22px 22px 0 0;margin-top:auto}
+ #v19-modal .v19-modal-body{padding:14px 14px 18px}
+ #v19-modal .v19-form{grid-template-columns:1fr;gap:10px}
+ #v19-modal .v19-form>label,#v19-modal .v19-form>.full,#v19-event-form>label.full,#v19-license-form>label.full,#v19-conv-form>label.full,#v19-conv-form>label:nth-child(2),#v19-conv-form>div.full:not(.v19-modal-actions){grid-column:1!important}
+ #v19-report-form .v19-teacher-picker{grid-template-columns:1fr 1fr}
+ #v19-conv-form .v19-student-picker{grid-template-columns:1fr;max-height:180px}
+}
