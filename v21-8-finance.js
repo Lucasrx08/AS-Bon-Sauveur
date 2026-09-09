@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='v21.8-20260909';
+const VERSION='v21.8.1-20260909';
 const STORE='bs-app-data-v4';
 const money=n=>Number(n||0);
 
@@ -39,7 +39,7 @@ function dateFr(v){
  return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('fr-FR');
 }
 function setFont(cell,{title=false,header=false,white=false,size}={}){
- cell.font={name:title?'Anton':'BroshK',size:size||(title?22:header?11:10),bold:title||header,color:{argb:white?'FFFFFFFF':'FF13213A'}};
+ cell.font={name:title?'Anton':'Montserrat',size:size||(title?22:header?11:10),bold:title||header,color:{argb:white?'FFFFFFFF':'FF13213A'}};
 }
 function fill(cell,argb){cell.fill={type:'pattern',pattern:'solid',fgColor:{argb}}}
 function thinBottom(cell,color='FFDCE5F0'){cell.border={bottom:{style:'thin',color:{argb:color}}}}
