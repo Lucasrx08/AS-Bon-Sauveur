@@ -1,0 +1,13 @@
+/* V21.9 — finitions visuelles */
+.v19-hero h1{text-transform:uppercase;letter-spacing:.01em!important}
+
+.v19-admin-action.v219-iconized{display:grid!important;grid-template-columns:48px minmax(0,1fr)!important;align-items:start!important;gap:15px!important}
+.v219-admin-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--blue) 9%,var(--card));color:var(--blue);border:1px solid color-mix(in srgb,var(--blue) 18%,var(--line));flex:0 0 auto}
+.v219-admin-icon svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.v19-admin-action.v219-iconized h3{margin-top:1px}
+
+@media(max-width:620px){
+ .v19-admin-action.v219-iconized{grid-template-columns:42px minmax(0,1fr)!important;gap:12px!important}
+ .v219-admin-icon{width:40px;height:40px;border-radius:12px}
+ .v219-admin-icon svg{width:23px;height:23px}
+}
