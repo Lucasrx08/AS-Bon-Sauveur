@@ -1,16 +1,16 @@
-/* V21.8 — harmonisation globale desktop / tablette / mobile */
+/* V21.8.1 — harmonisation globale desktop / tablette / mobile */
 :root{
  --v218-radius:22px;
  --v218-radius-sm:15px;
  --v218-shadow:0 14px 36px rgba(19,33,58,.085);
  --v218-shadow-soft:0 8px 24px rgba(19,33,58,.065);
  --v218-title:'Anton',Impact,'Arial Narrow',sans-serif;
- --v218-body:'BroshK','Arial Narrow',Arial,sans-serif;
+ --v218-body:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
 }
 html,body,button,input,select,textarea,table{font-family:var(--v218-body)!important}
-body{font-weight:500;letter-spacing:.01em}
+body{font-weight:500;letter-spacing:0}
 h1,h2,h3,h4,.v19-page-head h1,.v19-hero h1,.v19-section-head h2,.v19-modal-head h2,.v19-tool strong,.v20-pole-text strong,.v21-admin-row-main strong,.v21-users-intro strong,.v19-product strong,.v19-stats strong{font-family:var(--v218-title)!important;font-weight:400!important;letter-spacing:.015em!important}
-.v19-kicker,.v19-filter span,.v19-form label>span,.v19-note-manager label>span,.v19-label,.v19-table th,.v19-badge,.v19-btn,.v19-link,.v19-status,.v19-bottom-nav button,.v19-chip,.v19-app-prev span,.v19-app-current span,.v21-user-status{font-family:var(--v218-body)!important;font-weight:500!important;letter-spacing:.035em}
+.v19-kicker,.v19-filter span,.v19-form label>span,.v19-note-manager label>span,.v19-label,.v19-table th,.v19-badge,.v19-btn,.v19-link,.v19-status,.v19-bottom-nav button,.v19-chip,.v19-app-prev span,.v19-app-current span,.v21-user-status{font-family:var(--v218-body)!important;font-weight:700!important;letter-spacing:.02em}
 
 /* Structure */
 .v19-container{width:min(1320px,calc(100% - 48px));padding:34px 0 76px}
@@ -21,7 +21,7 @@ h1,h2,h3,h4,.v19-page-head h1,.v19-hero h1,.v19-section-head h2,.v19-modal-head 
 .v19-avatar{font-family:var(--v218-title)!important;font-weight:400!important}
 .v19-page-head{align-items:center;margin-bottom:24px}
 .v19-page-head h1,.v19-hero h1{line-height:.94!important}
-.v19-page-head p,.v19-hero p{font-size:18px;line-height:1.45}
+.v19-page-head p,.v19-hero p{font-size:18px;line-height:1.5;font-weight:500}
 .v19-hero{border-radius:28px;padding:44px 40px;min-height:250px;box-shadow:var(--v218-shadow)}
 
 /* Composants */
@@ -35,7 +35,7 @@ h1,h2,h3,h4,.v19-page-head h1,.v19-hero h1,.v19-section-head h2,.v19-modal-head 
 .v19-btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(7,87,201,.14)}
 .v19-btn:active{transform:translateY(0)}
 .v19-btn.small{min-height:38px;border-radius:12px}
-.v19-search,.v19-filter select,.v19-form input,.v19-form select,.v19-form textarea,.v19-note-manager input,.v19-note-manager select,.v19-note-manager textarea,.v19-drop input,.v19-app-editor textarea{border-radius:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+.v19-search,.v19-filter select,.v19-form input,.v19-form select,.v19-form textarea,.v19-note-manager input,.v19-note-manager select,.v19-note-manager textarea,.v19-drop input,.v19-app-editor textarea{border-radius:14px;outline:none;transition:border-color .15s ease,box-shadow .15s ease;font-weight:500}
 .v19-search:focus,.v19-filter select:focus,.v19-form input:focus,.v19-form select:focus,.v19-form textarea:focus,.v19-note-manager input:focus,.v19-note-manager select:focus,.v19-note-manager textarea:focus,.v19-app-editor textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 14%,transparent)}
 .v19-modal{border-radius:24px;box-shadow:0 32px 80px rgba(0,0,0,.24)}
 .v19-modal-head{padding:18px 22px}
@@ -43,7 +43,7 @@ h1,h2,h3,h4,.v19-page-head h1,.v19-hero h1,.v19-section-head h2,.v19-modal-head 
 .v19-modal-head h2{font-size:32px}
 .v19-table-wrap{border-radius:18px!important}
 .v19-table th{background:color-mix(in srgb,var(--blue) 7%,var(--card));color:var(--blue);padding:14px 13px;font-size:11px}
-.v19-table td{padding:14px 13px}
+.v19-table td{padding:14px 13px;font-weight:500}
 .v19-table tbody tr{transition:background .12s ease}
 .v19-table tbody tr:hover{background:color-mix(in srgb,var(--blue) 3%,var(--card))}
 .v19-accounting{padding:16px 20px}
