@@ -3,15 +3,19 @@
 const cfg=window.APP_CONFIG||{};
 
 const POLES=[
-  {key:'as',label:'Association Sportive',short:'AS',sub:'Activités & compétitions',logo:'assets/logo-as.png',search:'Association Sportive'},
-  {key:'football',label:'Section Football',short:'Football',sub:'Section sportive',logo:'assets/logo-football.png',search:'Section Football'},
-  {key:'gym',label:'Sport-études Gymnastique',short:'Gymnastique',sub:'Sport-études',logo:'assets/logo-gymnastique.png',search:'Sport-études Gymnastique'},
-  {key:'escalade',label:'Option Escalade',short:'Escalade',sub:'Option sportive',logo:'assets/logo-escalade.png',search:'Option Escalade'}
+  {key:'as',eyebrow:'ASSOCIATION',label:'Association Sportive',desc:'Activités, compétitions et rendez-vous AS.',logo:'assets/logo-as.png',search:'Association Sportive'},
+  {key:'football',eyebrow:'SECTION',label:'Section Football',desc:'Entraînements, rencontres et convocations.',logo:'assets/logo-football.png',search:'Section Football'},
+  {key:'gym',eyebrow:'SPORT-ÉTUDES',label:'Gymnastique',desc:'Planning, entraînements et informations.',logo:'assets/logo-gymnastique.png',search:'Sport-études Gymnastique'},
+  {key:'escalade',eyebrow:'OPTION',label:'Escalade',desc:'Séances, sorties et convocations.',logo:'assets/logo-escalade.png',search:'Option Escalade'}
 ];
 
 function goPole(search){
   window.app?.go?.('calendar');
-  setTimeout(()=>window.app?.search?.(search),50);
+  setTimeout(()=>{
+    if(typeof window.app?.search==='function') return window.app.search(search);
+    const input=document.querySelector('.v19-search');
+    if(input){input.value=search;input.dispatchEvent(new Event('input',{bubbles:true}));}
+  },80);
 }
 
 function buildHomeLinks(){
@@ -21,7 +25,7 @@ function buildHomeLinks(){
   const docs=document.createElement('button');
   docs.type='button';
   docs.className='v20-hero-action v20-hero-action-docs';
-  docs.textContent='Documents';
+  docs.innerHTML='<span>Documents</span><span aria-hidden="true">→</span>';
   docs.addEventListener('click',()=>window.app?.go?.('documents'));
   links.appendChild(docs);
 
@@ -32,39 +36,45 @@ function buildHomeLinks(){
     insta.target='_blank';
     insta.rel='noopener noreferrer';
     insta.setAttribute('aria-label','Ouvrir Instagram de l’Association Sportive');
-    insta.textContent='Instagram ↗';
+    insta.innerHTML='<span>Instagram</span><span aria-hidden="true">↗</span>';
     links.appendChild(insta);
   }
   return links;
 }
 
-function buildPoleHub(){
-  const hub=document.createElement('aside');
-  hub.className='v20-home-hub';
-  hub.setAttribute('aria-label','Les pôles sportifs du Bon Sauveur');
-  hub.innerHTML='<div class="v20-hub-head"><span>NOS PÔLES</span><strong>Bon Sauveur Sport</strong></div>';
-  const grid=document.createElement('div');
-  grid.className='v20-pole-grid';
+function buildPoleSection(){
+  const section=document.createElement('section');
+  section.className='v20-poles-section';
+  section.setAttribute('aria-label','Nos pôles sportifs');
+  section.innerHTML=`<div class="v20-poles-head"><div><span class="v20-poles-kicker">BON SAUVEUR SPORT</span><h2>Nos pôles</h2><p>Retrouvez rapidement les informations de votre activité.</p></div><span class="v20-poles-hint">Choisir un pôle</span></div>`;
 
-  POLES.forEach(p=>{
+  const grid=document.createElement('div');
+  grid.className='v20-poles-grid';
+  POLES.forEach((p,index)=>{
     const btn=document.createElement('button');
     btn.type='button';
-    btn.className=`v20-pole-tile ${p.key}`;
-    btn.setAttribute('aria-label',`Voir le calendrier — ${p.label}`);
-    btn.innerHTML=`<span class="v20-pole-logo"><img src="${p.logo}" alt="" decoding="async"></span><span class="v20-pole-copy"><strong>${p.short}</strong><small>${p.sub}</small></span><span class="v20-pole-arrow" aria-hidden="true">→</span>`;
+    btn.className=`v20-pole-card ${p.key}`;
+    btn.setAttribute('aria-label',`Ouvrir ${p.label}`);
+    btn.innerHTML=`
+      <span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span>
+      <span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async"></span>
+      <span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span>
+      <span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;
     btn.addEventListener('click',()=>goPole(p.search));
     grid.appendChild(btn);
   });
-  hub.appendChild(grid);
-  return hub;
+  section.appendChild(grid);
+  return section;
 }
 
 function enhancePublicHome(){
   const hero=document.querySelector('.v19-hero');
   if(!hero)return;
-  hero.classList.add('v20-hero-enhanced');
+  const container=hero.parentElement;
+  if(!container)return;
 
-  hero.querySelectorAll('.v20-hero-logo').forEach(el=>el.remove());
+  hero.classList.add('v20-hero-clean');
+  hero.querySelectorAll('.v20-home-hub,.v20-hero-logo').forEach(el=>el.remove());
 
   let copy=hero.querySelector('.v20-hero-copy');
   if(!copy){
@@ -73,9 +83,16 @@ function enhancePublicHome(){
     hero.insertBefore(copy,hero.firstChild);
     [...hero.children].filter(el=>el!==copy&&el.matches('.v19-kicker,h1,p')).forEach(el=>copy.appendChild(el));
   }
-
   if(!copy.querySelector('.v20-home-links')) copy.appendChild(buildHomeLinks());
-  if(!hero.querySelector('.v20-home-hub')) hero.appendChild(buildPoleHub());
+
+  if(!hero.querySelector('.v20-hero-seal')){
+    const seal=document.createElement('div');
+    seal.className='v20-hero-seal';
+    seal.innerHTML='<span class="v20-seal-glow"></span><img src="assets/logo-as.png" alt="Association Sportive du Bon Sauveur" decoding="async">';
+    hero.appendChild(seal);
+  }
+
+  if(!container.querySelector(':scope > .v20-poles-section')) hero.insertAdjacentElement('afterend',buildPoleSection());
 }
 
 function ensureDocumentNavigation(){
@@ -93,6 +110,7 @@ function repairBrandLogo(){
   document.querySelectorAll('.v19-brand img').forEach(img=>{
     img.src='assets/logo-as.png';
     img.alt='Logo Association Sportive du Bon Sauveur';
+    img.decoding='async';
   });
 }
 
@@ -115,10 +133,9 @@ function enhanceConvocationLogos(){
     wrap.className='v20-conv-brandline';
     const tile=document.createElement('span');
     tile.className='v20-specialty-logo-tile';
-    tile.innerHTML=`<img src="${src}" alt="${specialty}" decoding="async">`;
+    tile.innerHTML=`<img src="${src}" alt="" decoding="async">`;
     head.insertBefore(wrap,titleBlock);
-    wrap.appendChild(tile);
-    wrap.appendChild(titleBlock);
+    wrap.append(tile,titleBlock);
   });
 }
 
