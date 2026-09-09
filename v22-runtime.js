@@ -40,7 +40,6 @@ function persistSilently(data){
 function replaceData(data){
  const target=app.readData();Object.keys(target).forEach(k=>delete target[k]);Object.assign(target,clone(data));persistSilently(target);
 }
-function roleSpecialty(role=currentRole){return{educator_football:'Section Football',educator_gymnastique:'Sport-études Gymnastique',educator_escalade:'Option Escalade'}[role]||null}
 function fmt(d){return d?new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00')):'—'}
 function money(n){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0))}
 function opts(list,current=''){return list.map(x=>`<option value="${esc(x)}" ${x===current?'selected':''}>${esc(x)}</option>`).join('')}
@@ -65,8 +64,7 @@ async function applySession(session,{goHome=true,forceHydrate=true}={}){
    currentUser={id:session.user.id,email:p?.email||session.user.email||'',name:p?.display_name||session.user.email||''};cacheRole(session.user,role);
    if(forceHydrate){const data=await hydrate(role);replaceData(data)}
    if(app.role?.()!==role)base.setRole(role);else if(goHome)base.go('home');
-   scheduleEnhance();
-   return true;
+   scheduleEnhance();return true;
   }catch(e){console.error('V22 session',e);toast('Impossible de charger votre espace.','error');return false}
   finally{authApplying=null}
  })();
@@ -105,7 +103,6 @@ function profileModal(){
 }
 app.profile=()=>currentUser?profileModal():loginModal();
 app.setRole=()=>toast('Le profil est défini par votre compte sécurisé.');
-
 if(base.setTerm)app.setTerm=t=>{currentTerm=Number(t)||1;return base.setTerm(t)};
 if(base.search){let searchTimer=null;app.search=v=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>base.search(v),110)}}
 if(base.order)app.order=id=>{pendingProductId=id;return base.order(id)};
@@ -152,20 +149,19 @@ async function syncObjects(prev,next){
  }
 }
 async function syncDiff(prev,next){
- if(!sb)return;
- if(currentRole==='public')return;
+ if(!sb||currentRole==='public')return;
  if(/^educator_/.test(currentRole))return syncKind('appreciations',prev,next);
  for(const kind of ['events','documents','products','students','licenses','convocations','reports','orders','appreciations'])await syncKind(kind,prev,next);
  await syncObjects(prev,next);
 }
 async function flushSync(){
- clearTimeout(syncTimer);if(syncBusy||suppressSync||!sb)return;syncBusy=true;
+ clearTimeout(syncTimer);syncTimer=null;if(syncBusy||suppressSync||!sb)return;syncBusy=true;
  const target=clone(latestSnapshot),baseSnap=clone(confirmedSnapshot);
  try{await syncDiff(baseSnap,target);confirmedSnapshot=clone(target)}catch(e){console.error('V22 sync',e);toast('Synchronisation impossible. Les données restent sur cet appareil.','error');syncTimer=setTimeout(flushSync,5000)}finally{syncBusy=false;if(JSON.stringify(confirmedSnapshot)!==JSON.stringify(latestSnapshot)&&!syncTimer)syncTimer=setTimeout(flushSync,300)}
 }
 Storage.prototype.setItem=function(k,v){
  nativeSet.call(this,k,v);
- if(this===localStorage&&k===STORE&&!suppressSync){const next=safe(v,{});latestSnapshot=clone(next);clearTimeout(syncTimer);syncTimer=setTimeout(flushSync,260)}
+ if(this===localStorage&&k===STORE&&!suppressSync){latestSnapshot=clone(safe(v,{}));clearTimeout(syncTimer);syncTimer=setTimeout(flushSync,260)}
 };
 
 async function publicOrderSubmit(form){
@@ -183,17 +179,20 @@ function buildPoles(){
 }
 function buildInstagram(){const s=document.createElement('section');s.className='v21-instagram v22-instagram';s.innerHTML=`<div class="v21-instagram-simple"><div class="v21-instagram-simple-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg></div><div class="v21-instagram-simple-copy"><span class="v21-instagram-kicker">LA VIE DE L’AS</span><h2>Suivez-nous sur Instagram</h2><p>Photos, résultats, compétitions et actualités de l’Association Sportive.</p></div><a class="v21-instagram-simple-btn" href="${esc(cfg.instagramUrl||'https://www.instagram.com/as_bs50/')}" target="_blank" rel="noopener noreferrer"><span>Voir les actualités de l’AS</span><span>↗</span></a></div>`;return s}
 function repairBrand(){
- const [logo,label,initials]=ROLE_BRAND[currentRole]||ROLE_BRAND.public;
- document.querySelectorAll('.v19-brand').forEach(el=>{const img=el.querySelector('img'),span=el.querySelector('span');if(img)img.src=logo;if(span)span.innerHTML=label.split('\n').map(esc).join('<br>')});
- document.querySelectorAll('.v19-avatar').forEach(a=>{a.textContent=initials;a.title=ROLE_LABELS[currentRole]||currentRole;a.setAttribute('aria-label',currentUser?'Ouvrir mon espace':'Se connecter')});
+ const [logo,label,initials]=ROLE_BRAND[currentRole]||ROLE_BRAND.public,html=label.split('\n').map(esc).join('<br>');
+ document.querySelectorAll('.v19-brand').forEach(el=>{const img=el.querySelector('img'),span=el.querySelector('span');if(img&&img.getAttribute('src')!==logo)img.setAttribute('src',logo);if(span&&span.innerHTML!==html)span.innerHTML=html});
+ document.querySelectorAll('.v19-avatar').forEach(a=>{if(a.textContent!==initials)a.textContent=initials;const title=ROLE_LABELS[currentRole]||currentRole;if(a.title!==title)a.title=title;a.setAttribute('aria-label',currentUser?'Ouvrir mon espace':'Se connecter')});
 }
 function enhanceHome(){
  const hero=document.querySelector('.v19-hero');if(!hero)return;const c=hero.parentElement;if(!c)return;
- c.querySelectorAll(':scope > .v22-poles,:scope > .v22-instagram').forEach(x=>x.remove());
- if(currentRole==='public'){const poles=buildPoles();hero.insertAdjacentElement('afterend',poles);poles.insertAdjacentElement('afterend',buildInstagram())}
+ let poles=c.querySelector(':scope > .v22-poles'),insta=c.querySelector(':scope > .v22-instagram');
+ if(currentRole==='public'){
+  if(!poles){poles=buildPoles();hero.insertAdjacentElement('afterend',poles)}
+  if(!insta){insta=buildInstagram();poles.insertAdjacentElement('afterend',insta)}
+ }else{poles?.remove();insta?.remove()}
 }
-function enhancePrivacy(){if(currentRole!=='public')return;document.querySelectorAll('.v19-conv-names,.v19-students').forEach(el=>el.style.display='none')}
-function enhanceGrammar(){document.querySelectorAll('.v19-term-info .grammar').forEach(el=>el.textContent='✓ Correcteur orthographique du navigateur activé');document.querySelectorAll('#v19-app-text').forEach(t=>{t.spellcheck=true;t.lang='fr'})}
+function enhancePrivacy(){if(currentRole!=='public')return;document.querySelectorAll('.v19-conv-names,.v19-students').forEach(el=>{if(el.style.display!=='none')el.style.display='none'})}
+function enhanceGrammar(){const msg='✓ Correcteur orthographique du navigateur activé';document.querySelectorAll('.v19-term-info .grammar').forEach(el=>{if(el.textContent!==msg)el.textContent=msg});document.querySelectorAll('#v19-app-text').forEach(t=>{t.spellcheck=true;t.lang='fr'})}
 function adminInject(){
  if(currentRole!=='admin')return;
  const grid=document.querySelector('.v19-admin-cards');if(grid&&!grid.querySelector('[data-v22-admin]')){
@@ -251,8 +250,25 @@ async function deleteOrder(id){if(!confirm('Supprimer définitivement cette comm
 
 async function initAuth(){
  if(!sb)return;
- try{const {data:{session}}=await wait(sb.auth.getSession(),2500);if(session?.user){const p=await profileFor(session.user);currentUser={id:session.user.id,email:p?.email||session.user.email||'',name:p?.display_name||session.user.email||''};currentRole=ROLE_LABELS[p?.role]?p.role:currentRole;cacheRole(session.user,currentRole);if(app.role?.()!==currentRole)base.setRole(currentRole);if(window.__BS_PASSWORD_FLOW)setTimeout(passwordModal,80)}else{currentUser=null;currentRole='public';cacheRole(null,'public')}}catch(e){console.warn('V22 auth init',e)}
- sb.auth.onAuthStateChange((event,session)=>{if(event==='INITIAL_SESSION')return;setTimeout(()=>{if(event==='SIGNED_OUT')handleSignedOut();else if(['SIGNED_IN','USER_UPDATED','PASSWORD_RECOVERY'].includes(event)&&session?.user){if(event==='PASSWORD_RECOVERY')window.__BS_PASSWORD_FLOW=true;if(session.user.id!==currentUser?.id||event==='PASSWORD_RECOVERY')applySession(session,{goHome:event!=='PASSWORD_RECOVERY',forceHydrate:true}).then(()=>{if(window.__BS_PASSWORD_FLOW)setTimeout(passwordModal,60)})}},0)});
+ try{
+  const {data:{session}}=await wait(sb.auth.getSession(),2500);
+  if(session?.user){
+   const p=await profileFor(session.user),role=ROLE_LABELS[p?.role]?p.role:currentRole;
+   currentUser={id:session.user.id,email:p?.email||session.user.email||'',name:p?.display_name||session.user.email||''};
+   if(app.role?.()!==role)await applySession(session,{goHome:false,forceHydrate:true});else{cacheRole(session.user,role);scheduleEnhance()}
+   if(window.__BS_PASSWORD_FLOW)setTimeout(passwordModal,80);
+  }else{currentUser=null;currentRole='public';cacheRole(null,'public');scheduleEnhance()}
+ }catch(e){console.warn('V22 auth init',e)}
+ sb.auth.onAuthStateChange((event,session)=>{
+  if(event==='INITIAL_SESSION')return;
+  setTimeout(()=>{
+   if(event==='SIGNED_OUT'){if(currentUser||currentRole!=='public')handleSignedOut();return}
+   if(['SIGNED_IN','USER_UPDATED','PASSWORD_RECOVERY'].includes(event)&&session?.user){
+    if(event==='PASSWORD_RECOVERY')window.__BS_PASSWORD_FLOW=true;
+    if(session.user.id!==currentUser?.id||event==='PASSWORD_RECOVERY')applySession(session,{goHome:event!=='PASSWORD_RECOVERY',forceHydrate:true}).then(()=>{if(window.__BS_PASSWORD_FLOW)setTimeout(passwordModal,60)});
+   }
+  },0);
+ });
 }
 initAuth();
 })();
