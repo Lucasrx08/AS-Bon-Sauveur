@@ -1,35 +1,11 @@
-const CACHE='as-bon-sauveur-v20-20260909-10';
-const CORE=[
-  './','./index.html','./config.js','./manifest.webmanifest',
-  './v19.css','./v20.css','./v19-app.js','./v20-exports.js','./v20-preflight.js','./v20-bridge.js','./v20-reconcile.js','./v20-admin.js','./v20-postboot.js',
-  './assets/logo-as.png','./assets/logo-football.png','./assets/logo-gymnastique.png','./assets/logo-escalade.png','./assets/logo-ecoledirecte.svg','./assets/shop-tshirt-skyblue.webp','./assets/shop-sweat-sapphire.webp'
-];
-self.addEventListener('install',event=>{
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));
-});
+self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>{
-  event.waitUntil(Promise.all([
-    caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))),
-    self.clients.claim()
-  ]));
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
 });
-self.addEventListener('fetch',event=>{
-  if(event.request.method!=='GET')return;
-  const url=new URL(event.request.url);
-  if(url.origin!==self.location.origin)return;
-  if(event.request.mode==='navigate'){
-    event.respondWith(fetch(event.request).then(resp=>{
-      if(resp?.ok)caches.open(CACHE).then(c=>c.put('./index.html',resp.clone()));
-      return resp;
-    }).catch(()=>caches.match('./index.html')));
-    return;
-  }
-  event.respondWith(caches.match(event.request).then(cached=>{
-    const network=fetch(event.request).then(resp=>{
-      if(resp?.ok)caches.open(CACHE).then(c=>c.put(event.request,resp.clone()));
-      return resp;
-    }).catch(()=>cached);
-    return cached||network;
-  }));
-});
+// Stability mode: do not intercept network requests. The application always loads
+// the current GitHub Pages assets while Supabase authentication is being stabilized.
+self.addEventListener('fetch',()=>{});
