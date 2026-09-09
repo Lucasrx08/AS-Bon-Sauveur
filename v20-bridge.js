@@ -4,6 +4,10 @@ const cfg=window.APP_CONFIG||{};
 const STORE='bs-app-data-v4',ROLE_KEY='bs-demo-role-v4',VERIFIED='bs-v20-verified-role',SENT_ORDERS='bs-v20-sent-orders';
 const roleLabels={public:'Élèves / Parents',educator_escalade:'Option Escalade',educator_football:'Section Football',educator_gymnastique:'Sport-études Gymnastique',teacher_as:'Association Sportive',admin:'Administrateur'};
 const hasSupabase=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
+const authParams=new URLSearchParams((location.hash||'').replace(/^#/,''));
+const authFlowType=authParams.get('type')||'';
+const passwordSetupFlow=['invite','recovery'].includes(authFlowType);
+const appRedirect=()=>location.origin+location.pathname;
 const sb=hasSupabase?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
 let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false;
 
@@ -26,28 +30,38 @@ function loginModal(){
  if(!hasSupabase){return modal('Espace sécurisé',`<div class="v19-empty"><strong>Connexion non activée.</strong><br><br>L’application publique reste disponible, mais les espaces éducateurs et administrateur sont verrouillés tant que Supabase n’est pas configuré.</div>`)}
  return modal('Connexion',`<form id="v20-login" class="v19-form"><label class="full"><span>Adresse e-mail</span><input required type="email" name="email" autocomplete="username"></label><label class="full"><span>Mot de passe</span><input required type="password" name="password" autocomplete="current-password"></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" id="v20-forgot">Mot de passe oublié</button><button class="v19-btn" type="submit">Se connecter</button></div></form>`);
 }
+function passwordModal(){
+ return modal('Définir mon mot de passe',`<form id="v20-set-password" class="v19-form"><div class="full v19-card"><strong>Compte sécurisé</strong><div class="v19-meta">Choisissez un mot de passe pour accéder à votre espace.</div></div><label class="full"><span>Nouveau mot de passe</span><input required minlength="10" type="password" name="password" autocomplete="new-password"></label><label class="full"><span>Confirmer le mot de passe</span><input required minlength="10" type="password" name="confirm" autocomplete="new-password"></label><div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer mon mot de passe</button></div></form>`);
+}
 function profileModal(){
  if(!currentUser)return loginModal();
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${currentUser.email||''}</strong><div class="v19-meta">${roleLabels[currentRole]||currentRole}</div></div><button class="v19-btn secondary" id="v20-reset">Réinitialiser mon mot de passe</button><button class="v19-btn" id="v20-logout">Se déconnecter</button></div>`);
  w.querySelector('#v20-logout').onclick=logout;w.querySelector('#v20-reset').onclick=resetOwnPassword;return w;
 }
-async function resetOwnPassword(){if(!currentUser?.email)return;const {error}=await sb.auth.resetPasswordForEmail(currentUser.email,{redirectTo:location.href});if(error)toast(error.message);else{document.getElementById('v20-modal')?.remove();toast('E-mail de réinitialisation envoyé')}}
+async function resetOwnPassword(){if(!currentUser?.email)return;const {error}=await sb.auth.resetPasswordForEmail(currentUser.email,{redirectTo:appRedirect()});if(error)toast(error.message);else{document.getElementById('v20-modal')?.remove();toast('E-mail de réinitialisation envoyé')}}
 async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
 
 async function authenticateSession(){
  if(!hasSupabase){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');return}
  const {data:{session}}=await sb.auth.getSession();
  if(!session?.user){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');await hydratePublic();return}
- await hydrateUser(session.user);
- sb.auth.onAuthStateChange(async(evt,session)=>{if(evt==='SIGNED_OUT'||!session?.user){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}else if(['SIGNED_IN','USER_UPDATED','PASSWORD_RECOVERY'].includes(evt)){await hydrateUser(session.user,true)}});
+ await hydrateUser(session.user,false,passwordSetupFlow);
+ if(passwordSetupFlow){passwordModal();return}
+ sb.auth.onAuthStateChange(async(evt,session)=>{
+  if(evt==='SIGNED_OUT'||!session?.user){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload();return}
+  if(evt==='PASSWORD_RECOVERY'){await hydrateUser(session.user,false,true);passwordModal();return}
+  if(['SIGNED_IN','USER_UPDATED'].includes(evt)){await hydrateUser(session.user,true,false)}
+ });
 }
-async function hydrateUser(user,forceReload=false){
+async function hydrateUser(user,forceReload=false,suppressReload=false){
  const {data:profile,error}=await sb.from('profiles').select('display_name,email,role').eq('id',user.id).single();
  if(error){toast('Profil utilisateur inaccessible');return}
  currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
  sessionStorage.setItem(VERIFIED,currentRole);localStorage.setItem(ROLE_KEY,currentRole);
  await hydrateAll();
- const marker='bs-v20-role-applied';if(forceReload||sessionStorage.getItem(marker)!==currentRole){sessionStorage.setItem(marker,currentRole);location.reload()}
+ const marker='bs-v20-role-applied';
+ if(!suppressReload&&(forceReload||sessionStorage.getItem(marker)!==currentRole)){sessionStorage.setItem(marker,currentRole);location.reload()}
+ else sessionStorage.setItem(marker,currentRole);
 }
 async function hydratePublic(){
  const data=safeJson(localStorage.getItem(STORE),{});hydrating=true;
@@ -130,8 +144,19 @@ function observeA11y(){enhanceA11y();new MutationObserver(()=>enhanceA11y()).obs
 
 async function init(){
  installStorageSync();wrapLazyDependencies();overrideSecurityUI();observeA11y();
- document.addEventListener('submit',async e=>{if(e.target?.id!=='v20-login')return;e.preventDefault();const fd=new FormData(e.target);const {error}=await sb.auth.signInWithPassword({email:String(fd.get('email')),password:String(fd.get('password'))});if(error)toast('Connexion impossible : '+error.message);else{document.getElementById('v20-modal')?.remove();toast('Connexion réussie')}});
- document.addEventListener('click',async e=>{if(e.target?.id!=='v20-forgot')return;const email=String(document.querySelector('#v20-login [name=email]')?.value||'').trim();if(!email)return toast('Saisissez votre adresse e-mail.');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.href});if(error)toast(error.message);else toast('E-mail de réinitialisation envoyé')});
+ document.addEventListener('submit',async e=>{
+  if(e.target?.id==='v20-login'){
+   e.preventDefault();const fd=new FormData(e.target);const {error}=await sb.auth.signInWithPassword({email:String(fd.get('email')),password:String(fd.get('password'))});if(error)toast('Connexion impossible : '+error.message);else{document.getElementById('v20-modal')?.remove();toast('Connexion réussie')};return
+  }
+  if(e.target?.id==='v20-set-password'){
+   e.preventDefault();const fd=new FormData(e.target);const password=String(fd.get('password')||''),confirm=String(fd.get('confirm')||'');
+   if(password.length<10)return toast('Utilisez au moins 10 caractères.');
+   if(password!==confirm)return toast('Les deux mots de passe sont différents.');
+   const {error}=await sb.auth.updateUser({password});if(error)return toast('Impossible d’enregistrer le mot de passe : '+error.message);
+   history.replaceState({},'',location.pathname+location.search);document.getElementById('v20-modal')?.remove();toast('Mot de passe enregistré.');setTimeout(()=>location.reload(),700);return
+  }
+ });
+ document.addEventListener('click',async e=>{if(e.target?.id!=='v20-forgot')return;const email=String(document.querySelector('#v20-login [name=email]')?.value||'').trim();if(!email)return toast('Saisissez votre adresse e-mail.');const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:appRedirect()});if(error)toast(error.message);else toast('E-mail de réinitialisation envoyé')});
  await authenticateSession();
 }
 init().catch(e=>console.error('V20 bridge',e));
