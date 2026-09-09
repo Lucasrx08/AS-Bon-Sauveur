@@ -41,6 +41,31 @@ function setRole(role,uid=''){
  return r;
 }
 function emptyData(){return{events:[],documents:[],products:[],orders:[],students:[],appreciations:[],licenses:[],convocations:[],reports:[],specialtyNotes:{},termSettings:{}}}
+function specialty(role){return{educator_football:'Section Football',educator_gymnastique:'Sport-études Gymnastique',educator_escalade:'Option Escalade'}[role]||null}
+function writeData(data){localStorage.setItem(STORE,JSON.stringify(data||emptyData()))}
+function sanitizeCached(role){
+ const raw=safe(localStorage.getItem(STORE)||'null',null)||emptyData();
+ if(['teacher_as','admin'].includes(role)){writeData({...emptyData(),...raw});return}
+ const out=emptyData();
+ if(role==='public'){
+  out.events=(raw.events||[]).filter(x=>x.publicVisible!==false);
+  out.documents=(raw.documents||[]).filter(x=>x.publicVisible!==false);
+  out.products=(raw.products||[]).filter(x=>x.active!==false);
+  out.convocations=(raw.convocations||[]).filter(x=>x.publicVisible!==false&&x.status!=='draft'&&x.status!=='archived').map(x=>({...x,studentIds:[]}));
+  out.specialtyNotes=raw.specialtyNotes||{};
+  writeData(out);return;
+ }
+ const sp=specialty(role);if(!sp){writeData(out);return}
+ out.events=(raw.events||[]).filter(x=>x.specialty===sp);
+ out.students=(raw.students||[]).filter(x=>x.specialty===sp);
+ const ids=new Set(out.students.map(x=>x.id));
+ out.licenses=(raw.licenses||[]).filter(x=>x.sectionOption===sp||ids.has(x.studentId));
+ out.convocations=(raw.convocations||[]).filter(x=>x.specialty===sp);
+ out.appreciations=(raw.appreciations||[]).filter(x=>ids.has(x.studentId));
+ out.specialtyNotes=raw.specialtyNotes?.[sp]?{[sp]:raw.specialtyNotes[sp]}:{};
+ out.termSettings=raw.termSettings||{};
+ writeData(out);
+}
 function rowsToNotes(rows){const o={};(rows||[]).forEach(r=>o[r.specialty]={message:r.message||'',expiresAt:r.expires_at||'',active:!!r.active});return o}
 function rowsToTerms(rows){const o={};(rows||[]).forEach(r=>o[r.term]={deadline:r.deadline||'',end:r.term_end||''});return o}
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
@@ -59,28 +84,18 @@ async function hydrateForRole(role){
  const d=emptyData();
  if(!sb)return Object.assign(d,safe(localStorage.getItem(STORE)||'{}',{}));
  if(role==='public'){
-  const [events,documents,products,convocations,notes]=await Promise.all([
-   q('v20_events'),q('v20_documents'),q('v20_products'),q('v20_convocations'),q('v20_specialty_notes')
-  ]);
-  d.events=events.map(camel);d.documents=documents.map(camel);d.products=products.map(camel);d.convocations=convocations.map(camel);d.specialtyNotes=rowsToNotes(notes);
-  return d;
+  const [events,documents,products,convocations,notes]=await Promise.all([q('v20_events'),q('v20_documents'),q('v20_products'),q('v20_convocations'),q('v20_specialty_notes')]);
+  d.events=events.map(camel);d.documents=documents.map(camel);d.products=products.map(camel);d.convocations=convocations.map(camel).map(c=>({...c,studentIds:[]}));d.specialtyNotes=rowsToNotes(notes);return d;
  }
  if(/^educator_/.test(role)){
-  const [events,students,licenses,convocations,links,apps,notes,terms]=await Promise.all([
-   q('v20_events'),q('v20_students'),q('v20_licenses'),q('v20_convocations'),q('v20_convocation_students'),q('v20_appreciations'),q('v20_specialty_notes'),q('v20_term_settings')
-  ]);
+  const [events,students,licenses,convocations,links,apps,notes,terms]=await Promise.all([q('v20_events'),q('v20_students'),q('v20_licenses'),q('v20_convocations'),q('v20_convocation_students'),q('v20_appreciations'),q('v20_specialty_notes'),q('v20_term_settings')]);
   d.events=events.map(camel);d.students=students.map(camel);d.licenses=licenses.map(camel);d.appreciations=apps.map(camel);d.specialtyNotes=rowsToNotes(notes);d.termSettings=rowsToTerms(terms);
-  const ls=links.map(camel);d.convocations=convocations.map(camel).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}));
-  return d;
+  const ls=links.map(camel);d.convocations=convocations.map(camel).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}));return d;
  }
- const [events,documents,products,orders,students,apps,licenses,convocations,links,reports,notes,terms]=await Promise.all([
-  q('v20_events'),q('v20_documents'),q('v20_products'),q('v20_orders'),q('v20_students'),q('v20_appreciations'),q('v20_licenses'),q('v20_convocations'),q('v20_convocation_students'),q('v20_reports'),q('v20_specialty_notes'),q('v20_term_settings')
- ]);
+ const [events,documents,products,orders,students,apps,licenses,convocations,links,reports,notes,terms]=await Promise.all([q('v20_events'),q('v20_documents'),q('v20_products'),q('v20_orders'),q('v20_students'),q('v20_appreciations'),q('v20_licenses'),q('v20_convocations'),q('v20_convocation_students'),q('v20_reports'),q('v20_specialty_notes'),q('v20_term_settings')]);
  d.events=events.map(camel);d.documents=documents.map(camel);d.products=products.map(camel);d.orders=orders.map(camel);d.students=students.map(camel);d.appreciations=apps.map(camel);d.licenses=licenses.map(camel);d.reports=reports.map(camel);d.specialtyNotes=rowsToNotes(notes);d.termSettings=rowsToTerms(terms);
- const ls=links.map(camel);d.convocations=convocations.map(camel).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}));
- return d;
+ const ls=links.map(camel);d.convocations=convocations.map(camel).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}));return d;
 }
-function writeData(data){localStorage.setItem(STORE,JSON.stringify(data||emptyData()))}
 function showBoot(){
  if(!root)return;
  root.innerHTML='<div class="v22-boot"><div class="v22-boot-card"><img src="assets/logo-as.png" alt="Association Sportive du Bon Sauveur"><div><strong>Association Sportive du Bon Sauveur</strong><span>Ouverture de votre espace…</span></div><i aria-hidden="true"></i></div></div>';
@@ -95,27 +110,24 @@ async function boot(){
  showBoot();
  const localUser=tokenUser();
  const fallbackRole=localUser?.id?cachedRole(localUser.id)||'public':'public';
- setRole(fallbackRole,localUser?.id||'');
+ setRole(fallbackRole,localUser?.id||'');sanitizeCached(fallbackRole);
+ window.__BS_BOOT_USER=localUser&&fallbackRole!=='public'?{id:localUser.id,email:localUser.email||'',name:localUser.user_metadata?.display_name||localUser.email||'',role:fallbackRole}:null;
  if(!sb){await loadApp();return}
  let settled=false;
  try{
   const work=(async()=>{
-   const out=await timeout(sb.auth.getSession(),1700);
-   const session=out?.data?.session||null;
-   let role='public',uid='';
+   const out=await timeout(sb.auth.getSession(),1700);const session=out?.data?.session||null;
+   let role='public',uid='',profile=null;
    if(session?.user){
     uid=session.user.id;
-    try{
-     const p=await timeout(sb.from('profiles').select('role').eq('id',uid).single(),1700);
-     if(ALLOWED.has(p?.data?.role))role=p.data.role;else role=cachedRole(uid)||fallbackRole;
-    }catch{role=cachedRole(uid)||fallbackRole}
+    try{const p=await timeout(sb.from('profiles').select('display_name,email,role').eq('id',uid).single(),1700);profile=p?.data||null;if(ALLOWED.has(profile?.role))role=profile.role;else role=cachedRole(uid)||fallbackRole}catch{role=cachedRole(uid)||fallbackRole}
    }
    const data=await timeout(hydrateForRole(role),2600);
    if(settled)return;
    setRole(role,uid);writeData(data);
+   window.__BS_BOOT_USER=session?.user&&role!=='public'?{id:uid,email:profile?.email||session.user.email||'',name:profile?.display_name||session.user.email||'',role}:null;
   })();
-  await Promise.race([work,new Promise(res=>setTimeout(res,3000))]);
-  settled=true;
+  await Promise.race([work,new Promise(res=>setTimeout(res,3000))]);settled=true;
  }catch(e){console.warn('V22 boot fallback',e)}
  await loadApp();
 }
