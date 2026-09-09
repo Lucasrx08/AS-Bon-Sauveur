@@ -1,4 +1,4 @@
-const CACHE='as-bon-sauveur-v20-20260909-7';
+const CACHE='as-bon-sauveur-v20-20260909-8';
 const CORE=[
   './','./index.html','./config.js','./manifest.webmanifest',
   './v19.css','./v20.css','./v19-app.js','./v20-exports.js','./v20-preflight.js','./v20-bridge.js','./v20-reconcile.js','./v20-admin.js','./v20-postboot.js',
