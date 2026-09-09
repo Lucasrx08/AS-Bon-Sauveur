@@ -40,7 +40,14 @@ if(api?.createClient&&!window.__BS_SUPABASE_STABILITY_PATCHED){
     const originalOn=client.auth.onAuthStateChange.bind(client.auth);
     client.auth.onAuthStateChange=(callback)=>originalOn((event,session)=>{
       if(event==='INITIAL_SESSION'&&!session?.user)return;
-      return callback(event,session);
+      // Important: Supabase déconseille d'attendre d'autres appels Supabase
+      // directement dans onAuthStateChange. On libère d'abord le verrou Auth,
+      // puis on exécute le callback applicatif au tick suivant.
+      setTimeout(()=>{
+        try{
+          Promise.resolve(callback(event,session)).catch(err=>console.error('Auth callback',err));
+        }catch(err){console.error('Auth callback',err)}
+      },0);
     });
     shared=client;
     window.__BS_SUPABASE_CLIENT=client;
