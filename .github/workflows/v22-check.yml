@@ -1,0 +1,26 @@
+name: V22 sanity check
+
+on:
+  push:
+    branches:
+      - v22-stabilisation
+  workflow_dispatch:
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check V22 JavaScript syntax
+        run: |
+          node --check v22-boot.js
+          node --check v22-runtime.js
+      - name: Verify required files
+        run: |
+          test -s index.html
+          test -s v22.css
+          test -s v19-app.js
+          test -s v20-exports.js
