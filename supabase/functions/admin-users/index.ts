@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       const allowedRoles = ['educator_football','educator_escalade','educator_gymnastique','teacher_as','admin']
       if (!body.email || !allowedRoles.includes(body.role)) return json({ error: 'Paramètres invalides' }, 400)
 
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(body.email, {
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(String(body.email).trim().toLowerCase(), {
         data: { display_name: body.displayName || body.email },
         redirectTo: body.redirectTo,
       })
@@ -37,11 +37,20 @@ Deno.serve(async (req) => {
       if (data.user) {
         const { error: profileError } = await admin.from('profiles').update({
           display_name: body.displayName || body.email,
-          email: body.email,
+          email: String(body.email).trim().toLowerCase(),
           role: body.role,
         }).eq('id', data.user.id)
         if (profileError) return json({ error: profileError.message }, 400)
       }
+      return json({ ok: true })
+    }
+
+    if (body.action === 'remove_access') {
+      const targetId = String(body.userId || '')
+      if (!targetId) return json({ error: 'Utilisateur manquant' }, 400)
+      if (targetId === user.id) return json({ error: 'Vous ne pouvez pas supprimer votre propre accès administrateur.' }, 400)
+      const { error } = await admin.auth.admin.deleteUser(targetId)
+      if (error) return json({ error: error.message }, 400)
       return json({ ok: true })
     }
 
