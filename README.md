@@ -1,84 +1,86 @@
-# Bon Sauveur Sport — V1
+# Association Sportive du Bon Sauveur — V20
 
-Application PWA mobile-first pour regrouper :
-- Association Sportive du Bon Sauveur ;
-- Section football ;
-- Option escalade ;
-- Sport-études gymnastique.
+PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
 
-## Ce que contient cette V1
+## V20 — objectifs
 
-- Accueil adapté au profil.
-- Calendrier filtrable par pôle.
-- Informations importantes avec niveaux NORMAL / IMPORTANT / URGENT.
-- Centre de documents.
-- Convocations aux compétitions.
-- Boutique et saisie de commandes.
-- Appréciations éducateurs.
-- Gestion des licences.
-- Bilans AS.
-- Administration moderne avec création / modification / duplication / suppression.
-- Mode clair / sombre.
-- Responsive smartphone / tablette / ordinateur.
-- PWA (manifest + service worker).
-- Connexion Supabase prête à être activée.
-- Schéma PostgreSQL + RLS dans `supabase/schema.sql`.
+- conserver l’interface V19 validée ;
+- supprimer le faux changement de rôle côté navigateur ;
+- activer une authentification réelle Supabase ;
+- synchroniser les données entre appareils ;
+- protéger les données élèves avec RLS ;
+- permettre l’invitation et la réinitialisation des accès depuis l’administration ;
+- fiabiliser la PWA et les mises à jour ;
+- améliorer SEO, partage, accessibilité et performances ;
+- améliorer les exports PDF des convocations et calendriers.
 
-## Lancer la démo immédiatement
+## Sécurité
 
-Le projet fonctionne sans installation grâce au mode démonstration local.
+Les rôles sont définis dans `profiles` et vérifiés côté serveur par les politiques RLS. Modifier `localStorage` ou le HTML ne donne donc pas accès aux données protégées.
 
-1. Lancer un petit serveur HTTP dans ce dossier :
-   `python3 -m http.server 8080`
-2. Ouvrir `http://localhost:8080`.
-3. Utiliser le bouton de profil en haut à droite pour tester les rôles : Élève/Parent, Éducateur, Enseignant AS, Administrateur.
+Les données élèves, licences, appréciations, bilans et listes nominatives de convocations ne sont jamais lisibles anonymement.
 
-Les modifications faites en mode démo sont conservées dans `localStorage` du navigateur.
+Les éducateurs ne peuvent accéder qu’aux élèves et appréciations correspondant à leur spécialité.
 
-## Passer en mode production Supabase
+## Activation Supabase
 
-1. Créer un projet Supabase.
-2. Exécuter `supabase/schema.sql` dans le SQL Editor.
-3. Créer les comptes utilisateurs dans Supabase Auth.
-4. Définir le rôle de chaque compte dans la table `profiles`.
-5. Modifier `config.js` :
+1. Créer ou ouvrir le projet Supabase.
+2. Exécuter le schéma initial si nécessaire : `supabase/schema.sql`.
+3. Exécuter les migrations existantes dans l’ordre.
+4. Exécuter `supabase/migration_v20.sql`.
+5. Déployer la fonction Edge `supabase/functions/admin-users`.
+6. Renseigner dans `config.js` :
 
 ```js
 window.APP_CONFIG = {
-  appName: "Bon Sauveur Sport",
+  appName: "Association Sportive du Bon Sauveur",
   supabaseUrl: "https://VOTRE-PROJET.supabase.co",
   supabaseAnonKey: "VOTRE_CLE_ANON",
-  demoMode: false
+  demoMode: false,
+  productionMode: true,
+  enableExternalGrammar: false
 };
 ```
 
-La clé `anon` est conçue pour être publique côté navigateur. La sécurité des données sensibles repose sur les politiques RLS du fichier SQL, pas sur le masquage de l'interface.
+La clé `anon` est une clé publique prévue pour le navigateur. La confidentialité repose sur les politiques RLS et non sur le masquage de cette clé.
 
-## Mise en ligne
+## Comptes utilisateurs
 
-Le projet étant statique côté front, il peut être hébergé sur GitHub Pages, Netlify, Cloudflare Pages ou un hébergement équivalent. Supabase fournit l'authentification, la base PostgreSQL et le stockage.
+Une fois connecté avec un compte `admin`, l’espace Administration affiche **Utilisateurs & accès**. Il permet :
 
-Pour GitHub Pages, placez tous les fichiers à la racine du dépôt et activez Pages sur la branche principale.
+- d’inviter un éducateur ou enseignant par e-mail ;
+- de choisir son rôle ;
+- de visualiser les comptes existants ;
+- d’envoyer un e-mail de réinitialisation de mot de passe.
 
-## Logos
+## PWA
 
-Les quatre logos transmis sont intégrés dans `assets/` et utilisés comme identité des différents pôles.
+Le service worker V20 ne met plus en cache les anciennes versions V3 à V18. Seul le shell réellement utilisé est préchargé. Les bibliothèques lourdes Excel et PDF sont chargées à la demande.
 
-## Points à brancher avant ouverture réelle aux familles
+## Correction grammaticale
 
-- Renseigner les vrais événements, documents, élèves et utilisateurs.
-- Créer les buckets Supabase Storage et adapter les politiques de fichiers.
-- Relier chaque compte élève/parent à l'élève concerné si vous souhaitez afficher des convocations nominatives.
-- Définir précisément la durée de conservation des données personnelles et le processus d'archivage/suppression.
-- Tester les permissions RLS avec un compte de chaque rôle avant publication.
-- Remplacer les exemples de données de démonstration par les données réelles.
+L’envoi des appréciations vers LanguageTool est désactivé par défaut avec `enableExternalGrammar: false`. Cela évite de transmettre automatiquement des textes pédagogiques à un service tiers. La validation locale reste disponible.
 
-## Structure
+## Exports
 
-- `index.html` : point d'entrée.
-- `styles.css` : charte graphique et responsive.
-- `app.js` : navigation, écrans, CRUD, mode démo, connexion Supabase.
-- `config.js` : configuration de l'environnement.
-- `manifest.webmanifest` + `sw.js` : PWA.
-- `assets/` : logos.
-- `supabase/schema.sql` : tables, rôles et politiques RLS.
+- titres avec Anton quand la police web est disponible ;
+- fonds PNG existants conservés ;
+- rendu PNG dans le PDF pour éviter les artefacts JPEG ;
+- calendrier limité à 3 rendez-vous par page ;
+- convocations multi-pages conservées pour les listes importantes.
+
+## Principaux fichiers V20
+
+- `index.html` : point d’entrée production ;
+- `v19-app.js` : interface principale conservée ;
+- `v20.css` : accessibilité et finitions ;
+- `v20-preflight.js` : verrouillage des rôles avant démarrage ;
+- `v20-bridge.js` : authentification, synchronisation et chargement à la demande ;
+- `v20-admin.js` : gestion des comptes ;
+- `v20-exports.js` : moteur PDF ;
+- `sw.js` + `manifest.webmanifest` : PWA ;
+- `supabase/migration_v20.sql` : tables V20 et politiques RLS.
+
+## Mise en production
+
+Ne fusionner la branche V20 vers `main` qu’après avoir renseigné `supabaseUrl` et `supabaseAnonKey`, appliqué `migration_v20.sql` et testé au minimum un compte administrateur et un compte éducateur.
