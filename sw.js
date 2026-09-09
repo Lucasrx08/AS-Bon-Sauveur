@@ -1,7 +1,7 @@
-const CACHE='as-bon-sauveur-v20-20260909-1';
+const CACHE='as-bon-sauveur-v20-20260909-2';
 const CORE=[
   './','./index.html','./config.js','./manifest.webmanifest',
-  './v19.css','./v19-app.js','./v19-exports.js','./v20-preflight.js','./v20-bridge.js','./v20-postboot.js',
+  './v19.css','./v20.css','./v19-app.js','./v20-exports.js','./v20-preflight.js','./v20-bridge.js','./v20-admin.js','./v20-postboot.js',
   './assets/convocation-template.png.b64','./assets/programme-template.png.b64',
   './assets/logo-as.png','./assets/logo-ecoledirecte.svg','./assets/shop-tshirt-skyblue.webp','./assets/shop-sweat-sapphire.webp'
 ];
