@@ -18,9 +18,28 @@ jobs:
         run: |
           node --check v22-boot.js
           node --check v22-runtime.js
+          node --check tests/v22-smoke.mjs
       - name: Verify required files
         run: |
           test -s index.html
           test -s v22.css
           test -s v19-app.js
           test -s v20-exports.js
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start local app
+        run: |
+          python3 -m http.server 8000 > /tmp/v22-server.log 2>&1 &
+          sleep 2
+      - name: Run public mobile smoke test
+        run: node tests/v22-smoke.mjs
