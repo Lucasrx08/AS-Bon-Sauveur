@@ -8,6 +8,17 @@
 .v22-fatal{min-height:100vh;display:grid;place-items:center;padding:30px;font:700 18px Arial,sans-serif;color:#13213a;background:#f4f7fb;text-align:center}
 .v22-form-status{min-height:20px;color:#6b7890;font-weight:750;font-size:13px;line-height:1.35}
 .v22-loading{display:flex;align-items:center;justify-content:center;gap:12px;min-height:180px;color:#6b7890}
+
+/* Hero V22 : même identité visuelle, sans reconstruction JavaScript */
+.v19-hero{position:relative;overflow:hidden;min-height:330px;padding:48px 230px 48px 52px!important;border-radius:34px!important;background:linear-gradient(118deg,#0757C9 0%,#087CE3 68%,#0757C9 100%)!important;box-shadow:0 22px 54px rgba(7,45,104,.16);color:#fff}
+.v19-hero:before{content:"";position:absolute;width:360px;height:360px;border:42px solid #FFD21A;border-radius:50%;right:-155px;bottom:-245px;opacity:.96;pointer-events:none}
+.v19-hero:after{content:"";position:absolute;z-index:2;right:58px;top:50%;transform:translateY(-50%);width:138px;height:138px;border-radius:34px;background:#fff center/82% no-repeat url('assets/logo-as.png');border:1px solid rgba(255,255,255,.75);box-shadow:0 22px 46px rgba(0,37,89,.2);pointer-events:none}
+body[data-bs-role="educator_football"] .v19-hero:after{background-image:url('assets/logo-football.png')}
+body[data-bs-role="educator_gymnastique"] .v19-hero:after{background-image:url('assets/logo-gymnastique.png')}
+body[data-bs-role="educator_escalade"] .v19-hero:after{background-image:url('assets/logo-escalade.png')}
+.v19-hero>.v19-kicker,.v19-hero>h1,.v19-hero>p{position:relative;z-index:3;max-width:780px}
+.v19-hero>.v19-kicker{color:#FFE35E!important;letter-spacing:.18em}.v19-hero>h1{color:#fff!important;margin-top:8px;margin-bottom:12px}.v19-hero>p{color:#EEF7FF!important;font-size:20px!important;line-height:1.45}
+
 .v22-users-list{display:grid;gap:10px}.v22-user-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:14px 15px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
 .v22-user-row strong,.v22-user-row small,.v22-user-row span{display:block}.v22-user-row small{margin-top:3px;color:var(--muted)}.v22-user-row>div:first-child>span{margin-top:5px;color:var(--blue);font-size:12px;font-weight:850}
 .v22-poles{margin-top:24px}.v22-instagram{margin-top:28px}
@@ -16,10 +27,17 @@
 .v21-instagram-simple-icon svg{width:34px;height:34px}.v21-instagram-simple-copy h2{margin:3px 0 4px;font-size:clamp(1.35rem,2.2vw,2rem);color:#13213a}.v21-instagram-simple-copy p{margin:0;color:#6b7890;font-weight:600}
 .v21-instagram-simple-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:14px 18px;border-radius:15px;background:#0757c9;color:#fff;text-decoration:none;font-weight:800;white-space:nowrap;box-shadow:0 8px 20px rgba(7,87,201,.18)}
 .v19-btn:disabled,.v19-icon-btn:disabled{opacity:.55;cursor:wait}.v22-toast-success{background:#176a36!important}.v22-toast-error{background:#a6243b!important}
+
+@media(max-width:760px){
+ .v19-hero{min-height:auto;padding:116px 24px 28px!important;border-radius:26px!important}
+ .v19-hero:after{left:24px;right:auto;top:24px;transform:none;width:76px;height:76px;border-radius:21px}
+ .v19-hero:before{width:230px;height:230px;border-width:30px;right:-120px;bottom:-155px}
+ .v19-hero>p{font-size:17px!important}
+}
 @media(max-width:620px){
  .v22-boot-card{grid-template-columns:54px minmax(0,1fr) 18px;padding:15px}.v22-boot-card img{width:54px;height:54px}.v22-boot-card strong{font-size:16px}
  .v19-bottom-nav button{font-size:10px!important}.v19-bottom-nav .v19-icon{width:20px!important;height:20px!important}
  .v22-user-row{grid-template-columns:1fr}.v22-user-row .v21-user-actions{display:grid;grid-template-columns:1fr;width:100%}.v22-user-row .v19-btn{width:100%;white-space:normal}
  .v21-instagram-simple{grid-template-columns:auto 1fr;padding:18px;gap:14px}.v21-instagram-simple-icon{width:54px;height:54px;border-radius:16px}.v21-instagram-simple-btn{grid-column:1/-1;width:100%;white-space:normal;text-align:center}.v21-instagram-simple-copy h2{font-size:1.35rem}.v21-instagram-simple-copy p{font-size:.95rem}
 }
-@media(max-width:390px){.v19-bottom-nav button{font-size:9.5px!important}}
+@media(max-width:390px){.v19-bottom-nav button{font-size:9.5px!important}.v19-hero{padding-left:18px!important;padding-right:18px!important}.v19-hero:after{left:18px}}
