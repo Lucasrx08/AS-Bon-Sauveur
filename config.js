@@ -6,6 +6,6 @@ window.APP_CONFIG = {
   productionMode: true,
   enableExternalGrammar: false,
   instagramUrl: "https://www.instagram.com/as_bs50/",
-  instagramFeedEndpoint: "",
+  instagramFeedEndpoint: "https://qafwwsxmhiesbfaydcih.supabase.co/functions/v1/instagram-feed",
   languageToolUrl: "https://api.languagetool.org/v2/check"
 };
