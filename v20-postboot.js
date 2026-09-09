@@ -72,7 +72,7 @@ function buildInstagramSection(){
 function repairBrand(){
   const r=role(),brand=ROLE_BRAND[r]||ROLE_BRAND.public;
   document.body.classList.toggle('v21-role-brand',r!=='public');
-  document.querySelectorAll('.v19-brand').forEach(el=>{const img=el.querySelector('img'),txt=el.querySelector('span');if(img){img.src=brand.logo;img.alt=brand.label.replace(/\n/g,' ');img.decoding='async'}if(txt)txt.innerHTML=brand.label.split('\n').map(esc).join('<br>')});
+  document.querySelectorAll('.v19-brand').forEach(el=>{const img=el.querySelector('img'),txt=el.querySelector('span');if(img&&img.getAttribute('src')!==brand.logo){img.src=brand.logo;img.alt=brand.label.replace(/\n/g,' ');img.decoding='async'}if(txt){const html=brand.label.split('\n').map(esc).join('<br>');if(txt.innerHTML!==html)txt.innerHTML=html}});
 }
 function cleanInjectedDocumentTabs(){
   if(role()==='public')return;
@@ -86,11 +86,14 @@ function enhanceHome(){
   hero.querySelectorAll('.v20-home-links,.v20-home-hub,.v20-hero-logo').forEach(el=>el.remove());
   let copy=hero.querySelector('.v20-hero-copy');if(!copy){copy=document.createElement('div');copy.className='v20-hero-copy';hero.insertBefore(copy,hero.firstChild);[...hero.children].filter(el=>el!==copy&&el.matches('.v19-kicker,h1,p')).forEach(el=>copy.appendChild(el))}
   let seal=hero.querySelector('.v20-hero-seal');if(!seal){seal=document.createElement('div');seal.className='v20-hero-seal';seal.innerHTML='<span class="v20-seal-glow"></span><img alt="" decoding="async">';hero.appendChild(seal)}
-  const sealImg=seal.querySelector('img');if(sealImg){sealImg.src=brand.logo;sealImg.alt=brand.label.replace(/\n/g,' ')}
-  container.querySelectorAll(':scope > .v20-poles-section,:scope > .v21-instagram').forEach(el=>el.remove());
+  const sealImg=seal.querySelector('img');if(sealImg&&sealImg.getAttribute('src')!==brand.logo){sealImg.src=brand.logo;sealImg.alt=brand.label.replace(/\n/g,' ')}
+  let poles=container.querySelector(':scope > .v20-poles-section');
+  let insta=container.querySelector(':scope > .v21-instagram');
   if(r==='public'){
-    const poles=buildPoleSection();hero.insertAdjacentElement('afterend',poles);
-    poles.insertAdjacentElement('afterend',buildInstagramSection());
+    if(!poles){poles=buildPoleSection();hero.insertAdjacentElement('afterend',poles)}
+    if(!insta){insta=buildInstagramSection();poles.insertAdjacentElement('afterend',insta)}
+  }else{
+    poles?.remove();insta?.remove();
   }
 }
 function enhanceConvocationLogos(){
@@ -107,7 +110,8 @@ function openFallbackAccess(){
 function setFallbackRole(r){if(!ROLES.some(([x])=>x===r))return;localStorage.setItem(FALLBACK_ROLE,r);localStorage.setItem(ROLE_KEY,r);closeFallbackModal();location.reload()}
 function installFallbackAccess(){if(!(cfg.demoMode===true&&!hasSupabase)||!window.app)return;const keep=localStorage.getItem(FALLBACK_ROLE);if(ROLES.some(([r])=>r===keep))localStorage.setItem(ROLE_KEY,keep);window.app.profile=openFallbackAccess;window.app.setRole=setFallbackRole}
 
-function enhance(){repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess()}
+let queued=false;
+function enhance(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess()})}
 enhance();
 new MutationObserver(enhance).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
 })();
