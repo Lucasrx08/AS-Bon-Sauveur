@@ -4,11 +4,11 @@ if(!window.app)return;
 const C={blue:'#2D4FAA',navy:'#2E2E2E',yellow:'#FFD61A',paper:'#FBFAF7',ink:'#2E2E2E',muted:'#667085',line:'#D9E2EE',white:'#FFFFFF'};
 const SPEC={'Association Sportive':'#2D4FAA','Section Football':'#2D79D8','Option Escalade':'#7057D8','Sport-études Gymnastique':'#8B5CC7'};
 const titleFont='Anton, Impact, Arial Narrow, sans-serif';
-const bodyFont='Arial, Helvetica, sans-serif';
-const VERSION='v20.1-20260909';
+const bodyFont='BroshK, Anton, Arial Narrow, sans-serif';
+const VERSION='v21.8-20260909';
 
 async function ensureDeps(){
- try{await document.fonts?.ready;await document.fonts?.load('48px Anton')}catch{}
+ try{await document.fonts?.ready;await Promise.all([document.fonts?.load('48px Anton'),document.fonts?.load('36px BroshK')])}catch{}
  if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 }
 function loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
