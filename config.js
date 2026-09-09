@@ -2,7 +2,7 @@ window.APP_CONFIG = {
   appName: "Association Sportive du Bon Sauveur",
   supabaseUrl: "",
   supabaseAnonKey: "",
-  demoMode: false,
+  demoMode: true,
   productionMode: true,
   enableExternalGrammar: false,
   instagramUrl: "https://www.instagram.com/as_bs50/",
