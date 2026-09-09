@@ -1,17 +1,13 @@
-/* V20.4 — refonte visuelle accueil + identité des pôles */
+/* V20.5 — refonte visuelle accueil + accès local complet */
 html{scroll-behavior:smooth}
 body{overflow-x:hidden}
 .v19-page-head h1,.v19-hero h1{font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;letter-spacing:.005em}
-.v19-btn:focus-visible,.v19-link:focus-visible,.v19-icon-btn:focus-visible,.v19-avatar:focus-visible,.v19-bottom-nav button:focus-visible,.v19-brand:focus-visible,.v19-role-list button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.v20-hero-action:focus-visible,.v20-pole-card:focus-visible{outline:3px solid #FFD21A;outline-offset:3px}
+.v19-btn:focus-visible,.v19-link:focus-visible,.v19-icon-btn:focus-visible,.v19-avatar:focus-visible,.v19-bottom-nav button:focus-visible,.v19-brand:focus-visible,.v19-role-list button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.v20-hero-action:focus-visible,.v20-pole-card:focus-visible,.v20-access-card:focus-visible{outline:3px solid #FFD21A;outline-offset:3px}
 .v19-modal[role="dialog"]{outline:none}
 .v19-modal-backdrop{overscroll-behavior:contain}
 .v19-product img{content-visibility:auto}
 .v19-toast{max-width:min(92vw,720px);text-align:center}
-
-/* En-tête : logo mieux intégré */
 .v19-brand img{border:1px solid #E5EBF3!important;box-shadow:0 8px 22px rgba(19,33,58,.08);background:#fff!important;padding:7px!important;border-radius:18px!important}
-
-/* HERO — simple, fort, sans grille tassée */
 .v19-hero.v20-hero-clean{position:relative;display:block;overflow:hidden;min-height:330px;padding:48px 52px;margin-bottom:0;border-radius:34px;background:linear-gradient(118deg,#0757C9 0%,#087CE3 68%,#0757C9 100%);box-shadow:0 22px 54px rgba(7,45,104,.16)}
 .v19-hero.v20-hero-clean:before{content:"";position:absolute;width:360px;height:360px;border:42px solid #FFD21A;border-radius:50%;right:-155px;bottom:-245px;opacity:.96;transform:none}
 .v19-hero.v20-hero-clean:after{content:"";position:absolute;right:115px;top:-150px;width:310px;height:310px;border-radius:50%;background:rgba(255,255,255,.07);filter:blur(1px)}
@@ -26,8 +22,6 @@ body{overflow-x:hidden}
 .v20-hero-seal{position:absolute!important;z-index:4!important;right:58px;top:50%;transform:translateY(-50%);width:138px;height:138px;border-radius:34px;background:#fff;border:1px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;padding:12px;box-shadow:0 22px 46px rgba(0,37,89,.2);max-width:none!important}
 .v20-hero-seal img{position:relative;z-index:2;width:100%;height:100%;object-fit:contain;display:block}
 .v20-seal-glow{position:absolute;inset:-18px;border-radius:44px;background:rgba(255,210,26,.18);filter:blur(15px);z-index:1}
-
-/* NOS PÔLES — vraie section dédiée */
 .v20-poles-section{margin:30px 0 38px}
 .v20-poles-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:16px}
 .v20-poles-kicker{display:block;color:#0757C9;font-size:11px;letter-spacing:.17em;font-weight:950;margin-bottom:4px}
@@ -50,8 +44,6 @@ body{overflow-x:hidden}
 .v20-pole-footer{position:relative;z-index:2;margin-top:auto;padding-top:16px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--accent);font-size:12px;font-weight:900}
 .v20-pole-footer b{font-size:20px;line-height:1}
 .v19-bottom-nav button[aria-label="Documents"]{display:flex}
-
-/* Convocations — logo en petite tuile d’identité */
 .v20-conv-brandline{display:flex;align-items:center;gap:13px;min-width:0}
 .v20-specialty-logo-tile{flex:0 0 58px;width:58px;height:58px;border:1px solid #E1E8F1;border-radius:17px;background:#fff;padding:6px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(19,33,58,.07)}
 .v20-specialty-logo-tile img{width:100%;height:100%;object-fit:contain;display:block}
@@ -59,40 +51,16 @@ body{overflow-x:hidden}
 .v19-conv-detail-head{gap:18px;align-items:center}
 .v19-conv-detail-head>.v19-badge{flex:0 0 auto;margin-top:0}
 
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+.v20-fallback-note{margin:4px 0 0;color:var(--muted);font-size:13px;font-weight:650}
+.v20-access-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v20-access-card{position:relative;min-height:92px;border:1px solid var(--line);border-radius:20px;background:var(--card);padding:18px;text-align:left;display:flex;flex-direction:column;justify-content:center;gap:5px;color:var(--ink);box-shadow:0 8px 20px rgba(19,33,58,.05);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.v20-access-card:hover{transform:translateY(-2px);border-color:#8CB7F0;box-shadow:0 14px 26px rgba(19,33,58,.10)}
+.v20-access-card.active{border-color:#0757C9;background:#F2F7FF;box-shadow:inset 0 0 0 2px rgba(7,87,201,.08)}
+.v20-access-card.active:after{content:'Actif';position:absolute;right:12px;top:10px;background:#0757C9;color:#fff;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:900}
+.v20-access-card span{font-size:16px;font-weight:900;line-height:1.1;padding-right:42px}
+.v20-access-card small{font-size:12px;color:var(--muted);font-weight:700}
 
-@media(max-width:1080px){
- .v19-hero.v20-hero-clean{padding-right:210px}
- .v20-hero-seal{right:42px;width:122px;height:122px;border-radius:30px}
- .v20-poles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
- .v20-pole-card{min-height:260px}
-}
-@media(max-width:760px){
- .v19-hero.v20-hero-clean{padding:28px 26px 30px;min-height:auto}
- .v20-hero-copy{padding-top:92px;min-height:0}
- .v20-hero-seal{left:26px;right:auto;top:24px;transform:none;width:76px;height:76px;border-radius:21px;padding:7px}
- .v20-seal-glow{inset:-10px}
- .v20-poles-head{align-items:flex-start}
- .v20-poles-hint{display:none}
- .v19-conv-detail-head{align-items:flex-start}
-}
-@media(max-width:620px){
- .v19-page-head h1,.v19-hero h1{font-size:43px;line-height:.96}
- .v19-brand span{max-width:175px}
- .v19-bottom-nav button{min-height:58px}
- .v19-modal-actions{flex-wrap:wrap}.v19-modal-actions .v19-btn{flex:1 1 180px}
- .v19-hero.v20-hero-clean{border-radius:26px;padding:24px 20px 26px}
- .v20-hero-copy{padding-top:84px}
- .v20-hero-seal{left:20px;top:20px;width:68px;height:68px;border-radius:19px}
- .v20-hero-copy p{font-size:17px}
- .v20-home-links{gap:8px}.v20-hero-action{flex:1 1 132px}
- .v20-poles-section{margin-top:24px}
- .v20-poles-head h2{font-size:27px}
- .v20-poles-grid{grid-template-columns:1fr;gap:11px}
- .v20-pole-card{min-height:224px;padding:17px;border-radius:22px}
- .v20-pole-medallion{width:76px;height:76px;border-radius:20px;margin:15px 0 14px}
- .v20-pole-text strong{font-size:19px}
- .v20-conv-brandline{gap:10px}
- .v20-specialty-logo-tile{width:52px;height:52px;flex-basis:52px;border-radius:15px}
- .v19-conv-detail-head{flex-direction:column}
-}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+@media(max-width:1080px){.v19-hero.v20-hero-clean{padding-right:210px}.v20-hero-seal{right:42px;width:122px;height:122px;border-radius:30px}.v20-poles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v20-pole-card{min-height:260px}}
+@media(max-width:760px){.v19-hero.v20-hero-clean{padding:28px 26px 30px;min-height:auto}.v20-hero-copy{padding-top:92px;min-height:0}.v20-hero-seal{left:26px;right:auto;top:24px;transform:none;width:76px;height:76px;border-radius:21px;padding:7px}.v20-seal-glow{inset:-10px}.v20-poles-head{align-items:flex-start}.v20-poles-hint{display:none}.v19-conv-detail-head{align-items:flex-start}}
+@media(max-width:620px){.v19-page-head h1,.v19-hero h1{font-size:43px;line-height:.96}.v19-brand span{max-width:175px}.v19-bottom-nav button{min-height:58px}.v19-modal-actions{flex-wrap:wrap}.v19-modal-actions .v19-btn{flex:1 1 180px}.v19-hero.v20-hero-clean{border-radius:26px;padding:24px 20px 26px}.v20-hero-copy{padding-top:84px}.v20-hero-seal{left:20px;top:20px;width:68px;height:68px;border-radius:19px}.v20-hero-copy p{font-size:17px}.v20-home-links{gap:8px}.v20-hero-action{flex:1 1 132px}.v20-poles-section{margin-top:24px}.v20-poles-head h2{font-size:27px}.v20-poles-grid{grid-template-columns:1fr;gap:11px}.v20-pole-card{min-height:224px;padding:17px;border-radius:22px}.v20-pole-medallion{width:76px;height:76px;border-radius:20px;margin:15px 0 14px}.v20-pole-text strong{font-size:19px}.v20-conv-brandline{gap:10px}.v20-specialty-logo-tile{width:52px;height:52px;flex-basis:52px;border-radius:15px}.v19-conv-detail-head{flex-direction:column}.v20-access-grid{grid-template-columns:1fr}.v20-access-card{min-height:78px;padding:15px}}
