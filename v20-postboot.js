@@ -37,14 +37,12 @@ function goPole(search){
 function buildHomeLinks(){
   const links=document.createElement('div');
   links.className='v20-home-links';
-
   const docs=document.createElement('button');
   docs.type='button';
   docs.className='v20-hero-action v20-hero-action-docs';
   docs.innerHTML='<span>Documents</span><span aria-hidden="true">→</span>';
   docs.addEventListener('click',()=>window.app?.go?.('documents'));
   links.appendChild(docs);
-
   if(cfg.instagramUrl){
     const insta=document.createElement('a');
     insta.className='v20-hero-action v20-hero-action-instagram';
@@ -63,7 +61,6 @@ function buildPoleSection(){
   section.className='v20-poles-section';
   section.setAttribute('aria-label','Nos pôles sportifs');
   section.innerHTML=`<div class="v20-poles-head"><div><span class="v20-poles-kicker">BON SAUVEUR SPORT</span><h2>Nos pôles</h2><p>Retrouvez rapidement les informations de votre activité.</p></div><span class="v20-poles-hint">Choisir un pôle</span></div>`;
-
   const grid=document.createElement('div');
   grid.className='v20-poles-grid';
   POLES.forEach((p,index)=>{
@@ -71,11 +68,7 @@ function buildPoleSection(){
     btn.type='button';
     btn.className=`v20-pole-card ${p.key}`;
     btn.setAttribute('aria-label',`Ouvrir ${p.label}`);
-    btn.innerHTML=`
-      <span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span>
-      <span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async"></span>
-      <span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span>
-      <span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;
+    btn.innerHTML=`<span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span><span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async"></span><span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span><span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;
     btn.addEventListener('click',()=>goPole(p.search));
     grid.appendChild(btn);
   });
@@ -88,10 +81,8 @@ function enhancePublicHome(){
   if(!hero)return;
   const container=hero.parentElement;
   if(!container)return;
-
   hero.classList.add('v20-hero-clean');
   hero.querySelectorAll('.v20-home-hub,.v20-hero-logo').forEach(el=>el.remove());
-
   let copy=hero.querySelector('.v20-hero-copy');
   if(!copy){
     copy=document.createElement('div');
@@ -100,14 +91,12 @@ function enhancePublicHome(){
     [...hero.children].filter(el=>el!==copy&&el.matches('.v19-kicker,h1,p')).forEach(el=>copy.appendChild(el));
   }
   if(!copy.querySelector('.v20-home-links')) copy.appendChild(buildHomeLinks());
-
   if(!hero.querySelector('.v20-hero-seal')){
     const seal=document.createElement('div');
     seal.className='v20-hero-seal';
     seal.innerHTML='<span class="v20-seal-glow"></span><img src="assets/logo-as.png" alt="Association Sportive du Bon Sauveur" decoding="async">';
     hero.appendChild(seal);
   }
-
   if(!container.querySelector(':scope > .v20-poles-section')) hero.insertAdjacentElement('afterend',buildPoleSection());
 }
 
@@ -131,12 +120,7 @@ function repairBrandLogo(){
 }
 
 function enhanceConvocationLogos(){
-  const logos={
-    'Association Sportive':'assets/logo-as.png',
-    'Section Football':'assets/logo-football.png',
-    'Sport-études Gymnastique':'assets/logo-gymnastique.png',
-    'Option Escalade':'assets/logo-escalade.png'
-  };
+  const logos={'Association Sportive':'assets/logo-as.png','Section Football':'assets/logo-football.png','Sport-études Gymnastique':'assets/logo-gymnastique.png','Option Escalade':'assets/logo-escalade.png'};
   document.querySelectorAll('.v19-conv-detail-head').forEach(head=>{
     if(head.querySelector('.v20-specialty-logo-tile'))return;
     const badge=head.querySelector('.v19-badge');
@@ -144,7 +128,6 @@ function enhanceConvocationLogos(){
     const src=logos[specialty];
     const titleBlock=head.firstElementChild;
     if(!src||!titleBlock)return;
-
     const wrap=document.createElement('div');
     wrap.className='v20-conv-brandline';
     const tile=document.createElement('span');
@@ -162,10 +145,7 @@ function openFallbackAccess(){
   const w=document.createElement('div');
   w.id='v20-fallback-access';
   w.className='v19-modal-backdrop';
-  w.innerHTML=`<div class="v19-modal" role="dialog" aria-modal="true" aria-labelledby="v20-fallback-title">
-    <div class="v19-modal-head"><div><h2 id="v20-fallback-title">Choisir un espace</h2><p class="v20-fallback-note">Accès local temporaire — la connexion sécurisée sera activée avec Supabase.</p></div><button class="v19-icon-btn" type="button" aria-label="Fermer">×</button></div>
-    <div class="v19-modal-body"><div class="v20-access-grid">${ROLES.map(([r,label,sub])=>`<button type="button" class="v20-access-card ${r===current?'active':''}" data-role="${r}"><span>${label}</span><small>${sub}</small></button>`).join('')}</div></div>
-  </div>`;
+  w.innerHTML=`<div class="v19-modal" role="dialog" aria-modal="true" aria-labelledby="v20-fallback-title"><div class="v19-modal-head"><div><h2 id="v20-fallback-title">Choisir un espace</h2><p class="v20-fallback-note">Accès local temporaire — la connexion sécurisée sera activée avec Supabase.</p></div><button class="v19-icon-btn" type="button" aria-label="Fermer">×</button></div><div class="v19-modal-body"><div class="v20-access-grid">${ROLES.map(([r,label,sub])=>`<button type="button" class="v20-access-card ${r===current?'active':''}" data-role="${r}"><span>${label}</span><small>${sub}</small></button>`).join('')}</div></div></div>`;
   document.body.appendChild(w);
   w.querySelector('.v19-icon-btn').onclick=closeFallbackModal;
   w.addEventListener('click',e=>{if(e.target===w)closeFallbackModal();});
@@ -186,21 +166,9 @@ function installFallbackAccess(){
   window.app.setRole=setFallbackRole;
 }
 
-function enhance(){
-  repairBrandLogo();
-  enhancePublicHome();
-  ensureDocumentNavigation();
-  enhanceConvocationLogos();
-  installFallbackAccess();
-}
-
+function enhance(){repairBrandLogo();enhancePublicHome();ensureDocumentNavigation();enhanceConvocationLogos();installFallbackAccess();}
 enhance();
 new MutationObserver(enhance).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
 
-if(!hasSupabase)return;
-if(sessionStorage.getItem('bs-v20-verified-role'))return;
-const key='bs-v20-public-refresh';
-if(sessionStorage.getItem(key))return;
-sessionStorage.setItem(key,'1');
-setTimeout(()=>location.reload(),1400);
+// IMPORTANT: no automatic reload in Supabase mode. The auth bridge handles the session.
 })();
