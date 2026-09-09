@@ -1,6 +1,22 @@
 (() => {
 'use strict';
 const cfg=window.APP_CONFIG||{};
+const ROLE_KEY='bs-demo-role-v4';
+const FALLBACK_ROLE='bs-v20-fallback-role';
+const hasSupabase=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey);
+const ROLES=[
+  ['public','Élève / Parent','Accès public'],
+  ['teacher_as','Association Sportive','Enseignant AS'],
+  ['admin','Administrateur','Gestion complète'],
+  ['educator_football','Section Football','Éducateur football'],
+  ['educator_gymnastique','Sport-études Gymnastique','Éducateur gymnastique'],
+  ['educator_escalade','Option Escalade','Éducateur escalade']
+];
+
+const rememberedRole=localStorage.getItem(FALLBACK_ROLE);
+if(cfg.demoMode===true&&!hasSupabase&&ROLES.some(([r])=>r===rememberedRole)){
+  localStorage.setItem(ROLE_KEY,rememberedRole);
+}
 
 const POLES=[
   {key:'as',eyebrow:'ASSOCIATION',label:'Association Sportive',desc:'Activités, compétitions et rendez-vous AS.',logo:'assets/logo-as.png',search:'Association Sportive'},
@@ -139,17 +155,49 @@ function enhanceConvocationLogos(){
   });
 }
 
+function closeFallbackModal(){document.getElementById('v20-fallback-access')?.remove();}
+function openFallbackAccess(){
+  closeFallbackModal();
+  const current=localStorage.getItem(FALLBACK_ROLE)||localStorage.getItem(ROLE_KEY)||'public';
+  const w=document.createElement('div');
+  w.id='v20-fallback-access';
+  w.className='v19-modal-backdrop';
+  w.innerHTML=`<div class="v19-modal" role="dialog" aria-modal="true" aria-labelledby="v20-fallback-title">
+    <div class="v19-modal-head"><div><h2 id="v20-fallback-title">Choisir un espace</h2><p class="v20-fallback-note">Accès local temporaire — la connexion sécurisée sera activée avec Supabase.</p></div><button class="v19-icon-btn" type="button" aria-label="Fermer">×</button></div>
+    <div class="v19-modal-body"><div class="v20-access-grid">${ROLES.map(([r,label,sub])=>`<button type="button" class="v20-access-card ${r===current?'active':''}" data-role="${r}"><span>${label}</span><small>${sub}</small></button>`).join('')}</div></div>
+  </div>`;
+  document.body.appendChild(w);
+  w.querySelector('.v19-icon-btn').onclick=closeFallbackModal;
+  w.addEventListener('click',e=>{if(e.target===w)closeFallbackModal();});
+  w.querySelectorAll('[data-role]').forEach(btn=>btn.onclick=()=>setFallbackRole(btn.dataset.role));
+}
+function setFallbackRole(role){
+  if(!ROLES.some(([r])=>r===role))return;
+  localStorage.setItem(FALLBACK_ROLE,role);
+  localStorage.setItem(ROLE_KEY,role);
+  closeFallbackModal();
+  location.reload();
+}
+function installFallbackAccess(){
+  if(!(cfg.demoMode===true&&!hasSupabase)||!window.app)return;
+  const keep=localStorage.getItem(FALLBACK_ROLE);
+  if(ROLES.some(([r])=>r===keep)) localStorage.setItem(ROLE_KEY,keep);
+  window.app.profile=openFallbackAccess;
+  window.app.setRole=setFallbackRole;
+}
+
 function enhance(){
   repairBrandLogo();
   enhancePublicHome();
   ensureDocumentNavigation();
   enhanceConvocationLogos();
+  installFallbackAccess();
 }
 
 enhance();
 new MutationObserver(enhance).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
 
-if(!(cfg.supabaseUrl&&cfg.supabaseAnonKey))return;
+if(!hasSupabase)return;
 if(sessionStorage.getItem('bs-v20-verified-role'))return;
 const key='bs-v20-public-refresh';
 if(sessionStorage.getItem(key))return;
