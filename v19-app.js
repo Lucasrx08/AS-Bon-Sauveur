@@ -135,6 +135,7 @@ function icon(name){
   shop:'<path d="M4 7h16l-1 14H5z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>',
   users:'<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M15 15a5 5 0 0 1 6 4v2"/>',
   signup:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3.5h6v3H9zM9 11l2 2 4-4M9 17h6"/>',
+  trash:'<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/>',
   settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/>',
   copy:'<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
   chevron:'<path d="m8 9 4-4 4 4M16 15l-4 4-4-4"/>'
@@ -297,7 +298,7 @@ function registrationsPage(){
    <button class="v19-btn secondary small" onclick="app.clearRegistrationFilters()">Effacer les filtres</button>
   </div>
   <div class="v19-stats v2115-stats"><div><strong>${rows.length}</strong><span>Inscription${rows.length>1?'s':''}</span></div><div><strong>${eventCount}</strong><span>Événement${eventCount>1?'s':''}</span></div><div><strong>${classCount}</strong><span>Classe${classCount>1?'s':''}</span></div></div>
-  ${rows.length?`<div class="v19-table-wrap v2115-registration-table"><table class="v19-table"><thead><tr><th>Date</th><th>Événement</th><th>Spécialité</th><th>Nom</th><th>Prénom</th><th>Classe</th><th>Inscrit le</th></tr></thead><tbody>${rows.map(({registration:r,event:e})=>`<tr><td><strong>${esc(fmtShort(e.date))}</strong></td><td>${esc(e.title)}</td><td>${specBadge(e.specialty)}</td><td><strong>${esc(r.lastName)}</strong></td><td>${esc(r.firstName)}</td><td>${esc(r.className)}</td><td>${esc(fmtDateTime(r.createdAt))}</td></tr>`).join('')}</tbody></table></div>`:'<div class="v19-empty">Aucune inscription pour cette sélection.</div>'}
+  ${rows.length?`<div class="v19-table-wrap v2115-registration-table"><table class="v19-table"><thead><tr><th>Date</th><th>Événement</th><th>Spécialité</th><th>Nom</th><th>Prénom</th><th>Classe</th><th>Inscrit le</th><th>Action</th></tr></thead><tbody>${rows.map(({registration:r,event:e})=>`<tr><td><strong>${esc(fmtShort(e.date))}</strong></td><td>${esc(e.title)}</td><td>${specBadge(e.specialty)}</td><td><strong>${esc(r.lastName)}</strong></td><td>${esc(r.firstName)}</td><td>${esc(r.className)}</td><td>${esc(fmtDateTime(r.createdAt))}</td><td><button class="v21152-remove-registration" data-registration-id="${esc(r.id)}" onclick="app.deleteEventRegistration(this.dataset.registrationId,this)" aria-label="Retirer ${esc(r.firstName)} ${esc(r.lastName)} de cette date">${icon('trash')} Retirer</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="v19-empty">Aucune inscription pour cette sélection.</div>'}
  </div>`;
 }
 function setAppreciationReviewFilter(key,value){
@@ -523,6 +524,27 @@ async function refreshEventRegistrations(quiet=false){
  const {data,error}=await client.from('v20_event_registrations').select('*').order('created_at',{ascending:false});if(error){console.warn('Inscriptions',error.message);if(!quiet)alert('Impossible d’actualiser les inscriptions.');return}
  state.data.eventRegistrations=(data||[]).map(r=>({id:r.id,eventId:r.event_id,lastName:r.last_name,firstName:r.first_name,className:r.class_name,createdAt:r.created_at}));if(state.route==='registrations')render();if(!quiet)toast('Liste des inscriptions actualisée');
 }
+async function deleteEventRegistration(id,button=null){
+ if(!isManager())return;
+ const registration=(state.data.eventRegistrations||[]).find(r=>String(r.id)===String(id));
+ if(!registration)return;
+ const event=registrationEvent(registration.eventId),student=[registration.firstName,registration.lastName].filter(Boolean).join(' '),eventLabel=event?`« ${event.title} » du ${fmtShort(event.date)}`:'cette date';
+ if(!confirm(`Retirer ${student} de ${eventLabel} ?\n\nSeule cette inscription sera supprimée. Ses inscriptions aux autres dates resteront intactes.`))return;
+ const client=window.__BS_SUPABASE_CLIENT;
+ if(!client){alert('Le service d’inscription est momentanément indisponible.');return}
+ const originalButton=button?.innerHTML||'';
+ if(button){button.disabled=true;button.textContent='Retrait…'}
+ const {data,error}=await client.from('v20_event_registrations').delete().eq('id',String(id)).select('id');
+ const deleted=Array.isArray(data)&&data.some(row=>String(row.id)===String(id));
+ if(error||!deleted){
+  console.warn('Suppression inscription',error?.message||'Aucune ligne supprimée');
+  if(button){button.disabled=false;button.innerHTML=originalButton}
+  alert('Impossible de retirer cette inscription. Actualisez la liste puis réessayez.');
+  return;
+ }
+ state.data.eventRegistrations=(state.data.eventRegistrations||[]).filter(r=>String(r.id)!==String(id));
+ save();render();toast(`Inscription de ${student} retirée de cette date`);
+}
 async function refreshAppreciationReview(quiet=false){
  if(!isManager())return;const client=window.__BS_SUPABASE_CLIENT;if(!client){if(!quiet)alert('Le service des appréciations est indisponible.');return}
  const [licenses,students,appreciations]=await Promise.all([client.from('v20_licenses').select('*'),client.from('v20_students').select('*'),client.from('v20_appreciations').select('*')]);const failed=[licenses,students,appreciations].find(result=>result.error);if(failed){console.warn('Appréciations',failed.error.message);if(!quiet)alert('Impossible d’actualiser les appréciations.');return}
@@ -625,12 +647,12 @@ window.app={
  editLicense,toggleLicensePayment,licenseFilter,clearLicenseFilters,
  editReport,deleteReport,order,toggleOrder,
  setTerm,editApp,saveAppDraft,validateApp,copyApp,copyReviewApp,
- openEventRegistration,refreshEventRegistrations,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
+ openEventRegistration,refreshEventRegistrations,deleteEventRegistration,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
  manageSpecialtyNotes,saveSpecialtyNote,manageTerms,
  openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,exportExcel,exportRegistrationsExcel,
  readData:()=>state.data, role:()=>state.role, roleSpecialty, studentName,hydrateFromServer
 };
-window.ASV2115={version:'v21.15.1-20260910',features:['event-registrations','appreciation-review','direct-event-sync']};
+window.ASV2115={version:'v21.15.2-20260910',features:['event-registrations','single-registration-delete','appreciation-review','direct-event-sync']};
 render();
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});

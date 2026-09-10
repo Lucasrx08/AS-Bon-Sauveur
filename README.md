@@ -1,4 +1,4 @@
-# Association Sportive du Bon Sauveur — V21.15.1
+# Association Sportive du Bon Sauveur — V21.15.2
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
 
@@ -19,6 +19,13 @@ PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section footba
 - accès direct aux inscriptions et appréciations depuis la page Administration ;
 - actualisation fiable du rôle et des données après le chargement Supabase ;
 - retrait des anciennes données nominatives de démonstration du code public.
+
+### Correctif V21.15.2
+
+- bouton « Retirer » sur chaque ligne de la liste des inscriptions ;
+- confirmation précisant que seule l’inscription de la date affichée est supprimée ;
+- suppression ciblée par identifiant unique, sans toucher aux autres dates de l’élève ;
+- droit de suppression réservé aux enseignants AS et administrateurs par les politiques RLS.
 
 ## V21.14 — décors PDF HD
 
@@ -62,8 +69,9 @@ Les éducateurs ne peuvent accéder qu’aux élèves et appréciations correspo
 3. Exécuter les migrations existantes dans l’ordre.
 4. Exécuter `supabase/migration_v20.sql`.
 5. Exécuter `supabase/migration_v21_15.sql`.
-6. Déployer la fonction Edge `supabase/functions/admin-users`.
-7. Renseigner dans `config.js` :
+6. Exécuter `supabase/migration_v21_15_2.sql`.
+7. Déployer la fonction Edge `supabase/functions/admin-users`.
+8. Renseigner dans `config.js` :
 
 ```js
 window.APP_CONFIG = {
@@ -117,7 +125,8 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 - `sw.js` + `manifest.webmanifest` : PWA ;
 - `supabase/migration_v20.sql` : tables V20 et politiques RLS.
 - `supabase/migration_v21_15.sql` : ouverture des inscriptions et protection de leur liste nominative.
+- `supabase/migration_v21_15_2.sql` : suppression ciblée d’une inscription par le staff AS.
 
 ## Mise en production
 
-Ne fusionner la V21.15 vers `main` qu’après avoir appliqué `migration_v21_15.sql` et testé au minimum une inscription publique, un compte enseignant AS, un compte administrateur et un compte éducateur.
+Ne fusionner la V21.15.2 vers `main` qu’après avoir appliqué les migrations V21.15 et V21.15.2, puis testé au minimum une inscription publique, une suppression ciblée, un compte enseignant AS, un compte administrateur et un compte éducateur.
