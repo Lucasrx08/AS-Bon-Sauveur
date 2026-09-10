@@ -1,8 +1,15 @@
-# Association Sportive du Bon Sauveur — V20
+# Association Sportive du Bon Sauveur — V21.12
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
 
-## V20 — objectifs
+## V21.12 — exports PDF professionnels
+
+- sélection visuelle des rendez-vous du programme ;
+- composition automatique depuis les données de l’application ;
+- fonds officiels, polices embarquées et texte vectoriel net à l’impression ;
+- confidentialité de la liste nominative conservée selon le profil connecté.
+
+## V20 — socle de l’application
 
 - conserver l’interface V19 validée ;
 - supprimer le faux changement de rôle côté navigateur ;
@@ -63,11 +70,12 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Exports
 
-- titres avec Anton quand la police web est disponible ;
-- fonds PNG existants conservés ;
-- rendu PNG dans le PDF pour éviter les artefacts JPEG ;
-- calendrier limité à 3 rendez-vous par page ;
-- convocations multi-pages conservées pour les listes importantes.
+- fonds PNG officiels utilisés sans modification ;
+- textes vectoriels avec les polices Anton et BroshK embarquées dans le PDF ;
+- sélection guidée de 1 à 3 rendez-vous pour le programme ;
+- une catégorie unique par convocation ;
+- convocations A4 paysage et programmes A4 portrait ;
+- convocations multi-pages conservées pour les listes importantes et données nominatives réservées aux espaces sécurisés.
 
 ## Principaux fichiers V20
 

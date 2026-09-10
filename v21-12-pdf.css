@@ -1,0 +1,30 @@
+@font-face{font-family:"AS Anton";src:url("assets/fonts/Anton-Regular.ttf") format("truetype");font-display:swap;font-style:normal;font-weight:400}
+@font-face{font-family:"AS BroshK";src:url("assets/fonts/BroshK.ttf") format("truetype");font-display:swap;font-style:normal;font-weight:400}
+
+.v2112-export-modal{width:min(1040px,100%)}
+.v2112-export-modal .v19-modal-head h2{font-family:"AS Anton",Anton,Impact,sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase}
+.v2112-picker-layout{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(235px,.7fr);gap:22px;align-items:start}
+.v2112-picker-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.v2112-picker-intro strong{font-size:20px}.v2112-picker-intro p{margin:4px 0 0;color:var(--muted);font-size:14px;line-height:1.4}
+.v2112-count{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:66px;padding:8px 12px;border-radius:999px;background:#eaf2ff;color:var(--blue);font-family:"AS Anton",Anton,Impact,sans-serif;font-size:17px}
+.v2112-event-list{display:grid;gap:8px;max-height:470px;overflow:auto;padding:2px 5px 2px 2px}
+.v2112-event-choice{display:grid!important;grid-template-columns:auto 58px 1fr;align-items:center;gap:12px;border:1px solid var(--line);border-radius:17px;padding:10px 12px;background:var(--card);cursor:pointer;transition:border-color .18s,background .18s,transform .18s}
+.v2112-event-choice:hover{transform:translateY(-1px);border-color:#a9c4ea}.v2112-event-choice.selected{border-color:var(--blue);background:#f3f7ff;box-shadow:inset 0 0 0 1px var(--blue)}
+.v2112-event-choice>input{width:20px;height:20px;accent-color:var(--blue);margin:0}
+.v2112-choice-date{height:51px;border-radius:14px;background:#eaf2ff;color:var(--blue);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.v2112-choice-date b{font-family:"AS Anton",Anton,Impact,sans-serif;font-size:23px;font-weight:400}.v2112-choice-date small{font-family:"AS Anton",Anton,Impact,sans-serif;font-size:11px;margin-top:3px}
+.v2112-choice-main{min-width:0}.v2112-choice-main strong,.v2112-choice-main small,.v2112-choice-main em{display:block}.v2112-choice-main strong{font-size:15px;line-height:1.2}.v2112-choice-main small{color:var(--muted);font-size:12px;margin-top:4px}.v2112-choice-main em{font-style:normal;color:var(--blue);font-size:11px;font-weight:800;margin-top:4px}
+.v2112-limit{min-height:22px;padding-top:7px;color:var(--muted);font-size:13px;font-weight:750}.v2112-limit.error{color:#b4233a}
+.v2112-preview{position:sticky;top:88px;display:grid;gap:8px;justify-items:center}.v2112-preview>span{font-size:12px;color:var(--muted);font-weight:800}
+.v2112-preview-sheet{width:min(100%,250px);aspect-ratio:1448/2048;background:url("assets/programme-v21-12.png") center/100% 100% no-repeat;border-radius:8px;box-shadow:0 18px 42px rgba(19,33,58,.18);position:relative;overflow:hidden}
+.v2112-preview-content{position:absolute;left:8%;right:8%;top:28%;bottom:12%;display:grid;align-content:center;gap:4.5%}
+.v2112-mini-event{background:rgba(255,255,255,.96);border:1px solid rgba(45,79,170,.2);border-left:4px solid #2d4faa;border-radius:7px;padding:6px 8px;display:grid;grid-template-columns:auto 1fr;gap:7px;align-items:center;box-shadow:0 3px 9px rgba(25,38,64,.08)}
+.v2112-mini-event b{font-family:"AS Anton",Anton,Impact,sans-serif;color:#2d4faa;font-size:11px;white-space:nowrap}.v2112-mini-event span{font-family:"AS BroshK","AS Anton",Anton,Impact,sans-serif;color:#2e2e2e;font-size:8px;line-height:1.15;text-transform:uppercase;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.v2112-mini-empty{font-family:"AS Anton",Anton,Impact,sans-serif;color:#2d4faa;text-align:center;font-size:13px;letter-spacing:.04em}
+.v2112-actions{border-top:1px solid var(--line);margin-top:20px;padding-top:16px}.v2112-toast{white-space:nowrap}
+
+@media(max-width:760px){
+ .v2112-export-backdrop{padding:8px;align-items:flex-end}.v2112-export-modal{max-height:94dvh;border-radius:26px 26px 16px 16px}
+ .v2112-picker-layout{grid-template-columns:1fr}.v2112-preview{display:none}.v2112-event-list{max-height:50dvh}.v2112-picker-intro strong{font-size:18px}
+ .v2112-event-choice{grid-template-columns:auto 52px 1fr;padding:9px;gap:9px}.v2112-choice-main em{line-height:1.25}.v2112-actions{position:sticky;bottom:-18px;background:var(--card);padding:14px 0 18px}
+}
