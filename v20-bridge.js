@@ -16,7 +16,8 @@ let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false;
 
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
 const snake=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/[A-Z]/g,m=>'_'+m.toLowerCase()),v]));
-const safeJson=(s,f)=>{try{return JSON.parse(s)}catch{return f}};
+const safeJson=(s,f)=>{try{const value=JSON.parse(s);return value&&typeof value==='object'?value:f}catch{return f}};
+const emptyData=()=>({events:[],documents:[],products:[],students:[],appreciations:[],licenses:[],convocations:[],reports:[],orders:[],eventRegistrations:[],specialtyNotes:{},termSettings:{}});
 const uid=(p='x')=>p+Math.random().toString(36).slice(2,10);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 function clearPrivateCache(){const data=safeJson(localStorage.getItem(STORE),{});data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);localStorage.setItem(STORE,JSON.stringify(data))}
@@ -68,24 +69,32 @@ async function hydrateUser(user,forceReload=false,suppressReload=false){
  else sessionStorage.setItem(marker,currentRole);
 }
 async function hydratePublic(){
- const data=safeJson(localStorage.getItem(STORE),{});hydrating=true;
+ const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};hydrating=true;
  data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
- localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;
+ localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');
 }
 async function hydrateAll(){
- hydrating=true;const data=safeJson(localStorage.getItem(STORE),{});
+ hydrating=true;const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['students','v20_students'],['appreciations','v20_appreciations'],['licenses','v20_licenses'],['convocations','v20_convocations'],['reports','v20_reports'],['orders','v20_orders']];
  if(['teacher_as','admin'].includes(currentRole))maps.push(['eventRegistrations','v20_event_registrations']);else data.eventRegistrations=[];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows))data[key]=rows.map(camel)}
  const {data:links,error:linkErr}=await sb.from('v20_convocation_students').select('*');if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
  const {data:notes,error:nErr}=await sb.from('v20_specialty_notes').select('*');if(!nErr){data.specialtyNotes={};(notes||[]).map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}
  const {data:terms,error:tErr}=await sb.from('v20_term_settings').select('*');if(!tErr){data.termSettings={};(terms||[]).map(camel).forEach(r=>data.termSettings[r.term]={deadline:r.deadline||'',end:r.termEnd||''})}
- localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;
+ localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,currentRole);
 }
 
-async function upsertTable(table,rows){if(!rows?.length)return;const cleaned=rows.map(r=>{const x=snake(r);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;return x});const {error}=await sb.from(table).upsert(cleaned);if(error)console.warn(table,error.message)}
+function cleanRow(row){const x=snake(row);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;return x}
+async function upsertTable(table,rows){if(!rows?.length)return;const {error}=await sb.from(table).upsert(rows.map(cleanRow));if(error)console.warn(table,error.message)}
+async function persistEvent(event){
+ if(!sb)throw new Error('SERVICE_UNAVAILABLE');
+ const {error}=await sb.from('v20_events').upsert(cleanRow({...event,publicVisible:true}));
+ if(error)throw error;
+ return true;
+}
+window.__BS_PERSIST_EVENT=persistEvent;
 async function syncSnapshot(){
  if(!hasSupabase||hydrating)return;const data=safeJson(localStorage.getItem(STORE),{});
  await submitPublicOrders(data.orders||[]);

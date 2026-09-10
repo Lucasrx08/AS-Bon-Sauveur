@@ -1,4 +1,4 @@
-# Association Sportive du Bon Sauveur — V21.15
+# Association Sportive du Bon Sauveur — V21.15.1
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
 
@@ -10,6 +10,15 @@ PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section footba
 - filtres par spécialité et événement, avec export Excel professionnel ;
 - consultation centralisée des appréciations dans « Plus » ;
 - filtres par spécialité et trimestre, puis copie directe vers ÉcoleDirecte.
+
+### Correctif V21.15.1
+
+- confirmation immédiate de l’événement dans Supabase avant d’ouvrir les inscriptions ;
+- même règle d’affichage du bouton « Inscription » sur l’accueil et le calendrier ;
+- priorité donnée aux inscriptions ouvertes dans les cinq rendez-vous de l’accueil ;
+- accès direct aux inscriptions et appréciations depuis la page Administration ;
+- actualisation fiable du rôle et des données après le chargement Supabase ;
+- retrait des anciennes données nominatives de démonstration du code public.
 
 ## V21.14 — décors PDF HD
 

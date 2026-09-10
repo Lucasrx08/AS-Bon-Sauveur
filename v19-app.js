@@ -47,46 +47,15 @@ const SPEC = {
 };
 
 const seed = {
- events:[
-  {id:'e4',title:'Sport-études gymnastique',ageCategory:'Toutes catégories',specialty:'Sport-études Gymnastique',date:'2026-09-08',startTime:'14:30',endTime:'18:45',place:'Saint-Loise Gymnastique'},
-  {id:'e1',title:'Entraînement AS multisports',ageCategory:'Toutes catégories',specialty:'Association Sportive',date:'2026-09-09',startTime:'13:30',endTime:'16:00',place:'Gymnase du Bon Sauveur'},
-  {id:'e2',title:'Entraînement section football',ageCategory:'Benjamin',specialty:'Section Football',date:'2026-09-10',startTime:'15:30',endTime:'17:30',place:'Stade'},
-  {id:'e3',title:'Option escalade',ageCategory:'Minime fille',specialty:'Option Escalade',date:'2026-09-10',startTime:'15:30',endTime:'18:00',place:'Salle d’escalade'},
-  {id:'e5',title:'UGSEL Football — secteur',ageCategory:'Benjamin',specialty:'Section Football',date:'2026-09-23',startTime:'12:45',endTime:'17:30',place:'Saint-Lô',convocationId:'c1'}
- ],
- documents:[
-  {id:'d1',title:'Règlement de l’Association Sportive',specialty:'Association Sportive',date:'2026-09-01',description:'Règles de fonctionnement et informations utiles.',url:'#',featured:true},
-  {id:'d2',title:'Horaires section football',specialty:'Section Football',date:'2026-09-01',description:'Horaires hebdomadaires de la section.',url:'#',featured:true}
- ],
- products:[
-  {id:'p1',name:'Sweat officiel',description:'Sweat officiel de l’Association Sportive.',price:35,deadline:'2026-10-05',active:true,image:'assets/shop-sweat-sapphire.webp',color:'Sapphire Blue'},
-  {id:'p2',name:'T-shirt Association Sportive',description:'T-shirt technique.',price:15,deadline:'2026-10-05',active:true,image:'assets/shop-tshirt-skyblue.webp',color:'Sky Blue'}
- ],
- orders:[
-  {id:'o1',productId:'p2',studentName:'MARTIN Léo',className:'5e Jacqueline AURIOL',size:'M',quantity:1,paymentMethod:'Chèque',paid:true,distributed:false,createdAt:'2026-09-07',color:'Sky Blue'}
- ],
- students:[
-  {id:'s1',fullName:'DUPONT Emma',className:'6e AVIGNON',specialty:'Sport-études Gymnastique'},
-  {id:'s2',fullName:'MARTIN Léo',className:'5e Jacqueline AURIOL',specialty:'Section Football'},
-  {id:'s3',fullName:'BERNARD Inès',className:'4e Cyril MORE',specialty:'Option Escalade'},
-  {id:'s4',fullName:'THOMAS Jade',className:'5e Bessie COLEMAN',specialty:'Section Football'}
- ],
- appreciations:[
-  {id:'a1',studentId:'s2',term:1,text:'Très bonne implication dans les séances.',status:'validated'},
-  {id:'a2',studentId:'s3',term:1,text:'Bon trimestre.',status:'draft'}
- ],
- licenses:[
-  {id:'l1',studentId:'s1',fullName:'DUPONT Emma',className:'6e AVIGNON',category:'Benjamine',contribution:'Chèque',paymentStatus:'Payé',amount:20,charterSigned:'Oui',sectionOption:'Sport-études Gymnastique'},
-  {id:'l2',studentId:'s2',fullName:'MARTIN Léo',className:'5e Jacqueline AURIOL',category:'Benjamin',contribution:'Espèces',paymentStatus:'Payé',amount:20,charterSigned:'Oui',sectionOption:'Section Football'},
-  {id:'l3',studentId:'s3',fullName:'BERNARD Inès',className:'4e Cyril MORE',category:'Minime fille',contribution:'Ticket Spot 50',paymentStatus:'En attente',amount:20,charterSigned:'Oui',sectionOption:'Option Escalade'},
-  {id:'l4',studentId:'s4',fullName:'THOMAS Jade',className:'5e Bessie COLEMAN',category:'Benjamine',contribution:'Cart’@too',paymentStatus:'Payé',amount:20,charterSigned:'Oui',sectionOption:'Section Football'}
- ],
- convocations:[
-  {id:'c1',title:'UGSEL Football — secteur',activity:'Football',ageCategory:'Benjamin',specialty:'Section Football',date:'2026-09-23',departure:'12:45',returnTime:'17:30',place:'Saint-Lô',meetingPoint:'Porche du Bon Sauveur',teacher:'',extraInfo:'Prévoir le repas du midi. Tenue de sport, gourde',studentIds:['s2','s4']}
- ],
- reports:[
-  {id:'b1',date:'2026-09-02',activity:'Multisports',teacher:'Lucas RIGAUX',level:'Entraînement',place:'Bon Sauveur',category:'Toutes catégories',participants:34,comment:'Belle reprise, forte participation.'}
- ],
+ events:[],
+ documents:[],
+ products:[],
+ orders:[],
+ students:[],
+ appreciations:[],
+ licenses:[],
+ convocations:[],
+ reports:[],
  eventRegistrations:[],
  specialtyNotes:{
   'Section Football':{message:'',expiresAt:'',active:false},
@@ -200,13 +169,16 @@ function eventsVisible(){
 function eventConvocation(e){
  return !e?null:(state.data.convocations||[]).find(x=>x.id===e.convocationId||(x.date===e.date&&x.specialty===e.specialty&&x.title===e.title))||null;
 }
+function eventRegistrationAvailable(e){
+ return !!e&&!eventConvocation(e)&&!!e.registrationOpen&&String(e.date||'')>=todayKey();
+}
 function eventCard(e){
  const c=eventConvocation(e);
  const d=new Date(e.date+'T12:00:00');
  return `<article class="v19-card v19-event-card">
   <div class="v19-date"><strong>${d.getDate()}</strong><span>${d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').toUpperCase()}</span></div>
   <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(e.startTime||'—')}${e.endTime?' → '+esc(e.endTime):''} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
-  <div class="v19-card-actions">${c?`<button class="v19-chip" onclick="app.openConv('${c.id}')">Voir convocation</button>`:e.registrationOpen&&e.date>=todayKey()?`<button class="v19-chip v2115-registration-chip" onclick="app.openEventRegistration('${e.id}')">Inscription</button>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
+  <div class="v19-card-actions">${c?`<button class="v19-chip" onclick="app.openConv('${c.id}')">Voir convocation</button>`:eventRegistrationAvailable(e)?`<button class="v19-chip v2115-registration-chip" onclick="app.openEventRegistration('${e.id}')">Inscription</button>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
  </article>`;
 }
 function specialtyNote(){
@@ -220,7 +192,8 @@ function homePage(){
  const sp=roleSpecialty();
  const title=sp||"L’Association Sportive du Bon Sauveur";
  const sub=sp?'Rendez-vous, informations et suivi de votre espace.':'Compétitions, entraînements, convocations et informations.';
- const ev=eventsVisible().slice(0,5);
+ const upcoming=eventsVisible().filter(e=>String(e.date||'')>=todayKey());
+ const ev=upcoming.slice().sort((a,b)=>Number(eventRegistrationAvailable(b))-Number(eventRegistrationAvailable(a))||(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||''))).slice(0,5);
  return `<div class="v19-container">
   <section class="v19-hero"><div class="v19-kicker">SAINT-LÔ · ${sp?esc(sp).toUpperCase():'ASSOCIATION SPORTIVE'}</div><h1>${esc(title)}</h1><p>${esc(sub)}</p></section>
   ${specialtyNote()}
@@ -367,6 +340,8 @@ function adminPage(){
  if(!isAdmin()) return denied();
  return `<div class="v19-container">${pageTitle('ADMINISTRATION','Administration','Réglages de l’application.')}
  <div class="v19-admin-cards">
+  <button class="v19-card v19-admin-action" onclick="app.go('registrations')">${icon('signup')}<div><h3>Inscriptions</h3><p>Voir les élèves inscrits et exporter la liste au format Excel.</p></div></button>
+  <button class="v19-card v19-admin-action" onclick="app.go('appreciationReview')">${icon('app')}<div><h3>Appréciations</h3><p>Consulter, filtrer et copier les appréciations vers ÉcoleDirecte.</p></div></button>
   <button class="v19-card v19-admin-action" onclick="app.manageSpecialtyNotes()">${icon('app')}<div><h3>Post-it spécialités</h3><p>Modifier l’information visible par Football, Escalade ou Gymnastique.</p></div></button>
   <button class="v19-card v19-admin-action" onclick="app.manageTerms()">${icon('cal')}<div><h3>Dates des trimestres</h3><p>Configurer les dates limite et fins de trimestre.</p></div></button>
   <button class="v19-card v19-admin-action" onclick="app.openLicenseImport()">${icon('users')}<div><h3>Importer des licenciés</h3><p>Ajouter plusieurs élèves depuis un fichier Excel ou CSV.</p></div></button>
@@ -407,8 +382,10 @@ function editEvent(id){
   <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(e?.endTime||'')}"></label>
   <label class="full"><span>Lieu</span><input name="place" value="${esc(e?.place||'')}"></label>
   <label class="full v2115-registration-choice"><input type="checkbox" name="registrationOpen" ${e?.registrationOpen&&!linkedConvocation?'checked':''} ${linkedConvocation?'disabled':''}><span><strong>Ouvrir l’inscription libre</strong><small>${linkedConvocation?'Une convocation est déjà liée à cet événement.':'Affiche le bouton Inscription tant qu’aucune convocation n’est disponible.'}</small></span></label>
+  <div class="full v2115-form-status" data-event-status aria-live="polite"></div>
   <div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer</button></div></form>`,true);
- m.querySelector('#v19-event-form').onsubmit=ev=>{ev.preventDefault();const fd=new FormData(ev.currentTarget),o={id:e?.id||uid('e'),title:String(fd.get('title')||'').trim(),ageCategory:fd.get('ageCategory'),specialty:fd.get('specialty'),date:fd.get('date'),startTime:fd.get('startTime'),endTime:fd.get('endTime'),place:String(fd.get('place')||'').trim(),convocationId:e?.convocationId||null,registrationOpen:!linkedConvocation&&fd.get('registrationOpen')==='on'};e?Object.assign(e,o):state.data.events.push(o);save();closeModal();render()};
+ const form=m.querySelector('#v19-event-form'),status=m.querySelector('[data-event-status]'),button=form.querySelector('button[type="submit"]');
+ form.onsubmit=async ev=>{ev.preventDefault();const fd=new FormData(form),o={id:e?.id||uid('e'),title:String(fd.get('title')||'').trim(),ageCategory:fd.get('ageCategory'),specialty:fd.get('specialty'),date:fd.get('date'),startTime:fd.get('startTime'),endTime:fd.get('endTime'),place:String(fd.get('place')||'').trim(),convocationId:e?.convocationId||null,registrationOpen:!linkedConvocation&&fd.get('registrationOpen')==='on'};button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='full v2115-form-status';try{if(typeof window.__BS_PERSIST_EVENT!=='function')throw new Error('SERVICE_UNAVAILABLE');await window.__BS_PERSIST_EVENT(o);e?Object.assign(e,o):state.data.events.push(o);save();closeModal();render();toast(o.registrationOpen?'Événement enregistré · inscriptions ouvertes':'Événement enregistré')}catch(error){console.warn('Enregistrement événement',error);button.disabled=false;button.textContent='Enregistrer';status.textContent='L’événement n’a pas pu être enregistré dans la base centrale. Réessayez.';status.className='full v2115-form-status error'}};
 }
 function deleteEvent(id){if(!isManager())return;const count=(state.data.eventRegistrations||[]).filter(r=>String(r.eventId)===String(id)).length,message=count?`Supprimer cet événement et ses ${count} inscription${count>1?'s':''} ?`:'Supprimer cet événement ?';if(!confirm(message))return;state.data.events=state.data.events.filter(e=>e.id!==id);state.data.eventRegistrations=(state.data.eventRegistrations||[]).filter(r=>String(r.eventId)!==String(id));save();render()}
 
@@ -527,8 +504,9 @@ async function copyReviewApp(studentId,term){
  toast(`Appréciation de ${studentName(studentId)||'l’élève'} copiée`);
 }
 function tidyName(value){return String(value||'').trim().replace(/\s+/g,' ')}
-function openEventRegistration(eventId){
+async function openEventRegistration(eventId){
  const event=registrationEvent(eventId),convocation=eventConvocation(event);if(!event)return alert('Événement introuvable.');if(convocation||!event.registrationOpen||event.date<todayKey())return alert('Les inscriptions libres ne sont pas disponibles pour cet événement.');
+ if(isManager()&&typeof window.__BS_PERSIST_EVENT==='function'){try{await window.__BS_PERSIST_EVENT(event)}catch(error){console.warn('Synchronisation événement',error);return alert('Cet événement n’est pas encore enregistré dans la base centrale. Réessayez dans un instant.')}}
  const m=modal('Inscription',`<div class="v2115-registration-intro"><div class="v19-kicker">${esc(event.specialty)}</div><h3>${esc(event.title)}</h3><p>${esc(fmtLong(event.date))} · ${esc(event.startTime||'Horaire à préciser')}${event.endTime?' → '+esc(event.endTime):''} · ${esc(event.place||'Lieu à préciser')}</p></div><form id="v2115-registration-form" class="v19-form">
   <label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>
   <label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>
@@ -549,6 +527,12 @@ async function refreshAppreciationReview(quiet=false){
  if(!isManager())return;const client=window.__BS_SUPABASE_CLIENT;if(!client){if(!quiet)alert('Le service des appréciations est indisponible.');return}
  const [licenses,students,appreciations]=await Promise.all([client.from('v20_licenses').select('*'),client.from('v20_students').select('*'),client.from('v20_appreciations').select('*')]);const failed=[licenses,students,appreciations].find(result=>result.error);if(failed){console.warn('Appréciations',failed.error.message);if(!quiet)alert('Impossible d’actualiser les appréciations.');return}
  const camel=row=>Object.fromEntries(Object.entries(row||{}).map(([key,value])=>[key.replace(/_([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));state.data.licenses=(licenses.data||[]).map(camel);state.data.students=(students.data||[]).map(camel);state.data.appreciations=(appreciations.data||[]).map(camel);if(state.route==='appreciationReview')render();if(!quiet)toast('Appréciations actualisées');
+}
+
+function hydrateFromServer(data,role){
+ if(data&&typeof data==='object')state.data=data;
+ if(ROLE_LABELS[role])state.role=role;
+ render();
 }
 
 function manageSpecialtyNotes(){
@@ -598,7 +582,7 @@ async function downloadLicenseTemplate(){
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Import');
  ws.mergeCells('A1:C1');ws.getCell('A1').value='IMPORT LICENCIÉS — AS BON SAUVEUR';ws.getCell('A1').font={name:'Aptos Display',size:20,bold:true,color:{argb:'FF0757C9'}};ws.getCell('A1').alignment={horizontal:'center'};ws.getRow(1).height=32;
  ['Nom & prénom','Classe','Catégorie'].forEach((h,i)=>{const c=ws.getCell(3,i+1);c.value=h;c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};c.font={name:'Aptos',size:11,bold:true,color:{argb:'FFFFFFFF'}};c.alignment={horizontal:'center'}});
- ws.getCell('A4').value='MARTIN Léo';ws.getCell('B4').value='5e Jacqueline AURIOL';ws.getCell('C4').value='Benjamin';ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;for(let r=4;r<=200;r++)ws.getCell(r,3).dataValidation={type:'list',formulae:[`"${LICENSE_CATEGORIES.join(',')}"`]};
+ ws.getCell('A4').value='NOM Prénom';ws.getCell('B4').value=CLASSES[0];ws.getCell('C4').value=LICENSE_CATEGORIES[0];ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;for(let r=4;r<=200;r++)ws.getCell(r,3).dataValidation={type:'list',formulae:[`"${LICENSE_CATEGORIES.join(',')}"`]};
  const help=wb.addWorksheet('Aide');help.getCell('A1').value='CATÉGORIES AUTORISÉES';LICENSE_CATEGORIES.forEach((x,i)=>help.getCell(i+2,1).value=x);help.getCell('C1').value='CLASSES AUTORISÉES';CLASSES.forEach((x,i)=>help.getCell(i+2,3).value=x);help.getColumn(1).width=24;help.getColumn(3).width=34;
  const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
@@ -644,9 +628,9 @@ window.app={
  openEventRegistration,refreshEventRegistrations,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
  manageSpecialtyNotes,saveSpecialtyNote,manageTerms,
  openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,exportExcel,exportRegistrationsExcel,
- readData:()=>state.data, role:()=>state.role, roleSpecialty, studentName
+ readData:()=>state.data, role:()=>state.role, roleSpecialty, studentName,hydrateFromServer
 };
-window.ASV2115={version:'v21.15-20260910',features:['event-registrations','appreciation-review']};
+window.ASV2115={version:'v21.15.1-20260910',features:['event-registrations','appreciation-review','direct-event-sync']};
 render();
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
