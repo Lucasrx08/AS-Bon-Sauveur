@@ -19,6 +19,7 @@ const snake=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(
 const safeJson=(s,f)=>{try{return JSON.parse(s)}catch{return f}};
 const uid=(p='x')=>p+Math.random().toString(36).slice(2,10);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
+function clearPrivateCache(){const data=safeJson(localStorage.getItem(STORE),{});data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);localStorage.setItem(STORE,JSON.stringify(data))}
 
 function modal(title,body){
  document.getElementById('v20-modal')?.remove();
@@ -42,12 +43,12 @@ function profileModal(){
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${currentUser.email||''}</strong><div class="v19-meta">${roleLabels[currentRole]||currentRole}</div></div><button class="v19-btn secondary" id="v20-change-password">Définir / modifier mon mot de passe</button><button class="v19-btn" id="v20-logout">Se déconnecter</button></div>`);
  w.querySelector('#v20-logout').onclick=logout;w.querySelector('#v20-change-password').onclick=passwordModal;return w;
 }
-async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
+async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
 
 async function authenticateSession(){
  if(!hasSupabase){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');return}
  sb.auth.onAuthStateChange(async(evt,session)=>{
-  if(evt==='SIGNED_OUT'||!session?.user){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload();return}
+  if(evt==='SIGNED_OUT'||!session?.user){sessionStorage.removeItem(VERIFIED);clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload();return}
   if(evt==='PASSWORD_RECOVERY'){sessionStorage.setItem(PASSWORD_SETUP,'1');await hydrateUser(session.user,false,true);setTimeout(passwordModal,60);return}
   if(['SIGNED_IN','USER_UPDATED'].includes(evt)){await hydrateUser(session.user,false,true);if(passwordSetupFlow())setTimeout(passwordModal,60)}
  });
@@ -68,6 +69,7 @@ async function hydrateUser(user,forceReload=false,suppressReload=false){
 }
 async function hydratePublic(){
  const data=safeJson(localStorage.getItem(STORE),{});hydrating=true;
+ data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
  localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;
@@ -75,6 +77,7 @@ async function hydratePublic(){
 async function hydrateAll(){
  hydrating=true;const data=safeJson(localStorage.getItem(STORE),{});
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['students','v20_students'],['appreciations','v20_appreciations'],['licenses','v20_licenses'],['convocations','v20_convocations'],['reports','v20_reports'],['orders','v20_orders']];
+ if(['teacher_as','admin'].includes(currentRole))maps.push(['eventRegistrations','v20_event_registrations']);else data.eventRegistrations=[];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows))data[key]=rows.map(camel)}
  const {data:links,error:linkErr}=await sb.from('v20_convocation_students').select('*');if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
  const {data:notes,error:nErr}=await sb.from('v20_specialty_notes').select('*');if(!nErr){data.specialtyNotes={};(notes||[]).map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}
@@ -120,7 +123,7 @@ function wrapLazyDependencies(){
  const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS');
  const pdf=()=>loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js','jspdf');
  for(const name of ['openLicenseImport']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await xlsx();return orig(...a)}}
- for(const name of ['downloadLicenseTemplate','exportExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
+ for(const name of ['downloadLicenseTemplate','exportExcel','exportRegistrationsExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
  for(const name of ['exportConvocation','exportCalendarPDF']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await pdf();return orig(...a)}}
 }
 function overrideSecurityUI(){

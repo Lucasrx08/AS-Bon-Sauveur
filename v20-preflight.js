@@ -13,5 +13,9 @@ if(cfg.demoMode===true&&!hasSupabase){
 }
 
 const verified=sessionStorage.getItem(VERIFIED);
-localStorage.setItem(ROLE_KEY,allowed.includes(verified)?verified:'public');
+const role=allowed.includes(verified)?verified:'public';
+localStorage.setItem(ROLE_KEY,role);
+if(role==='public'){
+  try{const data=JSON.parse(localStorage.getItem('bs-app-data-v4')||'{}');data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);localStorage.setItem('bs-app-data-v4',JSON.stringify(data))}catch{}
+}
 })();

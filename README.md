@@ -1,6 +1,21 @@
-# Association Sportive du Bon Sauveur — V21.12
+# Association Sportive du Bon Sauveur — V21.15
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
+
+## V21.15 — inscriptions et suivi pédagogique
+
+- inscription libre depuis le calendrier lorsqu’aucune convocation n’est disponible ;
+- saisie publique limitée au nom, prénom et à une classe prédéfinie ;
+- liste nominative réservée aux enseignants AS et administrateurs ;
+- filtres par spécialité et événement, avec export Excel professionnel ;
+- consultation centralisée des appréciations dans « Plus » ;
+- filtres par spécialité et trimestre, puis copie directe vers ÉcoleDirecte.
+
+## V21.14 — décors PDF HD
+
+- fonds de programme et de convocation haute définition ;
+- jusqu’à cinq dates par programme ;
+- typographie agrandie et composition optimisée pour une lecture à distance.
 
 ## V21.12 — exports PDF professionnels
 
@@ -25,7 +40,9 @@ PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section footba
 
 Les rôles sont définis dans `profiles` et vérifiés côté serveur par les politiques RLS. Modifier `localStorage` ou le HTML ne donne donc pas accès aux données protégées.
 
-Les données élèves, licences, appréciations, bilans et listes nominatives de convocations ne sont jamais lisibles anonymement.
+Les données élèves, licences, appréciations, bilans, listes nominatives de convocations et listes d’inscriptions ne sont jamais lisibles anonymement.
+
+Une personne non connectée peut uniquement ajouter une inscription à un événement public, à venir, explicitement ouvert et sans convocation. Elle ne peut jamais consulter la liste obtenue.
 
 Les éducateurs ne peuvent accéder qu’aux élèves et appréciations correspondant à leur spécialité.
 
@@ -35,8 +52,9 @@ Les éducateurs ne peuvent accéder qu’aux élèves et appréciations correspo
 2. Exécuter le schéma initial si nécessaire : `supabase/schema.sql`.
 3. Exécuter les migrations existantes dans l’ordre.
 4. Exécuter `supabase/migration_v20.sql`.
-5. Déployer la fonction Edge `supabase/functions/admin-users`.
-6. Renseigner dans `config.js` :
+5. Exécuter `supabase/migration_v21_15.sql`.
+6. Déployer la fonction Edge `supabase/functions/admin-users`.
+7. Renseigner dans `config.js` :
 
 ```js
 window.APP_CONFIG = {
@@ -72,7 +90,7 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 - fonds PNG officiels utilisés sans modification ;
 - textes vectoriels avec les polices Anton et BroshK embarquées dans le PDF ;
-- sélection guidée de 1 à 3 rendez-vous pour le programme ;
+- sélection guidée de 1 à 5 rendez-vous pour le programme ;
 - une catégorie unique par convocation ;
 - convocations A4 paysage et programmes A4 portrait ;
 - convocations multi-pages conservées pour les listes importantes et données nominatives réservées aux espaces sécurisés.
@@ -86,9 +104,11 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 - `v20-bridge.js` : authentification, synchronisation et chargement à la demande ;
 - `v20-admin.js` : gestion des comptes ;
 - `v20-exports.js` : moteur PDF ;
+- `v21-15.css` : présentation des inscriptions et de la supervision pédagogique ;
 - `sw.js` + `manifest.webmanifest` : PWA ;
 - `supabase/migration_v20.sql` : tables V20 et politiques RLS.
+- `supabase/migration_v21_15.sql` : ouverture des inscriptions et protection de leur liste nominative.
 
 ## Mise en production
 
-Ne fusionner la branche V20 vers `main` qu’après avoir renseigné `supabaseUrl` et `supabaseAnonKey`, appliqué `migration_v20.sql` et testé au minimum un compte administrateur et un compte éducateur.
+Ne fusionner la V21.15 vers `main` qu’après avoir appliqué `migration_v21_15.sql` et testé au minimum une inscription publique, un compte enseignant AS, un compte administrateur et un compte éducateur.

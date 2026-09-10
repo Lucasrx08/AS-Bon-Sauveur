@@ -1,0 +1,66 @@
+/* V21.15 — inscriptions libres et supervision des appréciations */
+
+.v2115-registration-chip{background:var(--yellow);color:#3f3500;box-shadow:inset 0 0 0 1px rgba(123,100,0,.16)}
+#v19-event-form>.v2115-registration-choice{grid-column:1/-1!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:12px!important;padding:13px 15px;border:1px solid color-mix(in srgb,var(--blue) 24%,var(--line));border-radius:16px;background:color-mix(in srgb,var(--blue) 5%,var(--card));cursor:pointer}
+.v2115-registration-choice input{width:22px!important;height:22px!important;min-height:0!important;flex:0 0 auto;accent-color:var(--blue)}
+.v2115-registration-choice>span{margin:0!important;text-transform:none!important;letter-spacing:0!important;color:var(--ink)!important}
+.v2115-registration-choice strong,.v2115-registration-choice small{display:block}
+.v2115-registration-choice strong{font-size:15px}
+.v2115-registration-choice small{margin-top:3px;color:var(--muted);font-size:12px;line-height:1.35;font-weight:650}
+.v2115-registration-choice:has(input:disabled){opacity:.68;cursor:not-allowed}
+
+.v2115-registration-intro{margin-bottom:18px;padding:17px 18px;border-radius:19px;background:linear-gradient(135deg,color-mix(in srgb,var(--blue) 9%,var(--card)),color-mix(in srgb,var(--yellow) 10%,var(--card)));border:1px solid color-mix(in srgb,var(--blue) 18%,var(--line))}
+.v2115-registration-intro h3{margin:6px 0 5px;font-size:24px;line-height:1.12;letter-spacing:-.025em}
+.v2115-registration-intro p{margin:0;color:var(--muted);line-height:1.45}
+.v2115-privacy{padding:12px 14px;border-radius:14px;background:color-mix(in srgb,var(--blue) 6%,var(--card));border:1px solid color-mix(in srgb,var(--blue) 17%,var(--line));color:var(--muted);font-size:13px;line-height:1.45}
+.v2115-form-status{min-height:0;color:var(--muted);font-size:13px;font-weight:800}
+.v2115-form-status:empty{display:none}
+.v2115-form-status.error{display:block;padding:11px 13px;border-radius:13px;background:#fff0f2;border:1px solid #ffc2cc;color:#a6243b}
+.v2115-registration-success{text-align:center;padding:12px 6px 4px}
+.v2115-registration-success>span{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 14px;border-radius:50%;background:#e9f8ef;border:1px solid #b9e5c9;color:#176a36;font-size:31px;font-weight:950}
+.v2115-registration-success h3{margin:0 0 8px;font-size:25px}
+.v2115-registration-success p{margin:0 auto 20px;max-width:480px;color:var(--muted);line-height:1.5}
+
+.v2115-filterbar{display:grid;grid-template-columns:minmax(190px,.8fr) minmax(280px,1.6fr) auto;align-items:end;gap:11px;margin-bottom:17px;padding:15px;border:1px solid var(--line);border-radius:21px;background:var(--card);box-shadow:var(--shadow)}
+.v2115-filterbar .v19-filter select{width:100%;height:48px;border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);padding:0 13px}
+.v2115-review-filters{grid-template-columns:minmax(240px,1fr) minmax(180px,.6fr);max-width:760px}
+.v2115-stats{margin-bottom:17px}
+.v2115-registration-table .v19-table{min-width:1080px}
+.v2115-registration-table .v19-badge{margin-top:0;white-space:nowrap}
+
+.v2115-review-list{display:grid;gap:13px}
+.v2115-review-card{display:grid;grid-template-columns:minmax(230px,.8fr) minmax(360px,1.7fr) auto;gap:18px;align-items:center}
+.v2115-review-student{min-width:0}
+.v2115-review-student>div{min-width:0}
+.v2115-review-student h3{margin-bottom:5px;overflow-wrap:anywhere}
+.v2115-review-student p{margin:0;color:var(--muted);font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.v2115-review-status{display:inline-flex;margin-top:10px;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:900}
+.v2115-review-status.validated{background:#e9f8ef;border:1px solid #b9e5c9;color:#176a36}
+.v2115-review-status.draft{background:#fff7d3;border:1px solid #efd971;color:#7c6200}
+.v2115-review-status.todo{background:color-mix(in srgb,var(--bg) 72%,var(--card));border:1px solid var(--line);color:var(--muted)}
+.v2115-review-copy{min-width:0;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--bg) 68%,var(--card));border:1px solid var(--line)}
+.v2115-review-copy>span{display:block;color:var(--blue);font-size:11px;letter-spacing:.1em;font-weight:950}
+.v2115-review-copy p{margin:7px 0 0;line-height:1.5;font-weight:700;white-space:pre-wrap;overflow-wrap:anywhere}
+.v2115-review-copy p.muted{color:var(--muted);font-weight:500}
+.v2115-review-card>.v19-btn{white-space:nowrap}
+
+@media(max-width:920px){
+ .v2115-filterbar{grid-template-columns:1fr 1fr}
+ .v2115-filterbar>.v19-btn{grid-column:1/-1;justify-self:start}
+ .v2115-review-filters{grid-template-columns:1fr 1fr;max-width:none}
+ .v2115-review-card{grid-template-columns:minmax(190px,.7fr) minmax(300px,1.3fr)}
+ .v2115-review-card>.v19-btn{grid-column:1/-1;justify-self:start}
+}
+
+@media(max-width:620px){
+ .v2115-registration-choice{padding:12px!important}
+ .v2115-filterbar,.v2115-review-filters{grid-template-columns:1fr;padding:12px;border-radius:18px}
+ .v2115-filterbar>.v19-btn{grid-column:1;width:100%}
+ .v2115-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+ .v2115-stats>div{padding:14px 8px!important;border-radius:17px!important;text-align:center}
+ .v2115-stats strong{font-size:29px!important}
+ .v2115-stats span{font-size:11px!important;line-height:1.2}
+ .v2115-review-card{grid-template-columns:1fr;gap:12px;padding:15px!important}
+ .v2115-review-card>.v19-btn{grid-column:1;width:100%;white-space:normal}
+ .v2115-review-copy{padding:12px 13px}
+}
