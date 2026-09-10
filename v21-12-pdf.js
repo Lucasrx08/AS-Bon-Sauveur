@@ -3,11 +3,11 @@
 
 if(!window.app)return;
 
-const VERSION='v21.13-20260910';
+const VERSION='v21.14-20260910';
 const MAX_PROGRAM_EVENTS=5;
 const ASSETS={
- programme:'assets/programme-v21-12.png',
- convocation:'assets/convocation-v21-12.png',
+ programme:'assets/programme-v21-14-hd.png',
+ convocation:'assets/convocation-v21-14-hd.png',
  anton:'assets/fonts/Anton-Regular.ttf',
  broshk:'assets/fonts/BroshK.ttf'
 };
@@ -146,8 +146,7 @@ async function buildProgramPdf(selectedEvents){
  const events=(selectedEvents||[]).slice(0,MAX_PROGRAM_EVENTS);if(!events.length)throw new Error('Sélectionnez au moins un événement.');
  const [background]=await Promise.all([asset(ASSETS.programme,'image/png')]);
  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true,putOnlyUsedFonts:true});await installFonts(doc);doc.addImage(background,'PNG',0,0,210,297,undefined,'FAST');
- const period=fitOne(doc,periodLabel(events),145,{start:16,min:12,kind:'anton'});font(doc,'anton');doc.setFontSize(period.size);color(doc,C.blue);doc.text(period.value,14,49);
- fill(doc,C.yellow);doc.rect(14,52,42,2,'F');programSlots(events.length).forEach((slot,i)=>drawProgramEvent(doc,events[i],slot));
+ programSlots(events.length).forEach((slot,i)=>drawProgramEvent(doc,events[i],slot));
  doc.setProperties({title:`Programme AS - ${periodLabel(events)}`,subject:'Calendrier de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
 }
 function studentRows(convocation){
@@ -217,4 +216,5 @@ window.app.exportConvocation=exportConvocation;
 const pdfApi={version:VERSION,buildProgramPdf,buildConvocationPdf,openCalendarPicker};
 window.ASV2112_PDF=pdfApi;
 window.ASV2113_PDF=pdfApi;
+window.ASV2114_PDF=pdfApi;
 })();
