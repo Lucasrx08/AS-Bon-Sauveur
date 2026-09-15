@@ -7,7 +7,7 @@ const data=()=>window.app?.readData?.()||JSON.parse(localStorage.getItem(STORE)|
 const COLLEGE=new Set(['benjamin','benjamine','minime fille','minime garcon','toutes categories']);
 const LYCEE=new Set(['lyceen','lyceenne']);
 
-async function ensureExcel(){if(window.ExcelJS)return;await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+async function ensureExcel(){if(window.ExcelJS)return;await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='vendor/exceljs-4.4.0.min.js';s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
 function download(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1200)}
 function font(cell,{title=false,header=false,size=11,white=false}={}){cell.font={name:title?'Anton':'Montserrat',size:title?24:size,bold:title||header,color:{argb:white?'FFFFFFFF':'FF13213A'}}}
 function fill(cell,color){cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:color}}}

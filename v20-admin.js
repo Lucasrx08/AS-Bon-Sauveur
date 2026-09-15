@@ -4,7 +4,7 @@ const cfg=window.APP_CONFIG||{};
 if(!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase))return;
 const sb=window.__BS_SUPABASE_CLIENT||window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
 const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const roles={educator_football:'Section Football',educator_escalade:'Option Escalade',educator_gymnastique:'Sport-études Gymnastique',teacher_as:'Association Sportive',admin:'Administrateur'};
+const roles={educator_football:'Section Football',educator_escalade:'Option Escalade',educator_gymnastique:'Sport-études Gymnastique',teacher_as:'Association Sportive'};
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 const wait=(p,ms)=>Promise.race([p,new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),ms))]);
 
@@ -19,10 +19,7 @@ function status(w,msg,type='info'){
  const el=w?.querySelector?.('[data-user-status]');if(!el)return;
  el.className=`v21-user-status ${type}`;el.textContent=msg||'';el.hidden=!msg;
 }
-function storedAccessToken(){
- try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!key.startsWith('sb-')||!key.endsWith('-auth-token'))continue;const raw=localStorage.getItem(key);if(!raw)continue;const data=JSON.parse(raw);const token=data?.access_token||data?.currentSession?.access_token||data?.session?.access_token;if(token)return token}}catch{}
- return '';
-}
+function storedAccessToken(){return ''}
 async function accessToken(){
  try{const out=await wait(sb.auth.getSession(),1800);const token=out?.data?.session?.access_token;if(token)return token}catch{}
  const fallback=storedAccessToken();if(fallback)return fallback;

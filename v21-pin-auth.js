@@ -71,7 +71,7 @@ async function loginAdminEmail(form,w,btn){
  btn.disabled=true;btn.textContent='Connexion…';setStatus(w,'Connexion administrateur…','info');
  try{
   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
-  if(!data?.user)throw new Error('Connexion impossible.');
+  if(!data?.user)throw new Error('Connexion impossible.');if(data.user?.app_metadata?.role!=='admin'){await sb.auth.signOut();throw new Error('Ce compte ne possède pas les droits administrateur.');}
   btn.textContent='Ouverture…';setStatus(w,'Connexion réussie.','success');setTimeout(()=>location.reload(),180);
  }catch(err){const msg=err?.message||'Connexion impossible.';setStatus(w,msg,'error');btn.disabled=false;btn.textContent='Se connecter'}
 }

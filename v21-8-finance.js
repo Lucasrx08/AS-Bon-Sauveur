@@ -26,7 +26,7 @@ function installUiCleanup(){
 }
 async function ensureExcel(){
  if(window.ExcelJS)return;
- await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
+ await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='vendor/exceljs-4.4.0.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)});
 }
 function downloadBlob(blob,name){
  const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1200);

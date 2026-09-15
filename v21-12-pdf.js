@@ -73,7 +73,7 @@ async function ensurePdf(){
  pdfLoader=new Promise((resolve,reject)=>{
   const existing=document.querySelector('script[data-v2112-jspdf]');
   if(existing){existing.addEventListener('load',()=>resolve(window.jspdf),{once:true});existing.addEventListener('error',reject,{once:true});return}
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';script.onload=()=>resolve(window.jspdf);script.onerror=()=>reject(new Error('Le module PDF ne peut pas être chargé.'));document.head.appendChild(script);
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='vendor/jspdf-4.2.1.umd.min.js';script.onload=()=>resolve(window.jspdf);script.onerror=()=>reject(new Error('Le module PDF ne peut pas être chargé.'));document.head.appendChild(script);
  });
  return pdfLoader;
 }

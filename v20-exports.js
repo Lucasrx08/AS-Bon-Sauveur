@@ -9,7 +9,7 @@ const VERSION='v21.8.1-20260909';
 
 async function ensureDeps(){
  try{await document.fonts?.ready;await Promise.all([document.fonts?.load('48px Anton'),document.fonts?.load('36px Montserrat')])}catch{}
- if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+ if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='vendor/jspdf-4.2.1.umd.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 }
 function loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 let logoPromise=null;function logo(){return logoPromise||(logoPromise=loadImage('assets/logo-as.png?v=20.1'))}

@@ -1,0 +1,40 @@
+name: Prepare V22 vendors
+
+on:
+  push:
+    branches: [codex/v22-rgpd]
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/v22-rgpd
+      - name: Fetch pinned browser libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vendor
+          curl --fail --location --retry 3 --output vendor/xlsx-0.18.5.full.min.js https://raw.githubusercontent.com/SheetJS/sheetjs/v0.18.5/dist/xlsx.full.min.js
+          npm pack exceljs@4.4.0 --silent
+          tar -xOf exceljs-4.4.0.tgz package/dist/exceljs.min.js > vendor/exceljs-4.4.0.min.js
+          rm exceljs-4.4.0.tgz
+          excel_hash="$(openssl dgst -sha384 -binary vendor/exceljs-4.4.0.min.js | openssl base64 -A)"
+          jspdf_hash="$(openssl dgst -sha384 -binary vendor/jspdf-4.2.1.umd.min.js | openssl base64 -A)"
+          test "$excel_hash" = "Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz"
+          test "$jspdf_hash" = "qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3"
+      - name: Commit vendored libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add vendor/
+          git diff --cached --quiet && exit 0
+          git commit -m "Vendor pinned V22 browser libraries"
+          git push origin HEAD:codex/v22-rgpd

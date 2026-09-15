@@ -48,7 +48,7 @@ function apply(){fixPlaceholder();pageCleanup();enhanceConvocationForm()}
 let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})}
 new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});apply();
 
-async function ensureExcel(){if(window.ExcelJS)return;await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+async function ensureExcel(){if(window.ExcelJS)return;await new Promise((ok,ko)=>{const s=document.createElement('script');s.src='vendor/exceljs-4.4.0.min.js';s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
 function download(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1200)}
 function font(cell,{title=false,header=false,size=11,white=false}={}){cell.font={name:title?'Anton':'Montserrat',size:title?24:size,bold:title||header,color:{argb:white?'FFFFFFFF':'FF13213A'}}}
 function fill(cell,color){cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:color}}}

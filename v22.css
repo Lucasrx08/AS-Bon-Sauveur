@@ -1,0 +1,15 @@
+@font-face{font-family:Anton;src:url("assets/fonts/Anton-Regular.ttf") format("truetype");font-display:swap}
+:root{--v22-focus:#ffcc00}
+html.v22-loading #app{min-height:70vh;opacity:.42;pointer-events:none}
+html.v22-loading body::after{content:"Chargement sécurisé…";position:fixed;z-index:99999;left:50%;top:50%;transform:translate(-50%,-50%);padding:.85rem 1.15rem;border-radius:999px;background:#13213a;color:#fff;font:700 .95rem system-ui,sans-serif;box-shadow:0 14px 38px #13213a40}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.v22-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.65rem;margin:2.5rem auto 5.5rem;padding:1.15rem max(1rem,calc((100% - 1180px)/2));border-top:1px solid #dce4ef;color:#5a6780;font-size:.84rem}
+.v22-footer a{color:#0757c9;font-weight:750;text-underline-offset:3px}
+.v22-form-info{margin:.2rem 0;padding:.85rem 1rem;border-radius:14px;background:#eef5ff;color:#263650;font-size:.88rem;line-height:1.5}
+.v22-form-info a{color:#0757c9;font-weight:800}
+.v22-noscript{padding:2rem;font-family:Arial,sans-serif}
+:focus-visible{outline:3px solid var(--v22-focus)!important;outline-offset:3px!important}
+.v19-product img{object-fit:contain}
+.v19-toast{max-width:min(92vw,520px)}
+@media(max-width:640px){.v22-footer{margin-bottom:6.5rem;flex-direction:column}.v22-form-info{font-size:.82rem}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

@@ -251,7 +251,7 @@ function ordersPage(){
  const pending=rows.filter(x=>!x.paid).length, dist=rows.filter(x=>x.paid&&!x.distributed).length;
  return `<div class="v19-container">${pageTitle('BOUTIQUE','Gestion des commandes','Paiement et distribution.',`<button class="v19-btn" onclick="app.exportExcel('orders')">Exporter Excel</button>`)}
   <div class="v19-stats"><div><strong>${rows.length}</strong><span>Commandes</span></div><div><strong>${pending}</strong><span>Paiements en attente</span></div><div><strong>${dist}</strong><span>À distribuer</span></div></div>
-  <div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Élève</th><th>Classe</th><th>Produit</th><th>Taille</th><th>Paiement</th><th>Payé</th><th>Distribution</th><th>Date</th></tr></thead><tbody>${rows.map(o=>`<tr><td><strong>${esc(o.studentName)}</strong></td><td>${esc(o.className)}</td><td>${esc(productName(o.productId))}</td><td>${esc(o.size)}</td><td>${esc(o.paymentMethod)}</td><td><button class="v19-status ${o.paid?'on':'off'}" onclick="app.toggleOrder('${o.id}','paid')"><span>${o.paid?'Payé':'En attente'}</span>${icon('chevron')}</button></td><td><button class="v19-status ${o.distributed?'on':'off'}" onclick="app.toggleOrder('${o.id}','distributed')"><span>${o.distributed?'Distribué':'À distribuer'}</span>${icon('chevron')}</button></td><td>${fmtShort(o.createdAt)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Élève</th><th>Classe</th><th>Produit</th><th>Taille</th><th>Paiement</th><th>Payé</th><th>Distribution</th><th>Date</th></tr></thead><tbody>${rows.map(o=>`<tr><td><strong>${esc(o.studentName)}</strong></td><td>${esc(o.className)}</td><td>${esc(productName(o.productId))}</td><td>${esc(o.size)}</td><td>${esc(o.paymentMethod)}</td><td><button class="v19-status ${o.paid?'on':'off'}" onclick="app.toggleOrder('${o.id}','paid')"><span>${o.paid?'Paiement vérifié':'Paiement à vérifier'}</span>${icon('chevron')}</button></td><td><button class="v19-status ${o.distributed?'on':'off'}" onclick="app.toggleOrder('${o.id}','distributed')"><span>${o.distributed?'Distribué':'À distribuer'}</span>${icon('chevron')}</button></td><td>${fmtShort(o.createdAt)}</td></tr>`).join('')}</tbody></table></div>
  </div>`;
 }
 function reportsPage(){
@@ -463,7 +463,7 @@ function order(productId){
   <label class="full"><span>Nom & prénom de l’élève</span><input name="studentName" required></label>
   <label class="full"><span>Classe</span><select name="className">${options(CLASSES,CLASSES[0])}</select></label>
   <label><span>Taille</span><select name="size">${options(SHOP_SIZES,'M')}</select></label>
-  <label><span>Quantité</span><input type="number" name="quantity" min="1" value="1"></label>
+  <label><span>Quantité</span><input type="number" name="quantity" min="1" max="10" value="1"></label>
   <label><span>Mode de paiement</span><select name="paymentMethod">${options(SHOP_PAYMENTS,SHOP_PAYMENTS[0])}</select></label>
   <label><span>Couleur souhaitée</span><input name="color" value="${esc(p.color||'')}"></label>
   <div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer la commande</button></div></form>`,true);
@@ -483,16 +483,7 @@ function upsertApp(studentId,text,status){
 function saveAppDraft(studentId){const text=String(document.querySelector('#v19-app-text')?.value||'').trim();upsertApp(studentId,text,'draft');closeModal();render()}
 async function validateApp(studentId){
  const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
- const url=cfg.languageToolUrl||'https://api.languagetool.org/v2/check';
- try{
-  const body=new URLSearchParams({text,language:'fr-FR'});const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});if(!r.ok)throw new Error('service');const j=await r.json();
-  const fixes=(j.matches||[]).filter(m=>m.replacements?.[0]?.value).slice(0,10);
-  if(fixes.length){
-   let corrected=text;[...fixes].sort((a,b)=>b.offset-a.offset).forEach(m=>{corrected=corrected.slice(0,m.offset)+m.replacements[0].value+corrected.slice(m.offset+m.length)});
-   if(corrected!==text&&confirm(`Une correction est proposée :\n\n${corrected}\n\nUtiliser cette version ?`)){upsertApp(studentId,corrected,'validated')}else upsertApp(studentId,text,'validated');
-  }else upsertApp(studentId,text,'validated');
-  closeModal();render();
- }catch{alert('La vérification orthographe/grammaire est momentanément indisponible. La validation est bloquée pour éviter d’enregistrer sans contrôle.')}
+ upsertApp(studentId,text,'validated');closeModal();render();toast('Appréciation validée');
 }
 async function copyApp(studentId){
  const text=currentApp(studentId)?.text||'';if(!text)return;
@@ -652,7 +643,7 @@ window.app={
  openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,exportExcel,exportRegistrationsExcel,
  readData:()=>state.data, role:()=>state.role, roleSpecialty, studentName,hydrateFromServer
 };
-window.ASV2115={version:'v21.15.2-20260910',features:['event-registrations','single-registration-delete','appreciation-review','direct-event-sync']};
+window.ASV2115={version:'v22.0.0-20260914',features:['event-registrations','single-registration-delete','appreciation-review','direct-event-sync']};
 render();
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
