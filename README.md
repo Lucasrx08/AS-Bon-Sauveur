@@ -25,7 +25,7 @@ PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section footba
 - commandes publiques transmises via une fonction serveur sécurisée, avec validation, anti-doublon et limitation de débit ;
 - inscriptions publiques transmises via une fonction serveur sécurisée, avec contrôle de l’événement et limitation de débit ;
 - suppression des accès SQL publics directs aux tables nominatives de commandes et d’inscriptions ;
-- durée de conservation automatisée : 7 jours après l’événement pour les inscriptions et jusqu’au 1er juillet de l’année scolaire concernée pour les commandes et données de suivi ;
+- durée de conservation automatisée : suppression des inscriptions et listes nominatives à minuit le jour de l’activité ; autres données de suivi jusqu’au 1er juillet de l’année scolaire concernée ;
 - nettoyage RGPD quotidien côté base de données ;
 - désactivation du module de réconciliation V20 susceptible de supprimer des lignes serveur à partir d’un état local incomplet ;
 - codes PIN conservés pour les enseignants/éducateurs, avec compte administrateur de secours.
