@@ -23,10 +23,10 @@ const api=(name)=>String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/'
 const headers=()=>({'Content-Type':'application/json','apikey':cfg.supabaseAnonKey||''});
 
 function modal(title,body){
-  document.getElementById('v22-modal')?.remove();
+  document.getElementById('v23-modal')?.remove();
   document.getElementById('v19-modal')?.remove();
   const w=document.createElement('div');
-  w.id='v22-modal';w.className='v19-modal-backdrop';
+  w.id='v23-modal';w.className='v19-modal-backdrop';
   w.innerHTML='<div class="v19-modal" role="dialog" aria-modal="true"><div class="v19-modal-head"><h2>'+esc(title)+'</h2><button type="button" class="v19-icon-btn" data-close aria-label="Fermer">×</button></div><div class="v19-modal-body">'+body+'</div></div>';
   document.body.appendChild(w);
   const close=()=>w.remove();
@@ -68,8 +68,8 @@ function secureOrder(productId){
   const product=productById(productId);if(!product)return toast('Produit introuvable.');
   const stableRequestId=uuid();
   const w=modal('Commander — '+product.name,
-    '<div class="v22-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
-    '<form id="v22-order-form" class="v19-form">'+
+    '<div class="v23-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
+    '<form id="v23-order-form" class="v19-form">'+
     '<label class="full"><span>Nom & prénom de l’élève</span><input name="studentName" required minlength="2" maxlength="120" autocomplete="name"></label>'+
     '<label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>'+opts(CLASSES)+'</select></label>'+
     '<label><span>Taille</span><select name="size">'+opts(SIZES,'M')+'</select></label>'+
@@ -77,18 +77,18 @@ function secureOrder(productId){
     '<label><span>Mode de paiement</span><select name="paymentMethod">'+opts(PAYMENTS,'Chèque')+'</select></label>'+
     '<label><span>Couleur / modèle</span><input name="color" maxlength="80" value="'+esc(product.color||'')+'"></label>'+
     '<div class="full v221-inline-privacy">Données utilisées uniquement pour gérer cette commande, conservées jusqu’au 1er juillet de l’année scolaire concernée. <button type="button" onclick="app.privacy()">En savoir plus</button></div><div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider la commande</button></div></form>'+
-    '<div class="v22-status" aria-live="polite"></div>');
-  const form=w.querySelector('#v22-order-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
+    '<div class="v23-status" aria-live="polite"></div>');
+  const form=w.querySelector('#v23-order-form'),status=w.querySelector('.v23-status'),button=form.querySelector('[type=submit]');
   form.onsubmit=async e=>{
     e.preventDefault();const fd=new FormData(form);
     const payload={requestId:stableRequestId,productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
-    if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='v22-status error';return}
-    button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='v22-status';
+    if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='v23-status error';return}
+    button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='v23-status';
     try{
       const result=await postPublic('public-order',payload);
       w.querySelector('.v19-modal-body').innerHTML='<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>Référence <strong>'+esc(result.reference||'AS')+'</strong>. Le paiement sera vérifié manuellement par l’équipe de l’AS.</p><button class="v19-btn" data-ok>Fermer</button></div>';
       w.querySelector('[data-ok]').onclick=()=>w.remove();
-    }catch(error){status.textContent=error.message;status.className='v22-status error';button.disabled=false;button.textContent='Valider la commande'}
+    }catch(error){status.textContent=error.message;status.className='v23-status error';button.disabled=false;button.textContent='Valider la commande'}
   };
 }
 
@@ -99,24 +99,24 @@ function secureRegistration(eventId){
   const stableRequestId=uuid();
   const w=modal('Inscription',
     '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(time(event.startTime)||'Horaire à préciser')+(event.endTime?' → '+esc(time(event.endTime)):'')+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
-    '<form id="v22-registration-form" class="v19-form">'+
+    '<form id="v23-registration-form" class="v19-form">'+
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+
     '<label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>'+opts(CLASSES)+'</select></label>'+
     '<div class="full v221-inline-privacy">Ces informations servent uniquement à organiser cette activité et sont supprimées automatiquement à minuit le jour de l’événement. <button type="button" onclick="app.privacy()">En savoir plus</button></div>'+
-    '<div class="full v22-status" aria-live="polite"></div>'+
+    '<div class="full v23-status" aria-live="polite"></div>'+
     '<div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider mon inscription</button></div></form>');
-  const form=w.querySelector('#v22-registration-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
+  const form=w.querySelector('#v23-registration-form'),status=w.querySelector('.v23-status'),button=form.querySelector('[type=submit]');
   form.onsubmit=async e=>{
     e.preventDefault();const fd=new FormData(form);
     const payload={requestId:stableRequestId,eventId:String(eventId),lastName:tidy(fd.get('lastName')).toLocaleUpperCase('fr-FR'),firstName:tidy(fd.get('firstName')),className:String(fd.get('className')||'')};
-    if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='full v22-status error';return}
-    button.disabled=true;button.textContent='Inscription en cours…';status.textContent='';status.className='full v22-status';
+    if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='full v23-status error';return}
+    button.disabled=true;button.textContent='Inscription en cours…';status.textContent='';status.className='full v23-status';
     try{
       await postPublic('public-registration',payload);
       w.querySelector('.v19-modal-body').innerHTML='<div class="v2115-registration-success"><span>✓</span><h3>'+esc(payload.firstName)+' '+esc(payload.lastName)+'</h3><p>L’inscription à <strong>'+esc(event.title)+'</strong> est bien enregistrée.</p><button class="v19-btn" data-ok>Fermer</button></div>';
       w.querySelector('[data-ok]').onclick=()=>w.remove();
-    }catch(error){status.textContent=error.message;status.className='full v22-status error';button.disabled=false;button.textContent='Valider mon inscription'}
+    }catch(error){status.textContent=error.message;status.className='full v23-status error';button.disabled=false;button.textContent='Valider mon inscription'}
   };
 }
 
