@@ -1,0 +1,6 @@
+/* V22 — confidentialité, retours sécurisés et finitions */
+.v22-secure-note{display:grid;gap:4px;margin:0 0 16px;padding:13px 15px;border:1px solid color-mix(in srgb,var(--blue) 18%,var(--line));border-radius:15px;background:color-mix(in srgb,var(--blue) 6%,var(--card));color:var(--muted);font-size:13px;line-height:1.45}
+.v22-secure-note strong{color:var(--ink);font-size:14px}
+.v22-status{display:none;margin-top:12px}
+.v22-status.error{display:block;padding:11px 13px;border-radius:13px;background:#fff0f2;border:1px solid #ffc2cc;color:#a6243b;font-weight:700;font-size:13px}
+body.dark .v22-status.error{background:color-mix(in srgb,#a6243b 18%,var(--card));border-color:color-mix(in srgb,#efb4bd 45%,var(--line));color:#ffb7c2}
