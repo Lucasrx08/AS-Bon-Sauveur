@@ -1,6 +1,19 @@
-# Association Sportive du Bon Sauveur — V21.15.2
+# Association Sportive du Bon Sauveur — V22.0
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
+
+## V22 — sécurité, RGPD et stabilité
+
+- données nominatives et pédagogiques retirées du stockage local persistant du navigateur ;
+- conservation temporaire en session pour rester compatible avec l’interface existante ;
+- Supabase demeure la source centrale pour les données partagées entre enseignants ;
+- commandes publiques transmises via une fonction serveur sécurisée, avec validation, anti-doublon et limitation de débit ;
+- inscriptions publiques transmises via une fonction serveur sécurisée, avec contrôle de l’événement et limitation de débit ;
+- suppression des accès SQL publics directs aux tables nominatives de commandes et d’inscriptions ;
+- durée de conservation automatisée : 90 jours après l’événement pour les inscriptions, 12 mois par défaut pour les commandes ;
+- nettoyage RGPD quotidien côté base de données ;
+- désactivation du module de réconciliation V20 susceptible de supprimer des lignes serveur à partir d’un état local incomplet ;
+- codes PIN conservés pour les enseignants/éducateurs, avec compte administrateur de secours.
 
 ## V21.15 — inscriptions et suivi pédagogique
 
