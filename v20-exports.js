@@ -6,7 +6,6 @@ const SPEC={'Association Sportive':'#2D4FAA','Section Football':'#2D79D8','Optio
 const titleFont='Anton, Impact, Arial Narrow, sans-serif';
 const bodyFont='Montserrat, Arial, sans-serif';
 const VERSION='v21.8.1-20260909';
-function fmtClock(value){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(value||'')}
 
 async function ensureDeps(){
  try{await document.fonts?.ready;await Promise.all([document.fonts?.load('48px Anton'),document.fonts?.load('36px Montserrat')])}catch{}
@@ -52,7 +51,7 @@ async function convCanvas(c,studentNames){
  let x=70,y=282;x+=chip(ctx,c.specialty||'Association Sportive',x,y,'#EEF4FF',a,420)+18;chip(ctx,c.ageCategory||'Toutes catégories',x,y,'#FFF1A5','#695A00',320);
  block(ctx,c.title||c.activity||'Convocation',70,385,1450,68,40,2,400,C.blue,titleFont,1.02);
  rr(ctx,70,470,305,300,28,'#F4F7FB');txt(ctx,dp.weekday,95,525,20,800,a);txt(ctx,dp.day,95,675,115,400,a,'left',titleFont);ctx.fillStyle=C.yellow;ctx.fillRect(95,700,180,10);txt(ctx,dp.month,95,754,27,400,a,'left',titleFont);
- info(ctx,'Lieu',c.place,440,500,320,{valueSize:31});info(ctx,'Départ',fmtClock(c.departure),805,500,230,{valueSize:34});info(ctx,'Retour',fmtClock(c.returnTime),1080,500,230,{valueSize:34});info(ctx,'Rendez-vous',c.meetingPoint,1350,500,560,{valueSize:28,maxLines:2});
+ info(ctx,'Lieu',c.place,440,500,320,{valueSize:31});info(ctx,'Départ',c.departure,805,500,230,{valueSize:34});info(ctx,'Retour',c.returnTime,1080,500,230,{valueSize:34});info(ctx,'Rendez-vous',c.meetingPoint,1350,500,560,{valueSize:28,maxLines:2});
  ctx.strokeStyle=C.line;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(440,650);ctx.lineTo(1920,650);ctx.stroke();
  info(ctx,'Professeur référent',c.teacher||'À renseigner',440,720,430,{valueSize:29,maxLines:2});info(ctx,'Informations importantes',c.extraInfo||'Aucune information particulière.',930,720,970,{accent:'#A48200',valueSize:26,maxLines:3});
  txt(ctx,'ÉLÈVES CONVOQUÉS',440,930,22,800,C.blue);ctx.fillStyle='#BFD1EA';ctx.fillRect(440,946,330,4);
@@ -64,7 +63,7 @@ async function convContinuation(c,studentNames,page,total){const im=await logo()
 async function programCanvas(events){
  const im=await logo(),{c:cv,ctx}=newCanvas(1448,2048);drawProgramDecor(ctx,1448,2048,im);
  const first=events[0],month=first?new Date(first.date+'T12:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'}).toUpperCase():'À VENIR';txt(ctx,month,72,350,28,400,C.blue,'left',titleFont);
- const slots=[{y:405,h:440},{y:870,h:440},{y:1335,h:440}];events.slice(0,3).forEach((e,i)=>{const q=slots[i],a=color(e.specialty),dp=parts(e.date);rr(ctx,70,q.y,1308,q.h,30,'rgba(255,255,255,.96)','#D9E2EE',3);rr(ctx,70,q.y,12,q.h,6,a);rr(ctx,112,q.y+54,182,182,30,'#F4F7FB');txt(ctx,dp.day,203,q.y+151,72,400,a,'center',titleFont);txt(ctx,dp.month.slice(0,4),203,q.y+202,20,400,a,'center',titleFont);block(ctx,e.title,335,q.y+105,885,43,28,2,400,C.ink,titleFont,1.05);chip(ctx,e.specialty||'Association Sportive',335,q.y+166,'#EEF4FB',a,365);info(ctx,'Catégorie',e.ageCategory||'Toutes catégories',335,q.y+292,330,{valueSize:24,maxLines:1});info(ctx,'Horaires',`${fmtClock(e.startTime)||'—'}${e.endTime?' – '+fmtClock(e.endTime):''}`,700,q.y+292,280,{valueSize:25,maxLines:1});info(ctx,'Lieu',e.place||'—',1010,q.y+292,320,{valueSize:23,maxLines:2});const d=window.app.readData(),has=(d.convocations||[]).some(c=>c.id===e.convocationId||(c.date===e.date&&c.specialty===e.specialty&&c.title===e.title));if(has){rr(ctx,1155,q.y+25,185,42,21,C.yellow);txt(ctx,'CONVOCATION',1248,q.y+53,14,800,'#4C4000','center')}});
+ const slots=[{y:405,h:440},{y:870,h:440},{y:1335,h:440}];events.slice(0,3).forEach((e,i)=>{const q=slots[i],a=color(e.specialty),dp=parts(e.date);rr(ctx,70,q.y,1308,q.h,30,'rgba(255,255,255,.96)','#D9E2EE',3);rr(ctx,70,q.y,12,q.h,6,a);rr(ctx,112,q.y+54,182,182,30,'#F4F7FB');txt(ctx,dp.day,203,q.y+151,72,400,a,'center',titleFont);txt(ctx,dp.month.slice(0,4),203,q.y+202,20,400,a,'center',titleFont);block(ctx,e.title,335,q.y+105,885,43,28,2,400,C.ink,titleFont,1.05);chip(ctx,e.specialty||'Association Sportive',335,q.y+166,'#EEF4FB',a,365);info(ctx,'Catégorie',e.ageCategory||'Toutes catégories',335,q.y+292,330,{valueSize:24,maxLines:1});info(ctx,'Horaires',`${e.startTime||'—'}${e.endTime?' – '+e.endTime:''}`,700,q.y+292,280,{valueSize:25,maxLines:1});info(ctx,'Lieu',e.place||'—',1010,q.y+292,320,{valueSize:23,maxLines:2});const d=window.app.readData(),has=(d.convocations||[]).some(c=>c.id===e.convocationId||(c.date===e.date&&c.specialty===e.specialty&&c.title===e.title));if(has){rr(ctx,1155,q.y+25,185,42,21,C.yellow);txt(ctx,'CONVOCATION',1248,q.y+53,14,800,'#4C4000','center')}});
  return cv
 }
 

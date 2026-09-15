@@ -113,7 +113,6 @@ function norm(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g
 function fmtLong(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtShort(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtDateTime(d){if(!d)return'—';const value=new Date(d);return Number.isNaN(value.getTime())?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(value)}
-function fmtTime(v){const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')}
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function money(n){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0))}
 function roleSpecialty(){return ROLE_SPECIALTY[state.role]||null}
@@ -179,7 +178,7 @@ function eventCard(e){
  const d=new Date(e.date+'T12:00:00');
  return `<article class="v19-card v19-event-card">
   <div class="v19-date"><strong>${d.getDate()}</strong><span>${d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').toUpperCase()}</span></div>
-  <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(fmtTime(e.startTime)||'—')}${e.endTime?' → '+esc(fmtTime(e.endTime)):''} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
+  <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(e.startTime||'—')}${e.endTime?' → '+esc(e.endTime):''} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
   <div class="v19-card-actions">${c?`<button class="v19-chip" onclick="app.openConv('${c.id}')">Voir convocation</button>`:eventRegistrationAvailable(e)?`<button class="v19-chip v2115-registration-chip" onclick="app.openEventRegistration('${e.id}')">Inscription</button>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
  </article>`;
 }
@@ -380,8 +379,8 @@ function editEvent(id){
   <label><span>Catégorie</span><select name="ageCategory">${options(AGE_CATEGORIES,e?.ageCategory||'Toutes catégories')}</select></label>
   <label><span>Spécialité</span><select name="specialty">${options(SPECIALTIES,e?.specialty||'Association Sportive')}</select></label>
   <label><span>Date</span><input type="date" name="date" required value="${esc(e?.date||new Date().toISOString().slice(0,10))}"></label>
-  <label><span>Heure de départ</span><input type="time" name="startTime" value="${esc(fmtTime(e?.startTime||''))}"></label>
-  <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(fmtTime(e?.endTime||''))}"></label>
+  <label><span>Heure de départ</span><input type="time" name="startTime" value="${esc(e?.startTime||'')}"></label>
+  <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(e?.endTime||'')}"></label>
   <label class="full"><span>Lieu</span><input name="place" value="${esc(e?.place||'')}"></label>
   <label class="full v2115-registration-choice"><input type="checkbox" name="registrationOpen" ${e?.registrationOpen&&!linkedConvocation?'checked':''} ${linkedConvocation?'disabled':''}><span><strong>Ouvrir l’inscription libre</strong><small>${linkedConvocation?'Une convocation est déjà liée à cet événement.':'Affiche le bouton Inscription tant qu’aucune convocation n’est disponible.'}</small></span></label>
   <div class="full v2115-form-status" data-event-status aria-live="polite"></div>
@@ -395,7 +394,7 @@ function studentName(id){return (state.data.students||[]).find(s=>s.id===id)?.fu
 function openConv(id){
  const c=(state.data.convocations||[]).find(x=>x.id===id);if(!c)return;const names=(c.studentIds||[]).map(studentName).filter(Boolean);
  modal('Convocation',`<div class="v19-conv-detail-head"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}</div><h2>${esc(c.title)}</h2></div>${specBadge(c.specialty)}</div>
-  <div class="v19-detail-grid"><div><span>Date</span><strong>${fmtLong(c.date)}</strong></div><div><span>Lieu</span><strong>${esc(c.place||'—')}</strong></div><div><span>Départ</span><strong>${esc(fmtTime(c.departure)||'—')}</strong></div><div><span>Retour</span><strong>${esc(fmtTime(c.returnTime)||'—')}</strong></div><div class="wide"><span>Point de rendez-vous</span><strong>${esc(c.meetingPoint||'—')}</strong></div><div class="wide"><span>Professeur référent</span><strong>${esc(c.teacher||'Non renseigné')}</strong><a class="v19-ed" href="https://www.ecoledirecte.com/" target="_blank" rel="noopener"><img src="assets/logo-ecoledirecte.svg"><span>Ouvrir ÉcoleDirecte</span>↗</a></div><div class="wide important"><span>Informations importantes</span><strong>${esc(c.extraInfo||'Aucune information particulière.')}</strong></div></div>
+  <div class="v19-detail-grid"><div><span>Date</span><strong>${fmtLong(c.date)}</strong></div><div><span>Lieu</span><strong>${esc(c.place||'—')}</strong></div><div><span>Départ</span><strong>${esc(c.departure||'—')}</strong></div><div><span>Retour</span><strong>${esc(c.returnTime||'—')}</strong></div><div class="wide"><span>Point de rendez-vous</span><strong>${esc(c.meetingPoint||'—')}</strong></div><div class="wide"><span>Professeur référent</span><strong>${esc(c.teacher||'Non renseigné')}</strong><a class="v19-ed" href="https://www.ecoledirecte.com/" target="_blank" rel="noopener"><img src="assets/logo-ecoledirecte.svg"><span>Ouvrir ÉcoleDirecte</span>↗</a></div><div class="wide important"><span>Informations importantes</span><strong>${esc(c.extraInfo||'Aucune information particulière.')}</strong></div></div>
   <div class="v19-students"><h3>Élèves convoqués</h3><div>${names.map(n=>`<span>${esc(n)}</span>`).join('')}</div></div>
   <div class="v19-modal-actions"><button class="v19-btn yellow" onclick="app.exportConvocation('${c.id}')">Exporter la convocation</button></div>`,true);
 }
@@ -410,8 +409,8 @@ function editConv(id){
   <label><span>Spécialité</span><select name="specialty">${options(SPECIALTIES,c?.specialty||'Association Sportive')}</select></label>
   <label><span>Date</span><input type="date" name="date" required value="${esc(c?.date||new Date().toISOString().slice(0,10))}"></label>
   <label><span>Lieu</span><input name="place" value="${esc(c?.place||'')}"></label>
-  <label><span>Heure de départ</span><input type="time" name="departure" value="${esc(fmtTime(c?.departure||''))}"></label>
-  <label><span>Heure de retour</span><input type="time" name="returnTime" value="${esc(fmtTime(c?.returnTime||''))}"></label>
+  <label><span>Heure de départ</span><input type="time" name="departure" value="${esc(c?.departure||'')}"></label>
+  <label><span>Heure de retour</span><input type="time" name="returnTime" value="${esc(c?.returnTime||'')}"></label>
   <label class="full"><span>Point de rendez-vous</span><input name="meetingPoint" value="${esc(c?.meetingPoint||'')}"></label>
   <label class="full"><span>Professeur référent</span><select name="teacher" required><option value="">Choisir un professeur</option>${options(TEACHERS,c?.teacher||'',null)}</select></label>
   <label class="full"><span>Informations importantes</span><textarea name="extraInfo" rows="4" placeholder="Repas, tenue, consignes, changement d’horaire…">${esc(c?.extraInfo||'')}</textarea></label>
@@ -509,7 +508,7 @@ function tidyName(value){return String(value||'').trim().replace(/\s+/g,' ')}
 async function openEventRegistration(eventId){
  const event=registrationEvent(eventId),convocation=eventConvocation(event);if(!event)return alert('Événement introuvable.');if(convocation||!event.registrationOpen||event.date<todayKey())return alert('Les inscriptions libres ne sont pas disponibles pour cet événement.');
  if(isManager()&&typeof window.__BS_PERSIST_EVENT==='function'){try{await window.__BS_PERSIST_EVENT(event)}catch(error){console.warn('Synchronisation événement',error);return alert('Cet événement n’est pas encore enregistré dans la base centrale. Réessayez dans un instant.')}}
- const m=modal('Inscription',`<div class="v2115-registration-intro"><div class="v19-kicker">${esc(event.specialty)}</div><h3>${esc(event.title)}</h3><p>${esc(fmtLong(event.date))} · ${esc(fmtTime(event.startTime)||'Horaire à préciser')}${event.endTime?' → '+esc(fmtTime(event.endTime)):''} · ${esc(event.place||'Lieu à préciser')}</p></div><form id="v2115-registration-form" class="v19-form">
+ const m=modal('Inscription',`<div class="v2115-registration-intro"><div class="v19-kicker">${esc(event.specialty)}</div><h3>${esc(event.title)}</h3><p>${esc(fmtLong(event.date))} · ${esc(event.startTime||'Horaire à préciser')}${event.endTime?' → '+esc(event.endTime):''} · ${esc(event.place||'Lieu à préciser')}</p></div><form id="v2115-registration-form" class="v19-form">
   <label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>
   <label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>
   <label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>${options(CLASSES,'',null)}</select></label>
