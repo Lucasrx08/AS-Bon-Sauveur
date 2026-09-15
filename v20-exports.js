@@ -6,6 +6,7 @@ const SPEC={'Association Sportive':'#2D4FAA','Section Football':'#2D79D8','Optio
 const titleFont='Anton, Impact, Arial Narrow, sans-serif';
 const bodyFont='Montserrat, Arial, sans-serif';
 const VERSION='v21.8.1-20260909';
+function fmtClock(value){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(value||'')}
 
 async function ensureDeps(){
  try{await document.fonts?.ready;await Promise.all([document.fonts?.load('48px Anton'),document.fonts?.load('36px Montserrat')])}catch{}
