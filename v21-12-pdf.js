@@ -35,7 +35,8 @@ function toast(message){
  const el=document.createElement('div');el.className='v19-toast v2112-toast';el.textContent=message;document.body.appendChild(el);setTimeout(()=>el.remove(),2600);
 }
 function today(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
-function parseDate(value){const d=new Date(String(value||'').slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?new Date():d}\nfunction fmtClock(value){const m=String(value||'').match(/^(\\d{1,2}):(\\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(value||'')}
+function parseDate(value){const d=new Date(String(value||'').slice(0,10)+'T12:00:00');return Number.isNaN(d.getTime())?new Date():d}
+function fmtClock(value){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(value||'')}
 function dateParts(value){
  const d=parseDate(value);return{
   weekday:d.toLocaleDateString('fr-FR',{weekday:'long'}).toUpperCase(),
