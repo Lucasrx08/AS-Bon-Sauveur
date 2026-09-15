@@ -12,32 +12,38 @@ Finalité : organiser la participation à une activité sportive.
 Données : nom, prénom, classe, événement.  
 Base légale : exécution de la demande d’inscription et intérêt légitime d’organisation.  
 Destinataires : enseignants AS / administrateurs autorisés.  
-Conservation : 90 jours après l’événement.
+Conservation : 7 jours après l’événement.
 
 ### Convocations
 Finalité : organiser les déplacements et participants.  
 Données : identité de l’élève, classe, activité, rendez-vous.  
 Base légale : intérêt légitime de l’établissement et organisation de l’activité scolaire/associative.  
 Destinataires : personnels autorisés selon rôle.  
-Conservation nominative : 90 jours après l’activité.
+Conservation nominative : 7 jours après l’activité.
 
 ### Licences et suivi des élèves
 Finalité : gestion de l’adhésion, cotisation, activité et suivi sportif.  
 Données : identité, classe, catégorie, spécialité, paiement, charte.  
 Base légale : exécution de l’adhésion/demande et intérêt légitime d’organisation.  
-Conservation : jusqu’au 1er octobre suivant l’année scolaire concernée.
+Conservation : jusqu’au 1er juillet de l’année scolaire concernée.
 
 ### Appréciations sportives
 Finalité : suivi pédagogique des dispositifs sportifs et transfert vers les outils scolaires.  
 Données : identité de l’élève, texte d’appréciation, trimestre, éducateur.  
 Base légale : intérêt légitime / mission éducative de l’établissement à confirmer dans le registre institutionnel.  
-Conservation : jusqu’au 1er octobre suivant l’année scolaire concernée.
+Conservation : jusqu’au 1er juillet de l’année scolaire concernée.
 
 ### Commandes
 Finalité : gérer les commandes de vêtements/articles AS et leur paiement/distribution.  
 Données : nom de l’élève, classe, produit, taille, quantité, paiement, état de distribution.  
 Base légale : exécution de la commande ; obligations comptables applicables le cas échéant.  
-Conservation dans l’application : 12 mois maximum.
+Conservation dans l’application : jusqu’au 1er juillet de l’année scolaire concernée.
+
+### Bilans AS
+Finalité : suivi des activités et compétitions de l’Association Sportive.  
+Données : date, activité, effectifs et, lorsqu’un commentaire en contient, données personnelles liées à l’activité.  
+Base légale : intérêt légitime de l’établissement à assurer le suivi de ses activités sportives.  
+Conservation : jusqu’au 1er juillet de l’année scolaire concernée.
 
 ### Comptes staff et sécurité
 Finalité : authentification, gestion des droits, prévention des tentatives abusives.  
