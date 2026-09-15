@@ -73,7 +73,7 @@ function secureOrder(productId){
     '<label><span>Quantité</span><input type="number" name="quantity" min="1" max="10" value="1"></label>'+
     '<label><span>Mode de paiement</span><select name="paymentMethod">'+opts(PAYMENTS,'Chèque')+'</select></label>'+
     '<label><span>Couleur / modèle</span><input name="color" maxlength="80" value="'+esc(product.color||'')+'"></label>'+
-    '<div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider la commande</button></div></form>'+
+    '<div class="full v221-inline-privacy">Données utilisées uniquement pour gérer cette commande, conservées 12 mois maximum. <button type="button" onclick="app.privacy()">En savoir plus</button></div><div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider la commande</button></div></form>'+
     '<div class="v22-status" aria-live="polite"></div>');
   const form=w.querySelector('#v22-order-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
   form.onsubmit=async e=>{
@@ -99,7 +99,7 @@ function secureRegistration(eventId){
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+
     '<label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>'+opts(CLASSES)+'</select></label>'+
-    '<div class="full v2115-privacy">Ces informations servent uniquement à organiser cette activité. Elles sont supprimées automatiquement après la période de conservation prévue.</div>'+
+    '<div class="full v221-inline-privacy">Ces informations servent uniquement à organiser cette activité et sont supprimées au plus tard 90 jours après l’événement. <button type="button" onclick="app.privacy()">En savoir plus</button></div>'+
     '<div class="full v22-status" aria-live="polite"></div>'+
     '<div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider mon inscription</button></div></form>');
   const form=w.querySelector('#v22-registration-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
