@@ -99,7 +99,7 @@ function secureRegistration(eventId){
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+
     '<label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>'+opts(CLASSES)+'</select></label>'+
-    '<div class="full v221-inline-privacy">Ces informations servent uniquement à organiser cette activité et sont supprimées 7 jours après l’événement. <button type="button" onclick="app.privacy()">En savoir plus</button></div>'+
+    '<div class="full v221-inline-privacy">Ces informations servent uniquement à organiser cette activité et sont supprimées automatiquement à minuit le jour de l’événement. <button type="button" onclick="app.privacy()">En savoir plus</button></div>'+
     '<div class="full v22-status" aria-live="polite"></div>'+
     '<div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider mon inscription</button></div></form>');
   const form=w.querySelector('#v22-registration-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
