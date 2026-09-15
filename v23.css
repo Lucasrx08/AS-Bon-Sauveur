@@ -13,3 +13,4 @@ body.dark .v23-status.error{background:color-mix(in srgb,#a6243b 18%,var(--card)
 .v23-tv-preview-content .v2112-mini-event b{font-size:9px}.v23-tv-preview-content .v2112-mini-event span{font-size:7px}
 @media(max-width:760px){.v23-tv-btn{min-width:0}.v23-tv-preview-sheet{display:none}}
 .v23-tv-preview-sheet:before{content:"PROGRAMME\A ASSOCIATION SPORTIVE BON SAUVEUR";white-space:pre;position:absolute;left:2.3%;top:8.5%;font-family:"AS Anton",Impact,sans-serif;font-size:clamp(8px,1.05vw,15px);line-height:.72;color:#343434;z-index:1}
+.v23-privacy-modal .v19-modal-head h2{font-family:"AS Anton",Impact,"Arial Narrow",sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase}
