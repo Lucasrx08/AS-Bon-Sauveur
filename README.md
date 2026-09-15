@@ -1,6 +1,21 @@
-# Association Sportive du Bon Sauveur — V22.0
+# Association Sportive du Bon Sauveur — V22.1
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
+
+## V22.1 — finalisation RGPD
+
+- notice « Données personnelles & RGPD » accessible depuis toutes les pages ;
+- information courte affichée au moment d’une inscription ou d’une commande ;
+- responsable de traitement et contact officiel de l’établissement affichés ;
+- finalités, bases légales, destinataires, durées de conservation, droits et recours CNIL explicités ;
+- purge automatisée étendue aux listes nominatives de convocations, élèves, licences, appréciations et bilans ;
+- fonctions de rôle privilégiées déplacées hors du schéma API public ;
+- fonctions publiques de rôle converties en SECURITY INVOKER ;
+- chargement Google Fonts supprimé ;
+- flux Instagram automatique désactivé : ouverture uniquement après clic volontaire ;
+- version de supabase-js fixée ;
+- registre simplifié des traitements : `RGPD_V22_1.md` ;
+- migration de production archivée : `supabase/migration_v22_1.sql`.
 
 ## V22 — sécurité, RGPD et stabilité
 
@@ -142,4 +157,4 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Mise en production
 
-Ne fusionner la V21.15.2 vers `main` qu’après avoir appliqué les migrations V21.15 et V21.15.2, puis testé au minimum une inscription publique, une suppression ciblée, un compte enseignant AS, un compte administrateur et un compte éducateur.
+La V22.1 est active sur `main`. Les migrations V22 et V22.1 sont appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
