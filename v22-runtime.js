@@ -14,7 +14,8 @@ const CLASSES=[
 const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
 const PAYMENTS=['Espèces','Virement','Chèque'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');\nconst time=v=>{const m=String(v||'').match(/^(\\d{1,2}):(\\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')};
+const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');
+const time=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')};
 const uuid=()=>globalThis.crypto?.randomUUID?.()||'00000000-0000-4000-8000-'+Math.random().toString(16).slice(2).padEnd(12,'0').slice(0,12);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 const api=(name)=>String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/'+name;
