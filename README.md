@@ -1,4 +1,4 @@
-# Association Sportive du Bon Sauveur — V23
+# Association Sportive du Bon Sauveur — V24
 
 ## V23 — version stable et sécurisée
 
@@ -20,6 +20,16 @@
 - migration de production archivée dans `supabase/migration_v23.sql`.
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
+
+## V24 — stabilité et horaires
+
+- retour au shell stable V22.1, antérieur à l’Export TV ;
+- aucun module Export TV chargé ;
+- aucun nouvel observateur DOM ;
+- horaires affichés au format HH:MM sans secondes ;
+- service worker en mode stabilité, sans cache applicatif persistant ;
+- backend Supabase sécurisé conservé.
+
 
 ## V22.1 — finalisation RGPD
 
