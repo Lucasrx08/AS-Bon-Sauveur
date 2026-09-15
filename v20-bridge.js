@@ -97,7 +97,6 @@ async function persistEvent(event){
 window.__BS_PERSIST_EVENT=persistEvent;
 async function syncSnapshot(){
  if(!hasSupabase||hydrating)return;const data=safeJson(localStorage.getItem(STORE),{});
- await submitPublicOrders(data.orders||[]);
  if(!currentUser)return;
  if(['teacher_as','admin'].includes(currentRole)){
   await upsertTable('v20_events',(data.events||[]).map(x=>({...x,publicVisible:true})));
@@ -116,14 +115,6 @@ async function syncSnapshot(){
  if(currentRole.startsWith('educator_')||['teacher_as','admin'].includes(currentRole)){
   const apps=(data.appreciations||[]).map(a=>({...a,educatorId:a.educatorId||currentUser.id,term:a.term||term}));await upsertTable('v20_appreciations',apps)
  }
-}
-async function submitPublicOrders(orders){
- if(!hasSupabase||!orders.length)return;const sent=new Set(safeJson(localStorage.getItem(SENT_ORDERS),'[]'));
- for(const o of orders){if(sent.has(o.id))continue;const payload=snake({...o,id:o.id||uid('o'),createdAt:o.createdAt||new Date().toISOString()});const {error}=await sb.from('v20_orders').insert(payload);if(!error){sent.add(o.id);localStorage.setItem(SENT_ORDERS,JSON.stringify([...sent]))}}
-}
-
-function installStorageSync(){
- const native=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){native.call(this,k,v);if(this===localStorage&&k===STORE&&!hydrating){clearTimeout(syncTimer);syncTimer=setTimeout(syncSnapshot,500)}};
 }
 function loadScript(src,key){return new Promise((resolve,reject)=>{if(window[key])return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
 function wrapLazyDependencies(){
@@ -158,7 +149,7 @@ function enhanceA11y(root=document){
 function observeA11y(){enhanceA11y();new MutationObserver(()=>enhanceA11y()).observe(document.body,{childList:true,subtree:true})}
 
 async function init(){
- installStorageSync();wrapLazyDependencies();overrideSecurityUI();observeA11y();
+ wrapLazyDependencies();overrideSecurityUI();observeA11y();
  document.addEventListener('submit',async e=>{
   if(e.target?.id==='v20-login'){
    e.preventDefault();const fd=new FormData(e.target);const {error}=await sb.auth.signInWithPassword({email:String(fd.get('email')),password:String(fd.get('password'))});if(error)toast('Connexion impossible : '+error.message);else{document.getElementById('v20-modal')?.remove();toast('Connexion réussie')};return
