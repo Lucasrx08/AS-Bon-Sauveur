@@ -14,7 +14,7 @@ const CLASSES=[
 const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
 const PAYMENTS=['Espèces','Virement','Chèque'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');
+const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');\nconst time=v=>{const m=String(v||'').match(/^(\\d{1,2}):(\\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')};
 const uuid=()=>globalThis.crypto?.randomUUID?.()||'00000000-0000-4000-8000-'+Math.random().toString(16).slice(2).padEnd(12,'0').slice(0,12);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 const api=(name)=>String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/'+name;
@@ -94,7 +94,7 @@ function secureRegistration(eventId){
   if(!event)return toast('Événement introuvable.');
   if(linkedConvocation(event)||!event.registrationOpen||String(event.date||'')<new Date().toISOString().slice(0,10))return toast('Les inscriptions ne sont pas ouvertes pour cet événement.');
   const w=modal('Inscription',
-    '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(event.startTime||'Horaire à préciser')+(event.endTime?' → '+esc(event.endTime):'')+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
+    '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(time(event.startTime)||'Horaire à préciser')+(event.endTime?' → '+esc(time(event.endTime)):'')+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
     '<form id="v22-registration-form" class="v19-form">'+
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+
