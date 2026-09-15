@@ -395,8 +395,8 @@ function editEvent(id){
   <label><span>Catégorie</span><select name="ageCategory">${options(AGE_CATEGORIES,e?.ageCategory||'Toutes catégories')}</select></label>
   <label><span>Spécialité</span><select name="specialty">${options(SPECIALTIES,e?.specialty||'Association Sportive')}</select></label>
   <label><span>Date</span><input type="date" name="date" required value="${esc(e?.date||new Date().toISOString().slice(0,10))}"></label>
-  <label><span>Heure de départ</span><input type="time" name="startTime" value="${esc(e?.startTime||'')}"></label>
-  <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(e?.endTime||'')}"></label>
+  <label><span>Heure de départ</span><input type="time" name="startTime" value="${esc(e?.startTime||'12:30')}"></label>
+  <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(e?.endTime||'14:30')}"></label>
   <label class="full"><span>Lieu</span><input name="place" value="${esc(e?.place||'')}"></label>
   <label class="full v2115-registration-choice"><input type="checkbox" name="registrationOpen" ${e?.registrationOpen&&!linkedConvocation?'checked':''} ${linkedConvocation?'disabled':''}><span><strong>Ouvrir l’inscription libre</strong><small>${linkedConvocation?'Une convocation est déjà liée à cet événement.':'Affiche le bouton Inscription tant qu’aucune convocation n’est disponible.'}</small></span></label>
   <div class="full v2115-form-status" data-event-status aria-live="polite"></div>
