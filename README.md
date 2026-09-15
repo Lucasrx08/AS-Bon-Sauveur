@@ -1,4 +1,23 @@
-# Association Sportive du Bon Sauveur — V22.1
+# Association Sportive du Bon Sauveur — V23
+
+## V23 — version stable et sécurisée
+
+- branche de validation dédiée avant mise en production ;
+- données nominatives conservées uniquement en session côté navigateur ;
+- suppression du mécanisme V20 de synchronisation automatique de tout le `localStorage` vers Supabase ;
+- commandes publiques et inscriptions libres exclusivement via Edge Functions sécurisées ;
+- identifiant de requête stable pendant un nouvel essai afin d’éviter les doublons ;
+- authentification des enseignants/éducateurs par nom + PIN à 6 chiffres ;
+- limitation de débit des connexions PIN par identifiant et par origine réseau ;
+- CORS des fonctions sensibles limité au domaine officiel GitHub Pages ;
+- inscription supprimée automatiquement après l’événement, conformément à l’information affichée ;
+- commandes et autres données scolaires supprimées au plus tard au 1er juillet suivant l’année scolaire concernée ;
+- nettoyage RGPD automatique toutes les heures ;
+- contraintes SQL supplémentaires sur les quantités et les champs nominatifs ;
+- export TV renforcé pour Safari et les navigateurs ne supportant pas certaines API récentes ;
+- service worker V23 : shell hors ligne sans interception des appels Supabase ;
+- dépôt GitHub réaligné avec les fonctions Edge réellement déployées ;
+- migration de production archivée dans `supabase/migration_v23.sql`.
 
 PWA mobile-first pour l’Association Sportive du Bon Sauveur, la section football, l’option escalade et le sport-études gymnastique.
 
@@ -157,4 +176,4 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Mise en production
 
-La V22.1 est active sur `main`. Les migrations V22 et V22.1 sont appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
+La V23 est la version de production. Les migrations V22, V22.1 et V23 sont appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
