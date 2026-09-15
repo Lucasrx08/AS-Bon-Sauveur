@@ -27,7 +27,7 @@ function openPrivacy(){
           '<section><h3>Cookies et suivi</h3><p>L’application n’utilise pas de cookie publicitaire ni d’outil de mesure d’audience. Les éléments techniques nécessaires à la connexion et à la sécurité servent uniquement au fonctionnement de l’application.</p></section>'+
           '<section><h3>Mineurs</h3><p>L’application étant destinée notamment à des élèves mineurs, la collecte est limitée au strict nécessaire pour chaque fonctionnalité et l’information est présentée en termes simples.</p></section>'+
         '</div>'+
-        '<div class="v221-privacy-version">Notice V22.1 · mise à jour : 15 septembre 2026</div>'+
+        '<div class="v221-privacy-version">Notice V24 · mise à jour : 15 septembre 2026</div>'+
       '</div>'+
     '</div>';
   document.body.appendChild(w);
@@ -39,7 +39,7 @@ function injectFooter(){
   const shell=document.querySelector('.v19-shell'); if(!shell)return;
   if(shell.querySelector('.v221-privacy-footer'))return;
   const f=document.createElement('footer'); f.className='v221-privacy-footer';
-  f.innerHTML='<button type="button" data-privacy>Données personnelles & RGPD</button><span>V22.1</span>';
+  f.innerHTML='<button type="button" data-privacy>Données personnelles & RGPD</button><span>V24</span>';
   f.querySelector('[data-privacy]').onclick=openPrivacy;
   shell.appendChild(f);
 }
