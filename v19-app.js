@@ -112,7 +112,8 @@ function esc(v=''){return String(v??'').replace(/[&<>"]/g,s=>({'&':'&amp;','<':'
 function norm(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,' ').replace(/[^a-z0-9]+/g,' ').trim()}
 function fmtLong(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtShort(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00'))}
-function fmtDateTime(d){if(!d)return'—';const value=new Date(d);return Number.isNaN(value.getTime())?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(value)}\nfunction fmtTime(v){const m=String(v||'').match(/^(\\d{1,2}):(\\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')}
+function fmtDateTime(d){if(!d)return'—';const value=new Date(d);return Number.isNaN(value.getTime())?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(value)}
+function fmtTime(v){const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')}
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function money(n){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0))}
 function roleSpecialty(){return ROLE_SPECIALTY[state.role]||null}
