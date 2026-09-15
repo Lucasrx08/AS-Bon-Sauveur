@@ -53,7 +53,7 @@ install();
 setTimeout(()=>{
   if(document.querySelector('script[data-v251-functional]'))return;
   const s=document.createElement('script');
-  s.src='v25-1-functional.js?v=20260915-v25-1';
+  s.src='v25-1-functional.js?v=20260915-v25-1-1';
   s.dataset.v251Functional='1';
   document.body.appendChild(s);
 },0);
