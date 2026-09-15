@@ -1,4 +1,4 @@
-const CACHE='as-bon-sauveur-v23';
+const CACHE='as-bon-sauveur-v23.0.1';
 const CORE=['./','./index.html','./manifest.webmanifest','./assets/logo-as.png','./v19.css','./v20.css','./v21.css','./v21-15.css','./v22-1.css','./v23.css'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).catch(()=>{}).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
