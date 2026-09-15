@@ -1,11 +1,14 @@
-self.addEventListener('install',()=>self.skipWaiting());
-self.addEventListener('activate',event=>{
-  event.waitUntil(
-    caches.keys()
-      .then(keys=>Promise.all(keys.map(key=>caches.delete(key))))
-      .then(()=>self.clients.claim())
-  );
+const CACHE_NAME='as-bon-sauveur-offline-v25';
+const OFFLINE_URL='./offline.html';
+const ESSENTIAL=[OFFLINE_URL,'./assets/logo-as.png'];
+
+self.addEventListener('install',event=>{
+ event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(ESSENTIAL)).then(()=>self.skipWaiting()));
 });
-// Stability mode: do not intercept network requests. The application always loads
-// the current GitHub Pages assets while Supabase authentication is being stabilized.
-self.addEventListener('fetch',()=>{});
+self.addEventListener('activate',event=>{
+ event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+});
+self.addEventListener('fetch',event=>{
+ if(event.request.mode!=='navigate')return;
+ event.respondWith(fetch(event.request).catch(()=>caches.match(OFFLINE_URL)));
+});

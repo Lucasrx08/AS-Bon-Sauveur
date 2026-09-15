@@ -3,7 +3,7 @@
 
 if(!window.app)return;
 
-const VERSION='v24.1-20260915';
+const VERSION='v25.0-20260915';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -52,7 +52,7 @@ function shortDate(value){return parseDate(value).toLocaleDateString('fr-FR',{da
 function shortTime(value){const match=String(value||'').match(/^(\d{1,2}):(\d{2})/);return match?`${match[1].padStart(2,'0')}:${match[2]}`:String(value||'')}
 function orderedEvents(){
  const roleSpecialty=window.app?.roleSpecialty?.();
- return (read().events||[]).filter(e=>!roleSpecialty||e.specialty===roleSpecialty).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
+ return (read().events||[]).filter(e=>String(e.date||'')>=today()).filter(e=>!roleSpecialty||e.specialty===roleSpecialty).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
 }
 function periodLabel(events){
  if(!events.length)return'À VENIR';
@@ -204,10 +204,10 @@ function drawStudentGrid(doc,rows,{x=13,y=150,w=271,cols=3,rowsPerPage=4,cellH=1
 function drawConvocationFirst(doc,c,students,totalPages){
  const theme=spec(c.specialty);drawConvocationHeading(doc,c,totalPages);drawDateCard(doc,c);
  infoBox(doc,'Lieu',c.place||'À préciser',63,68,111,18,theme.accent,{valueSize:12,minValueSize:9,maxLines:1});infoBox(doc,'Départ',c.departure||'À préciser',179,68,49,18,theme.accent,{valueSize:14,minValueSize:10,maxLines:1});infoBox(doc,'Retour',c.returnTime||'À préciser',233,68,51,18,theme.accent,{valueSize:14,minValueSize:10,maxLines:1});infoBox(doc,'Point de rendez-vous',c.meetingPoint||'À préciser',63,90,221,17,theme.accent,{valueSize:11.5,minValueSize:9,maxLines:1});
- infoBox(doc,'Professeur référent',c.teacher||'À renseigner',13,112,75,22,theme.accent,{valueSize:11.5,minValueSize:9,maxLines:2});infoBox(doc,'Informations importantes',c.extraInfo||'Aucune information particulière.',93,112,191,22,[151,121,0],{valueSize:10.5,minValueSize:8.4,maxLines:2});
+ infoBox(doc,'Professeur référent',c.teacher||(window.app?.role?.()==='public'?'Référent via ÉcoleDirecte':'À renseigner'),13,112,75,22,theme.accent,{valueSize:11.5,minValueSize:8.4,maxLines:2});infoBox(doc,'Informations importantes',c.extraInfo||'Aucune information particulière.',93,112,191,22,[151,121,0],{valueSize:10.5,minValueSize:8.4,maxLines:2});
  label(doc,'Élèves convoqués',13,144,theme.accent,13.5);font(doc,'anton');doc.setFontSize(10.5);color(doc,C.muted);doc.text(students.length?`${students.length} ÉLÈVE${students.length>1?'S':''}`:'',284,144,{align:'right'});
  if(students.length)drawStudentGrid(doc,students.slice(0,12),{accent:theme.accent,pale:theme.pale});
- else{font(doc,'body','bold');doc.setFontSize(11);color(doc,C.muted);doc.text(window.app?.role?.()==='public'?"Liste nominative disponible dans l’espace sécurisé.":'Aucun élève sélectionné.',13,158)}
+ else{font(doc,'body','bold');doc.setFontSize(11);color(doc,C.muted);doc.text(window.app?.role?.()==='public'?"Liste transmise via ÉcoleDirecte.":'Aucun élève sélectionné.',13,158)}
 }
 function drawContinuation(doc,c,students,page,totalPages){
  const theme=spec(c.specialty);let x=13;x+=pill(doc,theme.short,x,42,{bg:theme.pale,fg:theme.accent,maxW:82,height:9,fontSize:8.5})+3;pill(doc,c.ageCategory||'Toutes catégories',x,42,{bg:[255,247,204],fg:[111,91,0],maxW:64,height:9,fontSize:8.5});

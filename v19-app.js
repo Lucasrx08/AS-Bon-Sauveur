@@ -145,7 +145,11 @@ function icon(name){
 function toast(msg){const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2200)}
 
 function currentNav(){
- if(state.role==='public') return [['home','home','Accueil'],['convocations','flag','Convocation'],['calendar','cal','Calendrier'],['shop','shop','Boutique'],['documents','doc','Documents']];
+ if(state.role==='public'){
+  const items=[['home','home','Accueil'],['convocations','flag','Convocation'],['calendar','cal','Calendrier'],['shop','shop','Boutique']];
+  if((state.data.documents||[]).some(d=>/^https?:\/\//i.test(String(d.url||''))))items.push(['documents','doc','Documents']);
+  return items;
+ }
  if(isEducator()) return [['home','home','Accueil'],['calendar','cal','Calendrier'],['appreciations','app','Appréciations']];
  return [['home','home','Accueil'],['calendar','cal','Calendrier'],['convocations','flag','Convocations'],['reports','chart','Bilans'],['more','more','Plus']];
 }
@@ -204,7 +208,7 @@ function homePage(){
 }
 function calendarPage(){
  const actions=(isManager()?`<button class="v19-btn" onclick="app.editEvent()">+ Événement</button>`:'')+`<button class="v19-btn yellow" onclick="app.exportCalendarPDF()">Exporter le calendrier</button>`;
- const q=norm(state.search), list=eventsVisible().filter(e=>!q||norm(`${e.title} ${e.place} ${e.ageCategory} ${e.specialty}`).includes(q));
+ const q=norm(state.search), list=eventsVisible().filter(e=>String(e.date||'')>=todayKey()).filter(e=>!q||norm(`${e.title} ${e.place} ${e.ageCategory} ${e.specialty}`).includes(q));
  return `<div class="v19-container">${pageTitle('CALENDRIER','À venir',roleSpecialty()?`Uniquement les rendez-vous liés à ${roleSpecialty()}.`:'Compétitions, entraînements et rendez-vous.',actions)}
  <input class="v19-search" placeholder="Rechercher…" value="${esc(state.search)}" oninput="app.search(this.value)">
  <div class="v19-stack">${list.map(eventCard).join('')||'<div class="v19-empty">Aucun rendez-vous.</div>'}</div></div>`;
@@ -213,12 +217,13 @@ function convCard(c){
  const names=(c.studentIds||[]).map(studentName).filter(Boolean);
  return `<article class="v19-card v19-conv-card">
   <div class="v19-row"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}</div><h3>${esc(c.title||'Convocation')}</h3><div class="v19-meta">${fmtLong(c.date)} · ${esc(c.place||'—')}</div></div>${specBadge(c.specialty)}</div>
-  <div class="v19-conv-names"><strong>Élèves convoqués :</strong> ${esc(names.join(' · ')||'Aucun élève')}</div>
+  <div class="v19-conv-names"><strong>Élèves convoqués :</strong> ${esc(names.join(' · ')||(state.role==='public'?'Liste transmise via ÉcoleDirecte':'Aucun élève sélectionné'))}</div>
   <div class="v19-card-actions"><button class="v19-btn small" onclick="app.openConv('${c.id}')">Consulter</button><button class="v19-btn small yellow" onclick="app.exportConvocation('${c.id}')">Exporter</button>${isManager()?`<button class="v19-link" onclick="app.editConv('${c.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteConv('${c.id}')">Supprimer</button>`:''}</div>
  </article>`;
 }
 function convocationsPage(){
  let list=(state.data.convocations||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ if(state.role==='public')list=list.filter(c=>String(c.date||'')>=todayKey());
  if(isEducator()) list=list.filter(c=>c.specialty===roleSpecialty());
  const actions=isManager()?`<button class="v19-btn" onclick="app.editConv()">+ Convocation</button><button class="v19-btn secondary" onclick="app.exportExcel('convocations')">Exporter Excel</button>`:'';
  return `<div class="v19-container">${pageTitle('CONVOCATIONS','Convocations','Horaires, informations et élèves convoqués.',actions)}<div class="v19-stack">${list.map(convCard).join('')||'<div class="v19-empty">Aucune convocation.</div>'}</div></div>`;
@@ -326,8 +331,9 @@ function shopPage(){
  <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(p.image||'assets/logo-as.png')}"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
 }
 function documentsPage(){
+ const rows=(state.data.documents||[]).filter(d=>state.role!=='public'||/^https?:\/\//i.test(String(d.url||'')));
  return `<div class="v19-container">${pageTitle('DOCUMENTS','Documents','Ressources utiles.')}
- <div class="v19-grid">${(state.data.documents||[]).map(d=>`<article class="v19-card"><div class="v19-row"><div>${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions"><button class="v19-btn secondary" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn" onclick="app.openDoc('${d.id}')">Télécharger</button></div></article>`).join('')}</div></div>`;
+ <div class="v19-grid">${rows.map(d=>`<article class="v19-card"><div class="v19-row"><div>${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions">${/^https?:\/\//i.test(String(d.url||''))?`<button class="v19-btn secondary" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn" onclick="app.openDoc('${d.id}')">Télécharger</button>`:(isManager()?`<span class="v19-meta">Fichier non associé — à compléter dans l’administration.</span>`:'')}</div></article>`).join('')||'<div class="v19-empty">Aucun document publié pour le moment.</div>'}</div></div>`;
 }
 function morePage(){
  if(!isManager()) return denied();
@@ -369,7 +375,17 @@ function profile(){
 function setRole(r){state.role=r;localStorage.setItem(ROLE_KEY,r);state.route='home';closeModal();render()}
 function go(r){state.route=r;state.search='';render();if(r==='registrations'&&isManager())refreshEventRegistrations(true);if(r==='appreciationReview'&&isManager())refreshAppreciationReview(true)}
 function theme(){state.dark=!state.dark;localStorage.setItem('bs-dark',state.dark?'1':'0');document.body.classList.toggle('dark',state.dark);render()}
-function search(v){state.search=v;render()}
+function search(v){
+ state.search=String(v||'');
+ const input=document.querySelector('.v19-search');
+ if(!input)return;
+ const q=norm(state.search),cards=[...document.querySelectorAll('.v19-event-card')];
+ let visible=0;
+ cards.forEach(card=>{const show=!q||norm(card.textContent||'').includes(q);card.hidden=!show;if(show)visible++});
+ let empty=document.querySelector('[data-v25-search-empty]');
+ if(!empty){empty=document.createElement('div');empty.className='v19-empty';empty.dataset.v25SearchEmpty='1';empty.textContent='Aucun rendez-vous correspondant.';input.parentElement?.appendChild(empty)}
+ empty.hidden=visible>0;
+}
 
 function editEvent(id){
  if(!isManager())return; const e=id?(state.data.events||[]).find(x=>x.id===id):null;
@@ -394,8 +410,8 @@ function studentName(id){return (state.data.students||[]).find(s=>s.id===id)?.fu
 function openConv(id){
  const c=(state.data.convocations||[]).find(x=>x.id===id);if(!c)return;const names=(c.studentIds||[]).map(studentName).filter(Boolean);
  modal('Convocation',`<div class="v19-conv-detail-head"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}</div><h2>${esc(c.title)}</h2></div>${specBadge(c.specialty)}</div>
-  <div class="v19-detail-grid"><div><span>Date</span><strong>${fmtLong(c.date)}</strong></div><div><span>Lieu</span><strong>${esc(c.place||'—')}</strong></div><div><span>Départ</span><strong>${esc(c.departure||'—')}</strong></div><div><span>Retour</span><strong>${esc(c.returnTime||'—')}</strong></div><div class="wide"><span>Point de rendez-vous</span><strong>${esc(c.meetingPoint||'—')}</strong></div><div class="wide"><span>Professeur référent</span><strong>${esc(c.teacher||'Non renseigné')}</strong><a class="v19-ed" href="https://www.ecoledirecte.com/" target="_blank" rel="noopener"><img src="assets/logo-ecoledirecte.svg"><span>Ouvrir ÉcoleDirecte</span>↗</a></div><div class="wide important"><span>Informations importantes</span><strong>${esc(c.extraInfo||'Aucune information particulière.')}</strong></div></div>
-  <div class="v19-students"><h3>Élèves convoqués</h3><div>${names.map(n=>`<span>${esc(n)}</span>`).join('')}</div></div>
+  <div class="v19-detail-grid"><div><span>Date</span><strong>${fmtLong(c.date)}</strong></div><div><span>Lieu</span><strong>${esc(c.place||'—')}</strong></div><div><span>Départ</span><strong>${esc(c.departure||'—')}</strong></div><div><span>Retour</span><strong>${esc(c.returnTime||'—')}</strong></div><div class="wide"><span>Point de rendez-vous</span><strong>${esc(c.meetingPoint||'—')}</strong></div><div class="wide"><span>Professeur référent</span><strong>${esc(c.teacher||(state.role==='public'?'Référent communiqué via ÉcoleDirecte':'Non renseigné'))}</strong><a class="v19-ed" href="https://www.ecoledirecte.com/" target="_blank" rel="noopener"><img src="assets/logo-ecoledirecte.svg"><span>Ouvrir ÉcoleDirecte</span>↗</a></div><div class="wide important"><span>Informations importantes</span><strong>${esc(c.extraInfo||'Aucune information particulière.')}</strong></div></div>
+  <div class="v19-students"><h3>Élèves convoqués</h3><div>${names.length?names.map(n=>`<span>${esc(n)}</span>`).join(''):`<span>${esc(state.role==='public'?'Liste transmise via ÉcoleDirecte':'Aucun élève sélectionné.')}</span>`}</div></div>
   <div class="v19-modal-actions"><button class="v19-btn yellow" onclick="app.exportConvocation('${c.id}')">Exporter la convocation</button></div>`,true);
 }
 function editConv(id){
