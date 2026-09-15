@@ -64,7 +64,7 @@ Storage.prototype.setItem=function(key,value){
     const {publicData,privateData}=splitData(full);
     nativeSet.call(localStorage,DATA_KEY,JSON.stringify(publicData));
     nativeSet.call(sessionStorage,SESSION_KEY,JSON.stringify(privateData));
-    window.dispatchEvent(new CustomEvent('bs-v22-data-split'));
+    window.dispatchEvent(new CustomEvent('bs-v23-data-split'));
     return;
   }
   return nativeSet.call(this,key,value);
@@ -79,7 +79,7 @@ Storage.prototype.removeItem=function(key){
   return nativeRemove.call(this,key);
 };
 
-// Migrate any pre-V22 snapshot immediately.
+// Migrate any pre-V23 snapshot immediately.
 const legacyPrivate=parse(nativeGet.call(sessionStorage,LEGACY_SESSION_KEY),{});
 const existing=parse(nativeGet.call(localStorage,DATA_KEY),null);
 if(existing){
