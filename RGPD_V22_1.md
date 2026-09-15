@@ -12,14 +12,14 @@ Finalité : organiser la participation à une activité sportive.
 Données : nom, prénom, classe, événement.  
 Base légale : exécution de la demande d’inscription et intérêt légitime d’organisation.  
 Destinataires : enseignants AS / administrateurs autorisés.  
-Conservation : 7 jours après l’événement.
+Conservation : jusqu’à minuit le jour de l’événement.
 
 ### Convocations
 Finalité : organiser les déplacements et participants.  
 Données : identité de l’élève, classe, activité, rendez-vous.  
 Base légale : intérêt légitime de l’établissement et organisation de l’activité scolaire/associative.  
 Destinataires : personnels autorisés selon rôle.  
-Conservation nominative : 7 jours après l’activité.
+Conservation nominative : jusqu’à minuit le jour de l’activité.
 
 ### Licences et suivi des élèves
 Finalité : gestion de l’adhésion, cotisation, activité et suivi sportif.  
