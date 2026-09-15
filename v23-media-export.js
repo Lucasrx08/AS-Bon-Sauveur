@@ -158,7 +158,7 @@ function enhanceCalendarActions(root=document){
   if(!pdf)return;
   if(pdf.textContent.trim()!=='Export PDF')pdf.textContent='Export PDF';
   if(pdf.parentElement?.querySelector('[data-v23-tv-export]'))return;
-  const tv=document.createElement('button');tv.type='button';tv.className='v19-btn v23-tv-btn';tv.dataset.v22TvExport='1';tv.textContent='Export TV';tv.onclick=exportTv;pdf.insertAdjacentElement('afterend',tv);
+  const tv=document.createElement('button');tv.type='button';tv.className='v19-btn v23-tv-btn';tv.dataset.v23TvExport='1';tv.textContent='Export TV';tv.onclick=exportTv;pdf.insertAdjacentElement('afterend',tv);
 }
 
 function install(){
@@ -170,8 +170,22 @@ function install(){
   normalizeTimes(window.app.readData?.());
   window.app.exportCalendarTV=exportTv;
   sanitizeDisplayedTimes();enhanceCalendarActions();
-  new MutationObserver(records=>{for(const record of records){for(const node of record.addedNodes){if(node.nodeType===1){sanitizeDisplayedTimes(node);enhanceCalendarActions(node)}else if(node.nodeType===3&&node.parentElement)sanitizeDisplayedTimes(node.parentElement)}}enhanceCalendarActions()}).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
-  window.ASV23Media={version:'23.0.0',tvBackground:TV_BG,maxEvents:MAX_EVENTS,timeFormat:'HH:MM'};
+  let observerQueued=false;
+  new MutationObserver(records=>{
+    if(observerQueued)return;
+    observerQueued=true;
+    requestAnimationFrame(()=>{
+      observerQueued=false;
+      for(const record of records){
+        for(const node of record.addedNodes){
+          if(node.nodeType===1)sanitizeDisplayedTimes(node);
+          else if(node.nodeType===3&&node.parentElement)sanitizeDisplayedTimes(node.parentElement);
+        }
+      }
+      enhanceCalendarActions(document);
+    });
+  }).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+  window.ASV23Media={version:'23.0.1',tvBackground:TV_BG,maxEvents:MAX_EVENTS,timeFormat:'HH:MM'};
 }
 install();
 })();
