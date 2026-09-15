@@ -1,0 +1,8 @@
+.v22-tv-btn{background:#0757C9!important;color:#fff!important;border-color:#0757C9!important}
+.v22-tv-btn:hover{filter:brightness(.96)}
+.v22-tv-preview-sheet{width:min(100%,280px);aspect-ratio:16/9;background:url("assets/programme-tv-v22.png") center/100% 100% no-repeat;border-radius:9px;box-shadow:0 18px 42px rgba(19,33,58,.18);position:relative;overflow:hidden;border:1px solid rgba(19,33,58,.08)}
+.v22-tv-preview-content{position:absolute;left:6%;right:6%;top:31%;bottom:11%;display:grid;align-content:center;gap:5%}
+.v22-tv-preview-content .v2112-mini-event{padding:4px 6px;border-radius:6px;min-height:0}
+.v22-tv-preview-content .v2112-mini-event b{font-size:9px}.v22-tv-preview-content .v2112-mini-event span{font-size:7px}
+@media(max-width:760px){.v22-tv-btn{min-width:0}.v22-tv-preview-sheet{display:none}}
+.v22-tv-preview-sheet:before{content:"PROGRAMME\A ASSOCIATION SPORTIVE BON SAUVEUR";white-space:pre;position:absolute;left:2.3%;top:8.5%;font-family:"AS Anton",Impact,sans-serif;font-size:clamp(8px,1.05vw,15px);line-height:.72;color:#343434;z-index:1}
