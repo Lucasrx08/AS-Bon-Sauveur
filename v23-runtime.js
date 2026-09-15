@@ -124,7 +124,7 @@ function install(){
   if(!window.app)return setTimeout(install,60);
   window.app.order=secureOrder;
   window.app.openEventRegistration=secureRegistration;
-  window.ASV23={version:'23.0.0',features:['pin-auth','privacy-session-storage','secure-public-orders','secure-public-registrations','idempotent-retry','rate-limits','automatic-retention','safari-export']};
+  window.ASV23={version:'23.0.2',features:['pin-auth','privacy-session-storage','secure-public-orders','secure-public-registrations','idempotent-retry','rate-limits','automatic-retention']};
   document.documentElement.dataset.appVersion='23';
 }
 install();
