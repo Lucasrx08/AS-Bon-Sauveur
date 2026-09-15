@@ -3,10 +3,12 @@
 
 if(!window.app)return;
 
-const VERSION='v21.14-20260910';
+const VERSION='v24.1-20260915';
 const MAX_PROGRAM_EVENTS=5;
+const MAX_TV_EVENTS=3;
 const ASSETS={
  programme:'assets/programme-v21-14-hd.png',
+ tv:'assets/programme-tv-v24-hd.png',
  convocation:'assets/convocation-v21-14-hd.png',
  anton:'assets/fonts/Anton-Regular.ttf',
  broshk:'assets/fonts/BroshK.ttf'
@@ -47,6 +49,7 @@ function dateParts(value){
 }
 function longDate(value){return parseDate(value).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
 function shortDate(value){return parseDate(value).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).replace('.','')}
+function shortTime(value){const match=String(value||'').match(/^(\d{1,2}):(\d{2})/);return match?`${match[1].padStart(2,'0')}:${match[2]}`:String(value||'')}
 function orderedEvents(){
  const roleSpecialty=window.app?.roleSpecialty?.();
  return (read().events||[]).filter(e=>!roleSpecialty||e.specialty===roleSpecialty).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
@@ -149,6 +152,34 @@ async function buildProgramPdf(selectedEvents){
  programSlots(events.length).forEach((slot,i)=>drawProgramEvent(doc,events[i],slot));
  doc.setProperties({title:`Programme AS - ${periodLabel(events)}`,subject:'Calendrier de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
 }
+function tvSlots(count){
+ if(count===1)return[{y:63,h:82}];
+ if(count===2)return[{y:57,h:48},{y:112,h:48}];
+ return[{y:54,h:34},{y:93,h:34},{y:132,h:34}];
+}
+function drawTvEvent(doc,event,slot){
+ const {y,h}=slot,x=13,w=294,theme=spec(event.specialty),compact=h<40,roomy=h>60;
+ card(doc,x,y,w,h,{bg:C.white,border:C.line,r:4.2,line:0.5});fill(doc,theme.accent);doc.roundedRect(x,y,3.5,h,1.7,1.7,'F');
+ const dateX=x+6,dateY=y+(compact?3:5),dateW=38,dateH=h-(compact?6:10);card(doc,dateX,dateY,dateW,dateH,{bg:theme.pale,border:theme.pale,r:3.4,line:0});
+ const dp=dateParts(event.date);font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?6.8:8.2);doc.text(dp.weekday,dateX+dateW/2,dateY+(compact?5.3:6.7),{align:'center'});doc.setFontSize(compact?23:roomy?38:31);doc.text(dp.day,dateX+dateW/2,dateY+(compact?20.2:roomy?31:27),{align:'center'});fill(doc,C.yellow);doc.rect(dateX+7,dateY+dateH-(compact?7.2:9),24,1.5,'F');font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?7.4:9);doc.text(`${dp.monthShort} ${dp.year}`,dateX+dateW/2,dateY+dateH-(compact?2.2:3),{align:'center'});
+ const bodyX=dateX+dateW+7,bodyW=x+w-bodyX-6,tagY=y+(compact?3:5),tagH=compact?6.7:8;
+ let tagX=bodyX;tagX+=pill(doc,theme.short,tagX,tagY,{bg:theme.pale,fg:theme.accent,maxW:78,height:tagH,fontSize:compact?6.6:7.8})+2.2;
+ if(event.ageCategory)tagX+=pill(doc,event.ageCategory,tagX,tagY,{bg:[255,247,204],fg:[111,91,0],maxW:62,height:tagH,fontSize:compact?6.6:7.8})+2.2;
+ const hasConv=(read().convocations||[]).some(c=>c.id===event.convocationId||(c.date===event.date&&c.specialty===event.specialty&&c.title===event.title));
+ if(hasConv)pill(doc,'CONVOCATION',tagX,tagY,{bg:C.yellow,fg:[78,65,0],maxW:38,height:tagH,fontSize:compact?6.5:7.6});
+ const titleY=y+(compact?20.2:roomy?32:27),title=roomy?fitLines(doc,displayText(event.title||'Rendez-vous').toUpperCase(),bodyW,{start:34,min:19,maxLines:2,kind:'broshk'}):(()=>{const one=fitOne(doc,displayText(event.title||'Rendez-vous').toUpperCase(),bodyW,{start:compact?23:29,min:compact?14:18,kind:'broshk'});return{lines:[one.value],size:one.size}})();
+ font(doc,'broshk');doc.setFontSize(title.size);color(doc,C.dark);const titleGap=mm(title.size)*.95;title.lines.forEach((line,index)=>doc.text(line,bodyX,titleY+index*titleGap));
+ const metaY=y+h-(compact?3.8:5.2),hours=`${shortTime(event.startTime)||'À préciser'}${event.endTime?' - '+shortTime(event.endTime):''}`,place=displayText(event.place||'Lieu à préciser');
+ font(doc,'anton');doc.setFontSize(compact?7.2:8.6);color(doc,theme.accent);doc.text('HORAIRES',bodyX,metaY);const hourX=bodyX+(compact?17:21);value(doc,hours,hourX,metaY,compact?40:49,{size:compact?9.2:11,min:7.2});
+ const placeX=hourX+(compact?45:55);font(doc,'anton');doc.setFontSize(compact?7.2:8.6);color(doc,theme.accent);doc.text('LIEU',placeX,metaY);value(doc,place,placeX+(compact?10:13),metaY,bodyX+bodyW-placeX-(compact?10:13),{size:compact?9.2:11,min:7.2});
+}
+async function buildTvPdf(selectedEvents){
+ const dep=await ensurePdf(),{jsPDF}=dep||{};if(!jsPDF)throw new Error('Module PDF indisponible.');
+ const events=(selectedEvents||[]).slice(0,MAX_TV_EVENTS);if(!events.length)throw new Error('Sélectionnez au moins un événement.');
+ const background=await asset(ASSETS.tv,'image/png'),doc=new jsPDF({orientation:'landscape',unit:'mm',format:[320,180],compress:true,putOnlyUsedFonts:true});await installFonts(doc);doc.addImage(background,'PNG',0,0,320,180,undefined,'FAST');
+ tvSlots(events.length).forEach((slot,index)=>drawTvEvent(doc,events[index],slot));
+ doc.setProperties({title:`Programme TV AS - ${periodLabel(events)}`,subject:'Programme TV 16:9 de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
+}
 function studentRows(convocation){
  if(window.app?.role?.()==='public')return[];
  const data=read(),students=new Map((data.students||[]).map(s=>[String(s.id),s])),licenses=new Map((data.licenses||[]).map(l=>[String(l.studentId),l]));
@@ -193,6 +224,12 @@ async function buildConvocationPdf(c){
 function selectedPreview(container,events){
  if(!container)return;container.innerHTML=events.length?events.map(e=>{const p=dateParts(e.date);return `<div class="v2112-mini-event"><b>${esc(p.day)} ${esc(p.monthShort)}</b><span>${esc(e.title||'Rendez-vous')}</span></div>`}).join(''):'<div class="v2112-mini-empty">CHOISISSEZ VOS DATES</div>';
 }
+function installTvButton(root=document){
+ const pdf=[...root.querySelectorAll?.('button[onclick]')||[]].find(button=>/app\.exportCalendarPDF\(\)/.test(button.getAttribute('onclick')||''));
+ if(!pdf)return false;
+ if(pdf.parentElement?.querySelector('[data-v241-tv-export]'))return true;
+ const button=document.createElement('button');button.type='button';button.className='v19-btn secondary';button.dataset.v241TvExport='1';button.textContent='Export TV';button.onclick=openTvPicker;pdf.insertAdjacentElement('afterend',button);return true;
+}
 function closePicker(){document.getElementById('v2112-calendar-modal')?.remove()}
 function openCalendarPicker(){
  const events=orderedEvents();if(!events.length)return alert('Aucun événement à exporter.');
@@ -202,9 +239,22 @@ function openCalendarPicker(){
  const sync=changed=>{const checked=inputs.filter(i=>i.checked);if(checked.length>MAX_PROGRAM_EVENTS&&changed){changed.checked=false;limit.textContent=`Vous pouvez sélectionner ${MAX_PROGRAM_EVENTS} dates maximum.`;limit.classList.add('error')}else{limit.textContent='';limit.classList.remove('error')}const ids=new Set(inputs.filter(i=>i.checked).map(i=>i.value));count.textContent=`${ids.size} / ${MAX_PROGRAM_EVENTS}`;button.disabled=!ids.size;inputs.forEach(i=>i.closest('label')?.classList.toggle('selected',i.checked));selectedPreview(preview,events.filter(e=>ids.has(String(e.id))).slice(0,MAX_PROGRAM_EVENTS))};
  inputs.forEach(i=>i.addEventListener('change',()=>sync(i)));wrapper.querySelector('[data-close]').onclick=closePicker;wrapper.querySelector('[data-cancel]').onclick=closePicker;wrapper.addEventListener('click',e=>{if(e.target===wrapper)closePicker()});wrapper.addEventListener('keydown',e=>{if(e.key==='Escape')closePicker()});wrapper.querySelector('form').onsubmit=async e=>{e.preventDefault();const ids=inputs.filter(i=>i.checked).map(i=>i.value),chosen=events.filter(ev=>ids.includes(String(ev.id))).slice(0,MAX_PROGRAM_EVENTS);if(!chosen.length)return;button.disabled=true;button.textContent='Création du PDF…';try{const doc=await buildProgramPdf(chosen);doc.save(`Programme_AS_${clean(periodLabel(chosen))}.pdf`);closePicker();toast('Programme PDF téléchargé.')}catch(error){console.error(error);button.disabled=false;button.textContent='Télécharger le PDF';limit.textContent='La création du PDF a échoué. Réessayez.';limit.classList.add('error')}};sync();setTimeout(()=>inputs[0]?.focus(),30);
 }
+function closeTvPicker(){document.getElementById('v241-tv-calendar-modal')?.remove()}
+function openTvPicker(){
+ const events=orderedEvents();if(!events.length)return alert('Aucun événement à exporter.');
+ closeTvPicker();const upcoming=events.filter(e=>(e.date||'')>=today()),defaults=(upcoming.length?upcoming:events).slice(0,MAX_TV_EVENTS),selected=new Set(defaults.map(e=>String(e.id)));
+ const wrapper=document.createElement('div');wrapper.id='v241-tv-calendar-modal';wrapper.className='v19-modal-backdrop v2112-export-backdrop';wrapper.innerHTML=`<div class="v19-modal wide v2112-export-modal" role="dialog" aria-modal="true" aria-labelledby="v241-tv-export-title"><div class="v19-modal-head"><div><div class="v19-kicker">EXPORT TV</div><h2 id="v241-tv-export-title">Créer le programme TV</h2></div><button class="v19-icon-btn" type="button" aria-label="Fermer" data-close>×</button></div><form class="v19-modal-body" id="v241-tv-calendar-form"><div class="v2112-picker-layout"><section><div class="v2112-picker-intro"><div><strong>Choisissez jusqu’à 3 dates</strong><p>Le PDF 16:9 reprend automatiquement les informations du calendrier.</p></div><span class="v2112-count" data-count>0 / 3</span></div><div class="v2112-event-list">${events.map(e=>{const p=dateParts(e.date);return `<label class="v2112-event-choice"><input type="checkbox" name="eventIds" value="${esc(e.id)}" ${selected.has(String(e.id))?'checked':''}><span class="v2112-choice-date"><b>${esc(p.day)}</b><small>${esc(p.monthShort)}</small></span><span class="v2112-choice-main"><strong>${esc(e.title||'Rendez-vous')}</strong><small>${esc(shortTime(e.startTime)||'—')}${e.endTime?' - '+esc(shortTime(e.endTime)):''} · ${esc(e.place||'À préciser')}</small><em>${esc(e.ageCategory||'Toutes catégories')} · ${esc(e.specialty||'Association Sportive')}</em></span></label>`}).join('')}</div><div class="v2112-limit" data-limit aria-live="polite"></div></section><aside class="v2112-preview"><div class="v2112-tv-preview-sheet"><div class="v2112-tv-preview-content" data-preview></div></div><span>Aperçu TV 16:9</span></aside></div><div class="v19-modal-actions v2112-actions"><button class="v19-btn secondary" type="button" data-cancel>Annuler</button><button class="v19-btn v2112-tv-button" type="submit" data-export>Télécharger le PDF TV</button></div></form></div>`;
+ document.body.appendChild(wrapper);const inputs=[...wrapper.querySelectorAll('input[name="eventIds"]')],count=wrapper.querySelector('[data-count]'),limit=wrapper.querySelector('[data-limit]'),button=wrapper.querySelector('[data-export]'),preview=wrapper.querySelector('[data-preview]');
+ const sync=changed=>{const checked=inputs.filter(i=>i.checked);if(checked.length>MAX_TV_EVENTS&&changed){changed.checked=false;limit.textContent=`Vous pouvez sélectionner ${MAX_TV_EVENTS} dates maximum.`;limit.classList.add('error')}else{limit.textContent='';limit.classList.remove('error')}const ids=new Set(inputs.filter(i=>i.checked).map(i=>i.value));count.textContent=`${ids.size} / ${MAX_TV_EVENTS}`;button.disabled=!ids.size;inputs.forEach(i=>i.closest('label')?.classList.toggle('selected',i.checked));selectedPreview(preview,events.filter(e=>ids.has(String(e.id))).slice(0,MAX_TV_EVENTS))};
+ inputs.forEach(i=>i.addEventListener('change',()=>sync(i)));wrapper.querySelector('[data-close]').onclick=closeTvPicker;wrapper.querySelector('[data-cancel]').onclick=closeTvPicker;wrapper.addEventListener('click',e=>{if(e.target===wrapper)closeTvPicker()});wrapper.addEventListener('keydown',e=>{if(e.key==='Escape')closeTvPicker()});wrapper.querySelector('form').onsubmit=async e=>{e.preventDefault();const ids=inputs.filter(i=>i.checked).map(i=>i.value),chosen=events.filter(ev=>ids.includes(String(ev.id))).slice(0,MAX_TV_EVENTS);if(!chosen.length)return;button.disabled=true;button.textContent='Création du PDF TV…';try{const doc=await buildTvPdf(chosen);doc.save(`Programme_TV_AS_${clean(periodLabel(chosen))}.pdf`);closeTvPicker();toast('Programme TV téléchargé.')}catch(error){console.error(error);button.disabled=false;button.textContent='Télécharger le PDF TV';limit.textContent='La création du PDF TV a échoué. Réessayez.';limit.classList.add('error')}};sync();setTimeout(()=>inputs[0]?.focus(),30);
+}
 async function exportCalendar(selection){
  if(!Array.isArray(selection))return openCalendarPicker();
  const ids=new Set(selection.map(String)),events=orderedEvents().filter(e=>ids.has(String(e.id))).slice(0,MAX_PROGRAM_EVENTS);const doc=await buildProgramPdf(events);doc.save(`Programme_AS_${clean(periodLabel(events))}.pdf`);
+}
+async function exportCalendarTv(selection){
+ if(!Array.isArray(selection))return openTvPicker();
+ const ids=new Set(selection.map(String)),events=orderedEvents().filter(e=>ids.has(String(e.id))).slice(0,MAX_TV_EVENTS),doc=await buildTvPdf(events);doc.save(`Programme_TV_AS_${clean(periodLabel(events))}.pdf`);
 }
 async function exportConvocation(id){
  const c=(read().convocations||[]).find(row=>String(row.id)===String(id));if(!c)return alert('Convocation introuvable.');toast('Création de la convocation…');
@@ -212,9 +262,11 @@ async function exportConvocation(id){
 }
 
 window.app.exportCalendarPDF=exportCalendar;
+window.app.exportCalendarTV=exportCalendarTv;
 window.app.exportConvocation=exportConvocation;
-const pdfApi={version:VERSION,buildProgramPdf,buildConvocationPdf,openCalendarPicker};
+const pdfApi={version:VERSION,buildProgramPdf,buildTvPdf,buildConvocationPdf,openCalendarPicker,openTvPicker,installTvButton};
 window.ASV2112_PDF=pdfApi;
 window.ASV2113_PDF=pdfApi;
 window.ASV2114_PDF=pdfApi;
+installTvButton();
 })();

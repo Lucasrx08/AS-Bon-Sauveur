@@ -111,7 +111,7 @@ function setFallbackRole(r){if(!ROLES.some(([x])=>x===r))return;localStorage.set
 function installFallbackAccess(){if(!(cfg.demoMode===true&&!hasSupabase)||!window.app)return;const keep=localStorage.getItem(FALLBACK_ROLE);if(ROLES.some(([r])=>r===keep))localStorage.setItem(ROLE_KEY,keep);window.app.profile=openFallbackAccess;window.app.setRole=setFallbackRole}
 
 let queued=false;
-function enhance(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess()})}
+function enhance(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess();window.ASV2114_PDF?.installTvButton?.()})}
 enhance();
 new MutationObserver(enhance).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
 })();
