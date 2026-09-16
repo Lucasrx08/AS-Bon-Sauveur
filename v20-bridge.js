@@ -11,7 +11,8 @@ const incomingPasswordFlow=['invite','recovery'].includes(authFlowType)||queryPa
 if(incomingPasswordFlow)sessionStorage.setItem(PASSWORD_SETUP,'1');
 const passwordSetupFlow=()=>sessionStorage.getItem(PASSWORD_SETUP)==='1';
 const appRedirect=()=>location.origin+location.pathname;
-const sb=hasSupabase?window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey):null;
+const sb=hasSupabase?(window.__BS_SUPABASE_CLIENT||window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey)):null;
+if(sb)window.__BS_SUPABASE_CLIENT=sb;
 let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false;
 
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
@@ -37,7 +38,7 @@ function loginModal(){
 }
 function passwordModal(){
  if(!currentUser)return loginModal();
- return modal('Définir mon mot de passe',`<form id="v20-set-password" class="v19-form"><div class="full v19-card"><strong>${currentUser.email||'Compte sécurisé'}</strong><div class="v19-meta">Choisissez votre nouveau mot de passe. Aucun nouvel e-mail n’est nécessaire puisque vous êtes déjà authentifié.</div></div><label class="full"><span>Nouveau mot de passe</span><input required minlength="10" type="password" name="password" autocomplete="new-password"></label><label class="full"><span>Confirmer le mot de passe</span><input required minlength="10" type="password" name="confirm" autocomplete="new-password"></label><div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer mon mot de passe</button></div></form>`);
+ return modal('Définir mon mot de passe',`<form id="v20-set-password" class="v19-form"><div class="full v19-card"><strong>${currentUser.email||'Compte sécurisé'}</strong><div class="v19-meta">Utilisez au moins 12 caractères avec majuscule, minuscule, chiffre et symbole. La double authentification protège en plus le compte administrateur.</div></div><label class="full"><span>Nouveau mot de passe</span><input required minlength="12" type="password" name="password" autocomplete="new-password"></label><label class="full"><span>Confirmer le mot de passe</span><input required minlength="12" type="password" name="confirm" autocomplete="new-password"></label><div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer mon mot de passe</button></div></form>`);
 }
 function profileModal(){
  if(!currentUser)return loginModal();
@@ -63,6 +64,11 @@ async function hydrateUser(user,forceReload=false,suppressReload=false){
  if(error){toast('Profil utilisateur inaccessible');return}
  currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
  sessionStorage.setItem(VERIFIED,currentRole);localStorage.setItem(ROLE_KEY,currentRole);
+ if(currentRole==='admin'&&sb?.auth?.mfa){
+  const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aalError){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-error',{detail:{message:aalError.message||'Vérification MFA impossible'}}));return}
+  if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));return}
+ }
  await hydrateAll();
  const marker='bs-v20-role-applied';
  if(!suppressReload&&(forceReload||sessionStorage.getItem(marker)!==currentRole)){sessionStorage.setItem(marker,currentRole);location.reload()}
@@ -165,7 +171,8 @@ async function init(){
   }
   if(e.target?.id==='v20-set-password'){
    e.preventDefault();const fd=new FormData(e.target);const password=String(fd.get('password')||''),confirm=String(fd.get('confirm')||'');
-   if(password.length<10)return toast('Utilisez au moins 10 caractères.');
+   if(password.length<12)return toast('Utilisez au moins 12 caractères.');
+   if(!/[a-z]/.test(password)||!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!(/[^A-Za-z0-9]/.test(password)))return toast('Ajoutez une majuscule, une minuscule, un chiffre et un symbole.');
    if(password!==confirm)return toast('Les deux mots de passe sont différents.');
    const submit=e.target.querySelector('button[type=submit]');if(submit){submit.disabled=true;submit.textContent='Enregistrement…'}
    const {error}=await sb.auth.updateUser({password});
