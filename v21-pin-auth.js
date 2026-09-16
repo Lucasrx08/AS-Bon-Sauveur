@@ -48,6 +48,7 @@ async function loginWithPin(form,w,btn){
   if(!r.ok||data?.error)throw new Error(data?.error||'Connexion impossible.');
   const {error}=await sb.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
   if(error)throw error;
+  sessionStorage.setItem('bs-auth-method','pin');
   btn.textContent='Ouverture…';setStatus(w,'Connexion réussie. Ouverture de votre espace…','success');
   setTimeout(()=>location.reload(),180);
  }catch(err){
@@ -72,6 +73,7 @@ async function loginAdminEmail(form,w,btn){
  try{
   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
   if(!data?.user)throw new Error('Connexion impossible.');
+  sessionStorage.setItem('bs-auth-method','email');
   btn.textContent='Ouverture…';setStatus(w,'Connexion réussie.','success');setTimeout(()=>location.reload(),180);
  }catch(err){const msg=err?.message||'Connexion impossible.';setStatus(w,msg,'error');btn.disabled=false;btn.textContent='Se connecter'}
 }
@@ -84,7 +86,7 @@ async function profileModal(){
  try{profile=(await sb.from('profiles').select('display_name,role,email').eq('id',session.user.id).single())?.data||null}catch{}
  const name=profile?.display_name||'Utilisateur',role=profile?.role||sessionStorage.getItem(VERIFIED)||'public';
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
- w.querySelector('[data-pin-logout]').onclick=async()=>{try{await sb.auth.signOut()}catch{}sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');location.reload()};
+ w.querySelector('[data-pin-logout]').onclick=async()=>{try{await sb.auth.signOut()}catch{}sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem('bs-auth-method');localStorage.setItem(ROLE_KEY,'public');location.reload()};
  return w;
 }
 
