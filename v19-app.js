@@ -21,7 +21,7 @@ const LICENSE_CATEGORIES = ['Benjamin','Benjamine','Minime fille','Minime garço
 const SPECIALTIES = ['Association Sportive','Section Football','Option Escalade','Sport-études Gymnastique'];
 const EDU_SPECIALTIES = ['Section Football','Option Escalade','Sport-études Gymnastique'];
 const PAYMENTS = ['Chèque','Espèces','Ticket Spot 50','Cart’@too','Virement'];
-const SHOP_PAYMENTS = ['Espèces','Virement','Chèque'];
+const SHOP_PAYMENTS = ['Virement','Chèque'];
 const SHOP_SIZES = ['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
 const TEACHERS = ['Thomas GONTIER','Guillaume DHERVILLY','Lucas RIGAUX','Maxime PETIT'];
 const ACTIVITIES = ['Réunion d’organisation','AG UGSEL Manche','Renforcement - Relaxation','Kayak','Volley-Ball','Handball','Cross de l’établissement','Cross-Country','Trisports','Football','Futsal','Basket-ball','Badminton','Tennis de table','Escalade','Gymnastique','Athlétisme','Course d’orientation','Natation','VTT','Laser Run','Multisports','Autre'];
@@ -236,6 +236,7 @@ function licensesPage(){
  if(!isManager()) return denied();
  const f=state.filters.licenses||{}; let rows=(state.data.licenses||[]).slice();
  for(const [k,v] of Object.entries(f)){if(!v)continue;const key={specialty:'sectionOption',paymentMethod:'contribution'}[k]||k;rows=rows.filter(x=>x[key]===v)}
+ window.__v19VisibleLicenseIds=rows.map(x=>String(x.id));
  const total=rows.filter(x=>x.paymentStatus==='Payé').reduce((s,x)=>s+Number(x.amount||0),0);
  const actions=`<button class="v19-btn secondary" onclick="app.exportExcel('licenses')">Exporter Excel</button>${isAdmin()?`<button class="v19-btn secondary" onclick="app.downloadLicenseTemplate()">Modèle Excel</button><button class="v19-btn" onclick="app.openLicenseImport()">Importer Excel / CSV</button>`:''}<button class="v19-btn" onclick="app.editLicense()">+ Licence</button>`;
  return `<div class="v19-container">${pageTitle('GESTION','Licences','La base centrale des élèves licenciés.',actions)}
@@ -248,6 +249,7 @@ function licensesPage(){
    <button class="v19-btn secondary small" onclick="app.clearLicenseFilters()">Effacer</button>
   </div>
   <div class="v19-accounting"><span>${rows.length} licence(s)</span><strong>${money(total)} encaissés dans la sélection</strong></div>
+  <div class="v19-filters v19-license-bulk"><label class="v19-filter"><span>Mode pour la sélection</span><select id="v19-bulk-license-payment">${PAYMENTS.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select></label><button class="v19-btn secondary small" ${rows.length?'':'disabled'} onclick="app.bulkLicensePaymentMode()">Appliquer à ${rows.length} licence(s)</button></div>
   <div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Nom & prénom</th><th>Classe</th><th>Catégorie</th><th>Spécialité</th><th>Cotisation</th><th>Statut</th><th>Montant</th><th>Charte</th><th></th></tr></thead><tbody>${rows.map(l=>`<tr><td><strong>${esc(l.fullName)}</strong></td><td>${esc(l.className)}</td><td>${esc(l.category)}</td><td>${esc(l.sectionOption)}</td><td>${esc(l.contribution)}</td><td><button class="v19-status ${l.paymentStatus==='Payé'?'on':'off'}" onclick="app.toggleLicensePayment('${l.id}')"><span>${esc(l.paymentStatus)}</span>${icon('chevron')}</button></td><td>${money(l.amount)}</td><td>${esc(l.charterSigned)}</td><td><button class="v19-link" onclick="app.editLicense('${l.id}')">Modifier</button></td></tr>`).join('')}</tbody></table></div>
  </div>`;
 }
@@ -605,7 +607,7 @@ function manageTerms(){
 
 function openLicenseImport(){
  if(!isAdmin())return;
- const m=modal('Importer des licenciés',`<div class="v19-import"><label><span>Spécialité attribuée à tout le fichier</span><select id="v19-import-sp">${options(SPECIALTIES,'Section Football')}</select></label><div class="v19-drop"><strong>Choisir un fichier Excel ou CSV</strong><small>.xlsx · .xls · .csv</small><input id="v19-import-file" type="file" accept=".xlsx,.xls,.csv,text/csv"></div><div id="v19-import-preview"></div></div>`,true);
+ const m=modal('Importer des licenciés',`<div class="v19-import"><div class="v19-form"><label><span>Spécialité attribuée à tout le fichier</span><select id="v19-import-sp">${options(SPECIALTIES,'Section Football')}</select></label><label><span>Mode de paiement par défaut</span><select id="v19-import-payment">${options(PAYMENTS,'Chèque')}</select></label></div><div class="v19-drop"><strong>Choisir un fichier Excel ou CSV</strong><small>.xlsx · .xls · .csv</small><input id="v19-import-file" type="file" accept=".xlsx,.xls,.csv,text/csv"></div><div id="v19-import-preview"></div></div>`,true);
  m.querySelector('#v19-import-file').onchange=e=>e.target.files[0]&&previewImport(e.target.files[0],m);
 }
 function exactClass(raw){const n=norm(raw);return CLASSES.find(c=>norm(c)===n)||''}
@@ -620,33 +622,35 @@ async function previewImport(file,m){
   const firstAliases=['Prénom','Prenom'];
   const classAliases=['Classe'];
   const catAliases=['Catégorie','Categorie'];
+  const paymentAliases=['Mode de paiement','Paiement','Cotisation','Mode'];
   const findCol=(row,aliases)=>row.findIndex(v=>aliases.some(a=>norm(v)===norm(a)));
-  let headerIndex=-1,fullCol=-1,lastCol=-1,firstCol=-1,classCol=-1,catCol=-1;
+  let headerIndex=-1,fullCol=-1,lastCol=-1,firstCol=-1,classCol=-1,catCol=-1,paymentCol=-1;
   for(let i=0;i<Math.min(matrix.length,30);i++){
    const row=(matrix[i]||[]).map(v=>String(v||'').trim());
-   const f=findCol(row,fullAliases),l=findCol(row,lastAliases),p=findCol(row,firstAliases),cl=findCol(row,classAliases),ca=findCol(row,catAliases);
-   if(cl>=0&&ca>=0&&(f>=0||(l>=0&&p>=0))){headerIndex=i;fullCol=f;lastCol=l;firstCol=p;classCol=cl;catCol=ca;break}
+   const f=findCol(row,fullAliases),l=findCol(row,lastAliases),p=findCol(row,firstAliases),cl=findCol(row,classAliases),ca=findCol(row,catAliases),pm=findCol(row,paymentAliases);
+   if(cl>=0&&ca>=0&&(f>=0||(l>=0&&p>=0))){headerIndex=i;fullCol=f;lastCol=l;firstCol=p;classCol=cl;catCol=ca;paymentCol=pm;break}
   }
   if(headerIndex<0)throw new Error('Entêtes introuvables');
   const rows=[];
   matrix.slice(headerIndex+1).forEach((r,offset)=>{
    const row=r||[],cell=i=>String(row[i]??'').trim();
    const full=fullCol>=0?cell(fullCol):[cell(lastCol),cell(firstCol)].filter(Boolean).join(' ');
-   const rc=cell(classCol),rg=cell(catCol);
-   if(!full&&!rc&&!rg)return;
-   const cl=exactClass(rc),ca=exactCat(rg),errors=[];
+   const rc=cell(classCol),rg=cell(catCol),rp=paymentCol>=0?cell(paymentCol):'';
+   if(!full&&!rc&&!rg&&!rp)return;
+   const cl=exactClass(rc),ca=exactCat(rg),payment=PAYMENTS.find(x=>norm(x)===norm(rp))||'',errors=[];
    if(!full)errors.push('Nom manquant');
    if(!cl)errors.push(`Classe inconnue : ${rc||'vide'}`);
    if(!ca)errors.push(`Catégorie inconnue : ${rg||'vide'}`);
-   rows.push({line:headerIndex+2+offset,fullName:full,className:cl,category:ca,errors,valid:!errors.length});
+   if(rp&&!payment)errors.push(`Mode de paiement inconnu : ${rp}`);
+   rows.push({line:headerIndex+2+offset,fullName:full,className:cl,category:ca,contribution:payment,errors,valid:!errors.length});
   });
   window.__v19ImportRows=rows;const valid=rows.filter(x=>x.valid).length;
-  box.innerHTML=`<div class="v19-import-summary">${valid} ligne(s) prête(s) · ${rows.length-valid} erreur(s)</div><div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Ligne</th><th>Nom</th><th>Classe</th><th>Catégorie</th><th>État</th></tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr><td>${r.line}</td><td>${esc(r.fullName||'—')}</td><td>${esc(r.className||'—')}</td><td>${esc(r.category||'—')}</td><td>${r.valid?'Prêt':esc(r.errors.join(' · '))}</td></tr>`).join('')}</tbody></table></div><div class="v19-modal-actions"><button class="v19-btn" ${valid?'':'disabled'} onclick="app.commitImport()">Importer ${valid} élève(s)</button></div>`;
+  box.innerHTML=`<div class="v19-import-summary">${valid} ligne(s) prête(s) · ${rows.length-valid} erreur(s)</div><div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Ligne</th><th>Nom</th><th>Classe</th><th>Catégorie</th><th>Mode</th><th>État</th></tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr><td>${r.line}</td><td>${esc(r.fullName||'—')}</td><td>${esc(r.className||'—')}</td><td>${esc(r.category||'—')}</td><td>${esc(r.contribution||'Par défaut')}</td><td>${r.valid?'Prêt':esc(r.errors.join(' · '))}</td></tr>`).join('')}</tbody></table></div><div class="v19-modal-actions"><button class="v19-btn" ${valid?'':'disabled'} onclick="app.commitImport()">Importer ${valid} élève(s)</button></div>`;
  }catch(e){console.error('Import licences',e);box.innerHTML='<div class="v19-empty">Impossible de lire ce fichier. Vérifiez les colonnes Nom & prénom, Classe et Catégorie.</div>'}
 }
 function commitImport(){
- const rows=(window.__v19ImportRows||[]).filter(x=>x.valid),sp=document.querySelector('#v19-import-sp')?.value||'Association Sportive';let added=0,updated=0;
- rows.forEach(r=>{let l=(state.data.licenses||[]).find(x=>norm(x.fullName)===norm(r.fullName)&&norm(x.className)===norm(r.className));if(l){Object.assign(l,{category:r.category,sectionOption:sp});const s=state.data.students.find(x=>x.id===l.studentId);if(s)Object.assign(s,{fullName:r.fullName,className:r.className,specialty:sp});updated++;return}const sid=uid('s');state.data.students.push({id:sid,fullName:r.fullName,className:r.className,specialty:sp});state.data.licenses.push({id:uid('l'),studentId:sid,fullName:r.fullName,className:r.className,category:r.category,contribution:'',paymentStatus:'En attente',amount:20,charterSigned:'Non',sectionOption:sp});added++});
+ const rows=(window.__v19ImportRows||[]).filter(x=>x.valid),sp=document.querySelector('#v19-import-sp')?.value||'Association Sportive',defaultPayment=document.querySelector('#v19-import-payment')?.value||'Chèque';let added=0,updated=0;
+ rows.forEach(r=>{let l=(state.data.licenses||[]).find(x=>norm(x.fullName)===norm(r.fullName)&&norm(x.className)===norm(r.className));if(l){Object.assign(l,{category:r.category,sectionOption:sp,contribution:r.contribution||defaultPayment});const s=state.data.students.find(x=>x.id===l.studentId);if(s)Object.assign(s,{fullName:r.fullName,className:r.className,specialty:sp});updated++;return}const sid=uid('s');state.data.students.push({id:sid,fullName:r.fullName,className:r.className,specialty:sp});state.data.licenses.push({id:uid('l'),studentId:sid,fullName:r.fullName,className:r.className,category:r.category,contribution:r.contribution||defaultPayment,paymentStatus:'En attente',amount:20,charterSigned:'Non',sectionOption:sp});added++});
  save();closeModal();render();alert(`${added} élève(s) ajouté(s) · ${updated} mis à jour.`);
 }
 async function downloadLicenseTemplate(){
