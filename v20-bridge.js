@@ -45,7 +45,7 @@ function profileModal(){
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${currentUser.email||''}</strong><div class="v19-meta">${roleLabels[currentRole]||currentRole}</div></div><button class="v19-btn secondary" id="v20-change-password">Définir / modifier mon mot de passe</button><button class="v19-btn" id="v20-logout">Se déconnecter</button></div>`);
  w.querySelector('#v20-logout').onclick=logout;w.querySelector('#v20-change-password').onclick=passwordModal;return w;
 }
-async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
+async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);sessionStorage.removeItem('bs-auth-method');clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
 
 async function authenticateSession(){
  if(!hasSupabase){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');return}
@@ -64,7 +64,8 @@ async function hydrateUser(user,forceReload=false,suppressReload=false){
  if(error){toast('Profil utilisateur inaccessible');return}
  currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
  sessionStorage.setItem(VERIFIED,currentRole);localStorage.setItem(ROLE_KEY,currentRole);
- if(currentRole==='admin'&&sb?.auth?.mfa){
+ const authMethod=sessionStorage.getItem('bs-auth-method')||'email';
+ if(currentRole==='admin'&&authMethod!=='pin'&&sb?.auth?.mfa){
   const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
   if(aalError){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-error',{detail:{message:aalError.message||'Vérification MFA impossible'}}));return}
   if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));return}
