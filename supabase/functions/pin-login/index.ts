@@ -18,7 +18,7 @@ Deno.serve(async request=>{
   const client=createClient(url,anon,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data,error}=await client.auth.signInWithPassword({email:account.auth_email,password:pin});
   if(error||!data?.session?.access_token||!data.session.refresh_token){await sleep(450);return json(request,{error:'Nom ou code PIN incorrect.'},401)}
-  return json(request,{ok:true,access_token:data.session.access_token,refresh_token:data.session.refresh_token,expires_at:data.session.expires_at,expires_in:data.session.expires_in},200);
+  return json(request,{ok:true,auth_method:'pin',access_token:data.session.access_token,refresh_token:data.session.refresh_token,expires_at:data.session.expires_at,expires_in:data.session.expires_in},200);
  }catch(error){
   const code=error instanceof Error?error.message:'';if(code==='PAYLOAD_TOO_LARGE')return json(request,{error:'Requête trop volumineuse.'},413);if(code==='INVALID_JSON')return json(request,{error:'Requête invalide.'},400);
   console.error('pin-login-v23',error instanceof Error?error.name:'error');return json(request,{error:'Connexion momentanément indisponible.'},500);
