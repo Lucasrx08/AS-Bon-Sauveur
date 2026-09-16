@@ -150,7 +150,7 @@ function currentNav(){
   if((state.data.documents||[]).some(d=>/^https?:\/\//i.test(String(d.url||''))))items.push(['documents','doc','Documents']);
   return items;
  }
- if(isEducator()) return [['home','home','Accueil'],['calendar','cal','Calendrier'],['appreciations','app','Appréciations']];
+ if(isEducator()) return [['home','home','Accueil'],['calendar','cal','Calendrier']];
  return [['home','home','Accueil'],['calendar','cal','Calendrier'],['convocations','flag','Convocations'],['reports','chart','Bilans'],['more','more','Plus']];
 }
 function header(){
@@ -267,14 +267,13 @@ function reportsPage(){
 }
 function currentApp(studentId,term=state.term){return (state.data.appreciations||[]).filter(a=>a.studentId===studentId&&Number(a.term)===Number(term)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null}
 function appreciationsPage(){
- if(!isEducator()&&!isAdmin()) return denied();
- const sp=roleSpecialty();
- const licensed=(state.data.licenses||[]).filter(l=>!sp||l.sectionOption===sp);
+ if(!isAdmin()) return denied();
+ const licensed=(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption));
  const st=state.data.termSettings?.[state.term]||{};
- return `<div class="v19-container">${pageTitle(sp||'ADMINISTRATION','Appréciations','Suivi annuel et transfert rapide vers ÉcoleDirecte.',`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
+ return `<div class="v19-container">${pageTitle('ADMINISTRATION','Appréciations','Réservé à l’administrateur · Football, Escalade et Sport-études Gymnastique.',`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
   <div class="v19-term-tabs">${[1,2,3].map(t=>`<button class="${t===state.term?'active':''}" onclick="app.setTerm(${t})">Trimestre ${t}</button>`).join('')}</div>
   <div class="v19-term-info"><div><span>Date limite de saisie</span><strong>${fmtLong(st.deadline)}</strong></div><div><span>Fin du trimestre</span><strong>${fmtLong(st.end)}</strong></div><div class="grammar">✓ Vérification orthographe + grammaire à la validation</div></div>
-  <div class="v19-app-list">${licensed.map(l=>appCard(l)).join('')||'<div class="v19-empty">Aucun élève.</div>'}</div>
+  <div class="v19-app-list">${licensed.map(l=>appCard(l)).join('')||'<div class="v19-empty">Aucun élève en Football, Escalade ou Sport-études Gymnastique.</div>'}</div>
  </div>`;
 }
 function appCard(l){
@@ -307,18 +306,18 @@ function registrationsPage(){
  </div>`;
 }
 function setAppreciationReviewFilter(key,value){
- if(!isManager())return;const next={...(state.filters.appreciationReview||{})};next[key]=key==='term'?Math.min(3,Math.max(1,Number(value)||1)):String(value||'');state.filters.appreciationReview=next;render();
+ if(!isAdmin())return;const next={...(state.filters.appreciationReview||{})};next[key]=key==='term'?Math.min(3,Math.max(1,Number(value)||1)):String(value||'');state.filters.appreciationReview=next;render();
 }
 function appreciationReviewRows(){
  const f=state.filters.appreciationReview||{},term=Number(f.term)||1;
- return (state.data.licenses||[]).filter(l=>!f.specialty||l.sectionOption===f.specialty).slice().sort((a,b)=>`${a.sectionOption||''}${a.className||''}${a.fullName||''}`.localeCompare(`${b.sectionOption||''}${b.className||''}${b.fullName||''}`,'fr')).map(license=>({license,appreciation:currentApp(license.studentId,term)}));
+ return (state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&(!f.specialty||l.sectionOption===f.specialty)).slice().sort((a,b)=>`${a.sectionOption||''}${a.className||''}${a.fullName||''}`.localeCompare(`${b.sectionOption||''}${b.className||''}${b.fullName||''}`,'fr')).map(license=>({license,appreciation:currentApp(license.studentId,term)}));
 }
 function appreciationReviewPage(){
- if(!isManager())return denied();
+ if(!isAdmin())return denied();
  const f=state.filters.appreciationReview||{},term=Number(f.term)||1,rows=appreciationReviewRows(),completed=rows.filter(x=>String(x.appreciation?.text||'').trim()).length,validated=rows.filter(x=>x.appreciation?.status==='validated').length;
  return `<div class="v19-container">${pageTitle('SUIVI PÉDAGOGIQUE','Appréciations','Consulter et copier les textes rédigés par les éducateurs vers ÉcoleDirecte.',`<button class="v19-btn secondary" onclick="app.refreshAppreciationReview()">Actualiser</button>`)}
   <div class="v2115-filterbar v2115-review-filters">
-   <label class="v19-filter"><span>Spécialité</span><select onchange="app.setAppreciationReviewFilter('specialty',this.value)"><option value="">Toutes</option>${SPECIALTIES.map(x=>`<option value="${esc(x)}" ${x===f.specialty?'selected':''}>${esc(x)}</option>`).join('')}</select></label>
+   <label class="v19-filter"><span>Spécialité</span><select onchange="app.setAppreciationReviewFilter('specialty',this.value)"><option value="">Toutes</option>${EDU_SPECIALTIES.map(x=>`<option value="${esc(x)}" ${x===f.specialty?'selected':''}>${esc(x)}</option>`).join('')}</select></label>
    <label class="v19-filter"><span>Trimestre</span><select onchange="app.setAppreciationReviewFilter('term',this.value)">${[1,2,3].map(t=>`<option value="${t}" ${t===term?'selected':''}>Trimestre ${t}</option>`).join('')}</select></label>
   </div>
   <div class="v19-stats v2115-stats"><div><strong>${rows.length}</strong><span>Élève${rows.length>1?'s':''}</span></div><div><strong>${completed}</strong><span>Appréciation${completed>1?'s':''} rédigée${completed>1?'s':''}</span></div><div><strong>${validated}</strong><span>Validée${validated>1?'s':''}</span></div></div>
@@ -338,9 +337,9 @@ function documentsPage(){
 function morePage(){
  if(!isManager()) return denied();
  const tiles=[
-  ['registrations','signup','Inscriptions'],['appreciationReview','app','Appréciations'],['licenses','users','Licences'],['orders','shop','Commandes'],['shop','shop','Boutique'],['documents','doc','Documents']
+  ['registrations','signup','Inscriptions'],['licenses','users','Licences'],['orders','shop','Commandes'],['shop','shop','Boutique'],['documents','doc','Documents']
  ];
- if(isAdmin()) tiles.push(['admin','settings','Administration']);
+ if(isAdmin()){tiles.splice(1,0,['appreciationReview','app','Appréciations']);tiles.push(['admin','settings','Administration'])}
  return `<div class="v19-container">${pageTitle('PLUS','Outils','Les fonctions adaptées à votre espace.')}<div class="v19-tools">${tiles.map(([r,i,l])=>`<button class="v19-tool" onclick="app.go('${r}')">${icon(i)}<strong>${l}</strong></button>`).join('')}</div></div>`;
 }
 function adminPage(){
@@ -374,7 +373,7 @@ function profile(){
  modal('Choisir un espace',`<div class="v19-role-list">${roles.map(([r,l])=>`<button class="${r===state.role?'active':''}" onclick="app.setRole('${r}')"><span>${esc(l)}</span>${r===state.role?'✓':''}</button>`).join('')}</div>`);
 }
 function setRole(r){state.role=r;localStorage.setItem(ROLE_KEY,r);state.route='home';closeModal();render()}
-function go(r){state.route=r;state.search='';render();if(r==='registrations'&&isManager())refreshEventRegistrations(true);if(r==='appreciationReview'&&isManager())refreshAppreciationReview(true)}
+function go(r){state.route=r;state.search='';render();if(r==='registrations'&&isManager())refreshEventRegistrations(true);if(r==='appreciationReview'&&isAdmin())refreshAppreciationReview(true)}
 function theme(){state.dark=!state.dark;localStorage.setItem('bs-dark',state.dark?'1':'0');document.body.classList.toggle('dark',state.dark);render()}
 function search(v){
  state.search=String(v||'');
@@ -490,16 +489,16 @@ function toggleOrder(id,kind){const o=(state.data.orders||[]).find(x=>x.id===id)
 
 function setTerm(t){state.term=t;render()}
 function editApp(studentId){
- const l=(state.data.licenses||[]).find(x=>x.studentId===studentId),a=currentApp(studentId);
+ if(!isAdmin())return;const l=(state.data.licenses||[]).find(x=>x.studentId===studentId);if(!l||!EDU_SPECIALTIES.includes(l.sectionOption))return;const a=currentApp(studentId);
  const m=modal(`Appréciation — ${l?.fullName||''}`,`<form id="v19-app-form"><div class="v19-app-editor"><div><strong>${esc(l?.fullName||'')}</strong><span>${esc(l?.className||'')}</span></div><textarea id="v19-app-text" rows="10" placeholder="Rédiger l’appréciation…">${esc(a?.text||'')}</textarea><div class="v19-modal-actions"><button type="button" class="v19-btn secondary" onclick="app.saveAppDraft('${studentId}')">Enregistrer le brouillon</button><button type="button" class="v19-btn" onclick="app.validateApp('${studentId}')">Vérifier & valider</button></div></div></form>`,true);
  setTimeout(()=>m.querySelector('#v19-app-text')?.focus(),50);
 }
 function upsertApp(studentId,text,status){
  let a=currentApp(studentId);if(a){a.text=text;a.status=status}else{state.data.appreciations.push({id:uid('a'),studentId,term:state.term,text,status})}save()
 }
-function saveAppDraft(studentId){const text=String(document.querySelector('#v19-app-text')?.value||'').trim();upsertApp(studentId,text,'draft');closeModal();render()}
+function saveAppDraft(studentId){if(!isAdmin())return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();upsertApp(studentId,text,'draft');closeModal();render()}
 async function validateApp(studentId){
- const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
+ if(!isAdmin())return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
  const url=cfg.languageToolUrl||'https://api.languagetool.org/v2/check';
  try{
   const body=new URLSearchParams({text,language:'fr-FR'});const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});if(!r.ok)throw new Error('service');const j=await r.json();
@@ -512,12 +511,12 @@ async function validateApp(studentId){
  }catch{alert('La vérification orthographe/grammaire est momentanément indisponible. La validation est bloquée pour éviter d’enregistrer sans contrôle.')}
 }
 async function copyApp(studentId){
- const text=currentApp(studentId)?.text||'';if(!text)return;
+ if(!isAdmin())return;const text=currentApp(studentId)?.text||'';if(!text)return;
  try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}
  toast('Appréciation copiée');
 }
 async function copyReviewApp(studentId,term){
- if(!isManager())return;const appreciation=currentApp(studentId,term),text=String(appreciation?.text||'').trim();if(!text)return;
+ if(!isAdmin())return;const appreciation=currentApp(studentId,term),text=String(appreciation?.text||'').trim();if(!text)return;
  try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}
  toast(`Appréciation de ${studentName(studentId)||'l’élève'} copiée`);
 }
@@ -563,7 +562,7 @@ async function deleteEventRegistration(id,button=null){
  save();render();toast(`Inscription de ${student} retirée de cette date`);
 }
 async function refreshAppreciationReview(quiet=false){
- if(!isManager())return;const client=window.__BS_SUPABASE_CLIENT;if(!client){if(!quiet)alert('Le service des appréciations est indisponible.');return}
+ if(!isAdmin())return;const client=window.__BS_SUPABASE_CLIENT;if(!client){if(!quiet)alert('Le service des appréciations est indisponible.');return}
  const [licenses,students,appreciations]=await Promise.all([client.from('v20_licenses').select('*'),client.from('v20_students').select('*'),client.from('v20_appreciations').select('*')]);const failed=[licenses,students,appreciations].find(result=>result.error);if(failed){console.warn('Appréciations',failed.error.message);if(!quiet)alert('Impossible d’actualiser les appréciations.');return}
  const camel=row=>Object.fromEntries(Object.entries(row||{}).map(([key,value])=>[key.replace(/_([a-z])/g,(_,letter)=>letter.toUpperCase()),value]));state.data.licenses=(licenses.data||[]).map(camel);state.data.students=(students.data||[]).map(camel);state.data.appreciations=(appreciations.data||[]).map(camel);if(state.route==='appreciationReview')render();if(!quiet)toast('Appréciations actualisées');
 }
@@ -636,7 +635,7 @@ async function exportExcel(kind){
   orders:{title:'COMMANDES',headers:['Élève','Classe','Produit','Taille','Qté','Couleur','Paiement','Payé','Distribué','Date'],rows:(state.data.orders||[]).map(o=>[o.studentName,o.className,productName(o.productId),o.size,o.quantity||1,o.color||'',o.paymentMethod,o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',o.createdAt])},
   reports:{title:'BILANS AS',headers:['Date','Activité','Enseignant(s)','Niveau','Lieu','Catégorie','Nombre d’élèves','Commentaire'],rows:(state.data.reports||[]).map(r=>[r.date,r.activity,r.teacher,r.level,r.place,r.category,Number(r.participants||0),r.comment])},
   convocations:{title:'CONVOCATIONS',headers:['Date','Titre','Activité','Spécialité','Catégorie','Lieu','Départ','Retour','Rendez-vous','Professeur','Informations','Élèves'],rows:(state.data.convocations||[]).map(c=>[c.date,c.title,c.activity,c.specialty,c.ageCategory,c.place,c.departure,c.returnTime,c.meetingPoint,c.teacher,c.extraInfo,(c.studentIds||[]).map(studentName).join(' · ')])},
-  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:(state.data.licenses||[]).filter(l=>!roleSpecialty()||l.sectionOption===roleSpecialty()).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']})}
+  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:isAdmin()?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
  };
  const d=defs[kind];if(!d)return;
  ws.mergeCells(1,1,1,d.headers.length);const t=ws.getCell(1,1);t.value=d.title;t.font={name:'Aptos Display',size:24,bold:true,color:{argb:'FFFFFFFF'}};t.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};t.alignment={horizontal:'left',vertical:'middle'};ws.getRow(1).height=38;
