@@ -1,4 +1,4 @@
-const CACHE_NAME='as-bon-sauveur-v27-6';
+const CACHE_NAME='as-bon-sauveur-v27-7';
 const OFFLINE_URL='./offline.html';
 const PRECACHE=[
   OFFLINE_URL,
