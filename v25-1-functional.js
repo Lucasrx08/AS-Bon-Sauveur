@@ -121,7 +121,7 @@ async function toggleOrder(id,kind){
 
 /* ---------- Interface ---------- */
 function injectSafetyCss(){if(document.getElementById('v251-safety-css'))return;const s=document.createElement('style');s.id='v251-safety-css';s.textContent='.v19-shell{padding-bottom:170px!important}.v19-container{padding-bottom:145px!important}body{scroll-padding-bottom:150px}.v251-charter{min-width:82px;justify-content:center}.v19-modal-backdrop .v19-form input:not([type="checkbox"]),.v19-modal-backdrop .v19-form select{height:48px!important;min-height:48px!important;padding:0 14px!important;border-radius:15px!important;font-size:15px!important;line-height:48px!important}.v19-modal-backdrop .v19-form input[type="number"],.v19-modal-backdrop .v19-form input[type="date"],.v19-modal-backdrop .v19-form input[type="time"]{height:48px!important;min-height:48px!important}.v19-modal-backdrop .v19-form textarea{min-height:96px!important;padding:12px 14px!important;border-radius:15px!important;font-size:15px!important}.v19-modal-backdrop .v19-form label>span,.v19-modal-backdrop .v19-label{min-height:16px;display:flex;align-items:flex-end}.v19-modal-backdrop .v19-form{align-items:end}@media(max-width:620px){.v19-shell{padding-bottom:145px!important}.v19-container{padding-bottom:120px!important}.v19-modal-backdrop .v19-form input:not([type="checkbox"]),.v19-modal-backdrop .v19-form select{height:50px!important;min-height:50px!important}}';document.head.appendChild(s)}
-function patchVersion(){if(['26','27'].includes(document.documentElement.dataset.appVersion))return;document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V25.1')}
+function patchVersion(){if(window.__BS_RELEASE?.major>=29)return;document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V25.1')}
 function patchEventDefaults(){const modal=[...document.querySelectorAll('.v19-modal')].find(x=>/Ajouter un événement/i.test(x.querySelector('.v19-modal-head h2')?.textContent||''));if(!modal)return;const start=modal.querySelector('input[name="startTime"]'),end=modal.querySelector('input[name="endTime"]');if(start&&!start.value)start.value='12:30';if(end&&!end.value)end.value='14:30'}
 function patchCharterCells(){
  const title=(document.querySelector('.v19-page-head h1')?.textContent||'').trim();if(title!=='Licences')return;
@@ -145,7 +145,7 @@ function install(){
  wrapNavigation(target);injectSafetyCss();afterRender();
  window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(afterRender));
  window.ASV25={version:VERSION,features:['server-first-deletes','server-first-licenses','reliable-license-import','clickable-charter','server-first-order-status','order-date-normalization','chronological-home','bottom-nav-safe-area','30-minute-inactivity-timeout']};
- document.documentElement.dataset.appVersion='25.1';
+ if(!window.__BS_RELEASE)document.documentElement.dataset.appVersion='25.1';
 }
 install();
 })();
