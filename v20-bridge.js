@@ -164,26 +164,11 @@ window.addEventListener('focus',()=>{if(currentUser&&Date.now()-lastServerRefres
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
 
 async function syncSnapshot(){
- if(!hasSupabase||hydrating)return;const data=safeJson(localStorage.getItem(STORE),{});
+ if(!hasSupabase||hydrating)return;
+ const data=safeJson(localStorage.getItem(STORE),{});
+ // V28 : le cache local n'est plus autoritaire. Les écritures privées sont server-first.
+ // Seules les anciennes commandes publiques locales peuvent encore être transmises ici.
  await submitPublicOrders(data.orders||[]);
- if(!currentUser)return;
- if(['teacher_as','admin'].includes(currentRole)){
-  await upsertTable('v20_events',(data.events||[]).map(x=>({...x,publicVisible:true})));
-  await upsertTable('v20_documents',(data.documents||[]).map(x=>({...x,publicVisible:true})));
-  await upsertTable('v20_products',data.products||[]);
-  await upsertTable('v20_students',data.students||[]);
-  await upsertTable('v20_licenses',data.licenses||[]);
-  await upsertTable('v20_convocations',(data.convocations||[]).map(({studentIds,...x})=>({...x,publicVisible:true,status:x.status||'published'})));
-  await upsertTable('v20_reports',data.reports||[]);
-  await upsertTable('v20_orders',data.orders||[]);
-  const links=(data.convocations||[]).flatMap(c=>(c.studentIds||[]).map(studentId=>({convocation_id:c.id,student_id:studentId})));
-  const {error:delErr}=await sb.from('v20_convocation_students').delete().neq('convocation_id','__never__');if(!delErr&&links.length)await sb.from('v20_convocation_students').insert(links);
-  const notes=Object.entries(data.specialtyNotes||{}).map(([specialty,n])=>({specialty,message:n.message||'',expires_at:n.expiresAt||null,active:!!n.active,public_visible:true}));if(notes.length)await sb.from('v20_specialty_notes').upsert(notes);
-  const terms=Object.entries(data.termSettings||{}).map(([t,v])=>({term:Number(t),deadline:v.deadline||null,term_end:v.end||null}));if(currentRole==='admin'&&terms.length)await sb.from('v20_term_settings').upsert(terms);
- }
- if(currentRole.startsWith('educator_')){
-  const apps=(data.appreciations||[]).map(a=>({...a,educatorId:a.educatorId||currentUser.id,term:a.term||term}));await upsertTable('v20_appreciations',apps)
- }
 }
 async function submitPublicOrders(orders){
  if(!hasSupabase||!orders.length)return;const sent=new Set(safeJson(localStorage.getItem(SENT_ORDERS),'[]'));
@@ -191,7 +176,8 @@ async function submitPublicOrders(orders){
 }
 
 function installStorageSync(){
- const native=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){native.call(this,k,v);if(this===localStorage&&k===STORE&&!hydrating){clearTimeout(syncTimer);syncTimer=setTimeout(syncSnapshot,500)}};
+ // V28 : aucune synchronisation en masse depuis localStorage.
+ // Cela évite qu'un appareil resté ouvert écrase les données plus récentes d'un autre utilisateur.
 }
 function loadScript(src,key){return new Promise((resolve,reject)=>{if(window[key])return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
 function wrapLazyDependencies(){
