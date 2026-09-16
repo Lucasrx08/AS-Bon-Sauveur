@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='v27.6-20260916';
+const VERSION='v27.8-20260916';
 const STORE='bs-app-data-v4';
 const money=n=>Number(n||0);
 
@@ -9,10 +9,6 @@ function normalize(s=''){
 }
 function scrubNode(node){
  if(!(node instanceof Element))return;
- const options=[];
- if(node.matches?.('option'))options.push(node);
- node.querySelectorAll?.('option').forEach(o=>options.push(o));
- options.forEach(o=>{if(normalize(o.textContent)==='especes'||normalize(o.value)==='especes')o.remove()});
  const logins=[];
  if(node.matches?.('input[name="loginName"]'))logins.push(node);
  node.querySelectorAll?.('input[name="loginName"]').forEach(i=>logins.push(i));
@@ -131,8 +127,8 @@ async function exportExcel(kind){
 async function downloadLicenseTemplate(){
  await ensureExcel();
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Import',{views:[{showGridLines:false}]});
- styleTitle(ws,'IMPORT LICENCIÉS — AS BON SAUVEUR',3);styleHeaderRow(ws,4,['Nom & prénom','Classe','Catégorie']);
- styleDataRow(ws,5,['MARTIN Léo','5e Jacqueline AURIOL','Benjamin']);ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;
+ styleTitle(ws,'IMPORT LICENCIÉS — AS BON SAUVEUR',4);styleHeaderRow(ws,4,['Nom & prénom','Classe','Catégorie','Mode de paiement']);
+ styleDataRow(ws,5,['MARTIN Léo','5e Jacqueline AURIOL','Benjamin','Chèque']);ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;ws.getColumn(4).width=24;
 
  const classes=[
   '6e AVIGNON','6e Georges BIZET','6e Paul CEZANNE','6e Alphonse DAUDET',
@@ -144,19 +140,22 @@ async function downloadLicenseTemplate(){
   'Terminale ST2S','Terminale ASSP'
  ];
  const cats=['Benjamin','Benjamine','Minime fille','Minime garçon','Lycéen','Lycéenne'];
+ const payments=['Chèque','Espèces','Ticket Spot 50','Cart’@too','Virement'];
 
- // Sources de validation conservées dans le même onglet : plus fiable dans Excel et Google Sheets.
  ws.getCell('X1').value='CLASSES';classes.forEach((x,i)=>ws.getCell(i+2,24).value=x);
  ws.getCell('Y1').value='CATÉGORIES';cats.forEach((x,i)=>ws.getCell(i+2,25).value=x);
- ws.getColumn(24).hidden=true;ws.getColumn(25).hidden=true;
+ ws.getCell('Z1').value='PAIEMENTS';payments.forEach((x,i)=>ws.getCell(i+2,26).value=x);
+ ws.getColumn(24).hidden=true;ws.getColumn(25).hidden=true;ws.getColumn(26).hidden=true;
  for(let r=5;r<=200;r++){
-  ws.getCell(r,2).dataValidation={type:'list',allowBlank:true,formulae:[`$X$2:$X${classes.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Classe invalide',error:'Choisissez une classe dans la liste déroulante.'};
-  ws.getCell(r,3).dataValidation={type:'list',allowBlank:true,formulae:[`$Y$2:$Y${cats.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Catégorie invalide',error:'Choisissez une catégorie dans la liste déroulante.'};
+  ws.getCell(r,2).dataValidation={type:'list',allowBlank:true,formulae:[`$X$2:$X$${classes.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Classe invalide',error:'Choisissez une classe dans la liste déroulante.'};
+  ws.getCell(r,3).dataValidation={type:'list',allowBlank:true,formulae:[`$Y$2:$Y$${cats.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Catégorie invalide',error:'Choisissez une catégorie dans la liste déroulante.'};
+  ws.getCell(r,4).dataValidation={type:'list',allowBlank:true,formulae:[`$Z$2:$Z$${payments.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Mode invalide',error:'Choisissez un mode de paiement dans la liste déroulante.'};
  }
 
  const help=wb.addWorksheet('Aide',{views:[{showGridLines:false}]});
  help.getCell('A1').value='CATÉGORIES AUTORISÉES';setFont(help.getCell('A1'),{header:true});cats.forEach((x,i)=>{help.getCell(i+2,1).value=x;setFont(help.getCell(i+2,1))});help.getColumn(1).width=28;
  help.getCell('C1').value='CLASSES AUTORISÉES';setFont(help.getCell('C1'),{header:true});classes.forEach((x,i)=>{help.getCell(i+2,3).value=x;setFont(help.getCell(i+2,3))});help.getColumn(3).width=34;
+ help.getCell('E1').value='MODES DE PAIEMENT LICENCES';setFont(help.getCell('E1'),{header:true});payments.forEach((x,i)=>{help.getCell(i+2,5).value=x;setFont(help.getCell(i+2,5))});help.getColumn(5).width=28;
 
  const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
