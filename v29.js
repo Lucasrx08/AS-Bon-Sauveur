@@ -19,7 +19,7 @@ observer.observe(document.body,{childList:true,subtree:true,characterData:true})
 async function registerPwa(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const reg=await navigator.serviceWorker.register('./sw.js?v=29.0.0',{scope:'./'});
+    const reg=await navigator.serviceWorker.register('./sw.js?v=29.0.0-final',{scope:'./'});
     if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
     reg.addEventListener('updatefound',()=>{
       const worker=reg.installing;
