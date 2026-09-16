@@ -11,6 +11,7 @@ function protectPinOperationalSession(){
 }
 
 function patchVersion(){
+ if(window.__BS_RELEASE?.major>=29){window.__BS_APPLY_RELEASE_LABEL?.();protectPinOperationalSession();return}
  document.documentElement.dataset.appVersion='28';
  document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V28.1');
  protectPinOperationalSession();
@@ -31,6 +32,7 @@ function savedMessage(title='Saisie validée',detail='Enregistrée dans la base 
 window.__BS_SAVED=savedMessage;
 
 async function register(){
+ if(window.__BS_RELEASE?.major>=29)return;
  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
  try{
   const reg=await navigator.serviceWorker.register('./sw.js?v=28.1.0',{scope:'./'});
