@@ -1,16 +1,16 @@
 (() => {
 'use strict';
-const VERSION='27.1.0';
+const VERSION='27.2.0';
 
 function patch(){
  document.documentElement.dataset.appVersion='27';
- document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V27.1');
+ document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V27.2');
  document.querySelectorAll('[data-v241-tv-export]').forEach(x=>x.remove());
 }
 async function register(){
  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
  try{
-  const reg=await navigator.serviceWorker.register('./sw.js?v=27.1.0',{scope:'./'});
+  const reg=await navigator.serviceWorker.register('./sw.js?v=27.2.0',{scope:'./'});
   reg.update().catch(()=>{});
  }catch(error){console.warn('V27 service worker',error)}
 }
