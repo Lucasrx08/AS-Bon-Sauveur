@@ -614,12 +614,35 @@ async function previewImport(file,m){
  if(!window.XLSX)return alert('Le module Excel n’est pas chargé.');
  const box=m.querySelector('#v19-import-preview');box.innerHTML='<p>Lecture du fichier…</p>';
  try{
-  const ab=await file.arrayBuffer(),wb=XLSX.read(ab,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],raw=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
-  const get=(r,aliases)=>{for(const k of Object.keys(r)){if(aliases.some(a=>norm(k)===norm(a))&&String(r[k]).trim())return String(r[k]).trim()}return''};
-  const rows=raw.map((r,i)=>{let full=get(r,['Nom & prénom','Nom et prénom','Nom prénom','Élève','Eleve']);if(!full)full=[get(r,['Nom']),get(r,['Prénom','Prenom'])].filter(Boolean).join(' ');const rc=get(r,['Classe']),rg=get(r,['Catégorie','Categorie']),cl=exactClass(rc),ca=exactCat(rg),errors=[];if(!full)errors.push('Nom manquant');if(!cl)errors.push(`Classe inconnue : ${rc||'vide'}`);if(!ca)errors.push(`Catégorie inconnue : ${rg||'vide'}`);return{line:i+2,fullName:full,className:cl,category:ca,errors,valid:!errors.length}});
+  const ab=await file.arrayBuffer(),wb=XLSX.read(ab,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+  const fullAliases=['Nom & prénom','Nom et prénom','Nom prénom','Élève','Eleve'];
+  const lastAliases=['Nom'];
+  const firstAliases=['Prénom','Prenom'];
+  const classAliases=['Classe'];
+  const catAliases=['Catégorie','Categorie'];
+  const findCol=(row,aliases)=>row.findIndex(v=>aliases.some(a=>norm(v)===norm(a)));
+  let headerIndex=-1,fullCol=-1,lastCol=-1,firstCol=-1,classCol=-1,catCol=-1;
+  for(let i=0;i<Math.min(matrix.length,30);i++){
+   const row=(matrix[i]||[]).map(v=>String(v||'').trim());
+   const f=findCol(row,fullAliases),l=findCol(row,lastAliases),p=findCol(row,firstAliases),cl=findCol(row,classAliases),ca=findCol(row,catAliases);
+   if(cl>=0&&ca>=0&&(f>=0||(l>=0&&p>=0))){headerIndex=i;fullCol=f;lastCol=l;firstCol=p;classCol=cl;catCol=ca;break}
+  }
+  if(headerIndex<0)throw new Error('Entêtes introuvables');
+  const rows=[];
+  matrix.slice(headerIndex+1).forEach((r,offset)=>{
+   const row=r||[],cell=i=>String(row[i]??'').trim();
+   const full=fullCol>=0?cell(fullCol):[cell(lastCol),cell(firstCol)].filter(Boolean).join(' ');
+   const rc=cell(classCol),rg=cell(catCol);
+   if(!full&&!rc&&!rg)return;
+   const cl=exactClass(rc),ca=exactCat(rg),errors=[];
+   if(!full)errors.push('Nom manquant');
+   if(!cl)errors.push(`Classe inconnue : ${rc||'vide'}`);
+   if(!ca)errors.push(`Catégorie inconnue : ${rg||'vide'}`);
+   rows.push({line:headerIndex+2+offset,fullName:full,className:cl,category:ca,errors,valid:!errors.length});
+  });
   window.__v19ImportRows=rows;const valid=rows.filter(x=>x.valid).length;
   box.innerHTML=`<div class="v19-import-summary">${valid} ligne(s) prête(s) · ${rows.length-valid} erreur(s)</div><div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Ligne</th><th>Nom</th><th>Classe</th><th>Catégorie</th><th>État</th></tr></thead><tbody>${rows.slice(0,100).map(r=>`<tr><td>${r.line}</td><td>${esc(r.fullName||'—')}</td><td>${esc(r.className||'—')}</td><td>${esc(r.category||'—')}</td><td>${r.valid?'Prêt':esc(r.errors.join(' · '))}</td></tr>`).join('')}</tbody></table></div><div class="v19-modal-actions"><button class="v19-btn" ${valid?'':'disabled'} onclick="app.commitImport()">Importer ${valid} élève(s)</button></div>`;
- }catch(e){box.innerHTML='<div class="v19-empty">Impossible de lire ce fichier.</div>'}
+ }catch(e){console.error('Import licences',e);box.innerHTML='<div class="v19-empty">Impossible de lire ce fichier. Vérifiez les colonnes Nom & prénom, Classe et Catégorie.</div>'}
 }
 function commitImport(){
  const rows=(window.__v19ImportRows||[]).filter(x=>x.valid),sp=document.querySelector('#v19-import-sp')?.value||'Association Sportive';let added=0,updated=0;
