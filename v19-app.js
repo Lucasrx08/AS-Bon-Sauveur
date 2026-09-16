@@ -157,7 +157,7 @@ function header(){
  const label=ROLE_LABELS[state.role]||'AS';
  const initials=label.split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();
  return `<header class="v19-topbar">
-  <button class="v19-brand" onclick="app.go('home')"><img src="assets/logo-as.png"><span>ASSOCIATION SPORTIVE<br>DU BON SAUVEUR</span></button>
+  <button class="v19-brand" onclick="app.go('home')"><img src="assets/logo-as.png" alt="Logo Association Sportive du Bon Sauveur" width="60" height="60" decoding="async" fetchpriority="high"><span>ASSOCIATION SPORTIVE<br>DU BON SAUVEUR</span></button>
   <div class="v19-top-actions"><button class="v19-icon-btn" onclick="app.theme()" aria-label="Thème">${state.dark?'☀':'☾'}</button><button class="v19-avatar" onclick="app.profile()">${esc(initials)}</button></div>
  </header>`;
 }
@@ -328,7 +328,7 @@ function appreciationReviewPage(){
 function shopPage(){
  const rows=(state.data.products||[]).filter(p=>p.active!==false);
  return `<div class="v19-container">${pageTitle('BOUTIQUE','Boutique AS','Articles officiels de l’Association Sportive.',isManager()?`<button class="v19-btn" onclick="app.go('orders')">Gérer les commandes</button>`:'')}
- <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(p.image||'assets/logo-as.png')}"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
+ <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(p.image||'assets/logo-as.png')}" alt="${esc(p.name||'Produit AS')}" loading="lazy" decoding="async"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
 }
 function documentsPage(){
  const rows=(state.data.documents||[]).filter(d=>state.role!=='public'||/^https?:\/\//i.test(String(d.url||'')));
@@ -365,7 +365,7 @@ function render(){
 function modal(title,html,wide=false){
  closeModal();
  const w=document.createElement('div');w.className='v19-modal-backdrop';w.id='v19-modal';
- w.innerHTML=`<div class="v19-modal ${wide?'wide':''}"><div class="v19-modal-head"><h2>${esc(title)}</h2><button class="v19-icon-btn" onclick="app.closeModal()">×</button></div><div class="v19-modal-body">${html}</div></div>`;
+ w.innerHTML=`<div class="v19-modal ${wide?'wide':''}" role="dialog" aria-modal="true"><div class="v19-modal-head"><h2>${esc(title)}</h2><button class="v19-icon-btn" aria-label="Fermer" onclick="app.closeModal()">×</button></div><div class="v19-modal-body">${html}</div></div>`;
  document.body.appendChild(w);w.addEventListener('click',e=>e.target===w&&closeModal());return w;
 }
 function closeModal(){document.getElementById('v19-modal')?.remove()}
