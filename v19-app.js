@@ -631,8 +631,9 @@ async function downloadLicenseTemplate(){
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Import');
  ws.mergeCells('A1:C1');ws.getCell('A1').value='IMPORT LICENCIÉS — AS BON SAUVEUR';ws.getCell('A1').font={name:'Aptos Display',size:20,bold:true,color:{argb:'FF0757C9'}};ws.getCell('A1').alignment={horizontal:'center'};ws.getRow(1).height=32;
  ['Nom & prénom','Classe','Catégorie'].forEach((h,i)=>{const c=ws.getCell(3,i+1);c.value=h;c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};c.font={name:'Aptos',size:11,bold:true,color:{argb:'FFFFFFFF'}};c.alignment={horizontal:'center'}});
- ws.getCell('A4').value='NOM Prénom';ws.getCell('B4').value=CLASSES[0];ws.getCell('C4').value=LICENSE_CATEGORIES[0];ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;for(let r=4;r<=200;r++)ws.getCell(r,3).dataValidation={type:'list',formulae:[`"${LICENSE_CATEGORIES.join(',')}"`]};
+ ws.getCell('A4').value='NOM Prénom';ws.getCell('B4').value=CLASSES[0];ws.getCell('C4').value=LICENSE_CATEGORIES[0];ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;
  const help=wb.addWorksheet('Aide');help.getCell('A1').value='CATÉGORIES AUTORISÉES';LICENSE_CATEGORIES.forEach((x,i)=>help.getCell(i+2,1).value=x);help.getCell('C1').value='CLASSES AUTORISÉES';CLASSES.forEach((x,i)=>help.getCell(i+2,3).value=x);help.getColumn(1).width=24;help.getColumn(3).width=34;
+ for(let r=4;r<=200;r++){ws.getCell(r,2).dataValidation={type:'list',formulae:[`Aide!$C$2:$C${CLASSES.length+1}`]};ws.getCell(r,3).dataValidation={type:'list',formulae:[`"${LICENSE_CATEGORIES.join(',')}"`]}}
  const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
 function openDoc(id){const d=(state.data.documents||[]).find(x=>x.id===id);if(!d)return;if(/^https?:\/\//.test(d.url||''))window.open(d.url,'_blank','noopener');else toast('Document de démonstration : aucun fichier distant associé.')}
