@@ -42,6 +42,10 @@ Deno.serve(async (req) => {
     const { data: profile } = await caller.from('profiles').select('role').eq('id', user.id).single()
     if (profile?.role !== 'admin') return json(req,{ error: 'Accès administrateur requis' }, 403)
 
+    const jwt = authHeader.replace(/^Bearer\s+/i, '')
+    const { data: aal, error: aalError } = await caller.auth.mfa.getAuthenticatorAssuranceLevel(jwt)
+    if (aalError || aal?.currentLevel !== 'aal2') return json(req,{ error: 'Double authentification administrateur requise' }, 403)
+
     const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } })
     const body = await req.json()
 
