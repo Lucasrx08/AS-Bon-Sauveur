@@ -1,8 +1,6 @@
 (() => {
 'use strict';
 
-if(!window.app)return;
-
 const VERSION='v25.0-20260915';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
@@ -227,8 +225,9 @@ function selectedPreview(container,events){
 function installTvButton(root=document){
  const pdf=[...root.querySelectorAll?.('button[onclick]')||[]].find(button=>/app\.exportCalendarPDF\(\)/.test(button.getAttribute('onclick')||''));
  if(!pdf)return false;
- if(pdf.parentElement?.querySelector('[data-v241-tv-export]'))return true;
- const button=document.createElement('button');button.type='button';button.className='v19-btn secondary';button.dataset.v241TvExport='1';button.textContent='Export TV';button.onclick=openTvPicker;pdf.insertAdjacentElement('afterend',button);return true;
+ const existing=pdf.parentElement?.querySelector('[data-v241-tv-export]');
+ if(existing){existing.style.setProperty('display','inline-flex','important');return true}
+ const button=document.createElement('button');button.type='button';button.className='v19-btn secondary';button.dataset.v241TvExport='1';button.textContent='Export TV';button.onclick=openTvPicker;button.style.setProperty('display','inline-flex','important');pdf.insertAdjacentElement('afterend',button);return true;
 }
 function closePicker(){document.getElementById('v2112-calendar-modal')?.remove()}
 function openCalendarPicker(){
@@ -261,12 +260,24 @@ async function exportConvocation(id){
  try{const doc=await buildConvocationPdf(c),name=`Convocation_${clean(c.activity||c.title||'AS')}_${clean(c.ageCategory||'Categorie')}_${clean(c.date||'')}.pdf`;doc.save(name);toast('Convocation PDF téléchargée.')}catch(error){console.error(error);alert('Impossible de générer la convocation PDF. Réessayez.')}
 }
 
-window.app.exportCalendarPDF=exportCalendar;
-window.app.exportCalendarTV=exportCalendarTv;
-window.app.exportConvocation=exportConvocation;
 const pdfApi={version:VERSION,buildProgramPdf,buildTvPdf,buildConvocationPdf,openCalendarPicker,openTvPicker,installTvButton};
-window.ASV2112_PDF=pdfApi;
-window.ASV2113_PDF=pdfApi;
-window.ASV2114_PDF=pdfApi;
-installTvButton();
+function mountPdfModule(){
+ if(!window.app)return false;
+ window.app.exportCalendarPDF=exportCalendar;
+ window.app.exportCalendarTV=exportCalendarTv;
+ window.app.exportConvocation=exportConvocation;
+ window.ASV2112_PDF=pdfApi;
+ window.ASV2113_PDF=pdfApi;
+ window.ASV2114_PDF=pdfApi;
+ installTvButton();
+ return true;
+}
+function mountWhenReady(){
+ if(!mountPdfModule())return;
+ window.removeEventListener('bs-app-rendered',mountWhenReady);
+}
+if(!mountPdfModule()){
+ window.addEventListener('bs-app-rendered',mountWhenReady);
+ document.addEventListener('DOMContentLoaded',mountWhenReady,{once:true});
+}
 })();
