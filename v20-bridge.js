@@ -111,6 +111,57 @@ async function persistReport(report){
  return camel(data);
 }
 window.__BS_PERSIST_REPORT=persistReport;
+
+async function persistConvocation(convocation,eventId=''){
+ if(!sb)throw new Error('SERVICE_UNAVAILABLE');
+ const studentIds=(convocation.studentIds||[]).map(String),base={...convocation};delete base.studentIds;
+ const payload=cleanRow({...base,status:base.status||'published',publicVisible:true,updatedAt:new Date().toISOString()});
+ const {data,error}=await sb.from('v20_convocations').upsert(payload).select('*').single();if(error)throw error;
+ const {error:deleteLinksError}=await sb.from('v20_convocation_students').delete().eq('convocation_id',String(convocation.id));if(deleteLinksError)throw deleteLinksError;
+ if(studentIds.length){
+  const {error:linksError}=await sb.from('v20_convocation_students').insert(studentIds.map(studentId=>({convocation_id:String(convocation.id),student_id:studentId})));if(linksError)throw linksError;
+ }
+ const {error:unlinkError}=await sb.from('v20_events').update({convocation_id:null}).eq('convocation_id',String(convocation.id));if(unlinkError)throw unlinkError;
+ if(eventId){
+  const {error:eventError}=await sb.from('v20_events').update({convocation_id:String(convocation.id),registration_open:false}).eq('id',String(eventId));if(eventError)throw eventError;
+ }
+ return {...camel(data),studentIds};
+}
+window.__BS_PERSIST_CONVOCATION=persistConvocation;
+
+async function persistAppreciation(appreciation){
+ if(!sb||!currentUser)throw new Error('SERVICE_UNAVAILABLE');
+ const payload=cleanRow({...appreciation,educatorId:appreciation.educatorId||currentUser.id,updatedAt:new Date().toISOString()});
+ const {data,error}=await sb.from('v20_appreciations').upsert(payload).select('*').single();if(error)throw error;
+ return camel(data);
+}
+window.__BS_PERSIST_APPRECIATION=persistAppreciation;
+
+async function persistSpecialtyNote(specialty,note){
+ if(!sb)throw new Error('SERVICE_UNAVAILABLE');
+ const payload={specialty,message:note.message||null,expires_at:note.expiresAt||null,active:!!note.active,public_visible:true,updated_at:new Date().toISOString()};
+ const {data,error}=await sb.from('v20_specialty_notes').upsert(payload).select('*').single();if(error)throw error;
+ return camel(data);
+}
+window.__BS_PERSIST_SPECIALTY_NOTE=persistSpecialtyNote;
+
+async function persistTerms(settings){
+ if(!sb)throw new Error('SERVICE_UNAVAILABLE');
+ const rows=Object.entries(settings||{}).map(([t,v])=>({term:Number(t),deadline:v.deadline||null,term_end:v.end||null,updated_at:new Date().toISOString()}));
+ const {data,error}=await sb.from('v20_term_settings').upsert(rows).select('*');if(error)throw error;
+ return (data||[]).map(camel);
+}
+window.__BS_PERSIST_TERMS=persistTerms;
+
+let lastServerRefresh=0;
+async function refreshFromServer(){
+ if(!currentUser||hydrating)return false;
+ await hydrateAll();lastServerRefresh=Date.now();return true;
+}
+window.__BS_REFRESH_DATA=refreshFromServer;
+window.addEventListener('focus',()=>{if(currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
+
 async function syncSnapshot(){
  if(!hasSupabase||hydrating)return;const data=safeJson(localStorage.getItem(STORE),{});
  await submitPublicOrders(data.orders||[]);
@@ -156,13 +207,24 @@ function overrideSecurityUI(){
  window.app.profile=profileModal;window.app.setRole=()=>toast('Le changement de rôle est protégé par la connexion.');
  const origSetTerm=window.app.setTerm;if(origSetTerm)window.app.setTerm=t=>{term=Number(t)||1;return origSetTerm(t)};
  const origValidate=window.app.validateApp;
+ const canWriteAppreciation=studentId=>{
+  if(!currentRole.startsWith('educator_'))return false;
+  const d0=window.app.readData(),lic=(d0.licenses||[]).find(x=>String(x.studentId)===String(studentId));const allowed=['Section Football','Option Escalade','Sport-études Gymnastique'];const roleSpecialty={educator_football:'Section Football',educator_escalade:'Option Escalade',educator_gymnastique:'Sport-études Gymnastique'}[currentRole]||null;
+  return !!lic&&allowed.includes(lic.sectionOption)&&(!roleSpecialty||lic.sectionOption===roleSpecialty);
+ };
+ const saveAppreciationServer=async(studentId,status)=>{
+  if(!canWriteAppreciation(studentId))return;
+  const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(status==='validated'&&!text)return alert('Saisissez une appréciation.');
+  const d=window.app.readData();let a=(d.appreciations||[]).find(x=>String(x.studentId)===String(studentId)&&Number(x.term||1)===Number(term));
+  const row={id:a?.id||uid('a'),studentId,term:Number(term)||1,text,status,educatorId:a?.educatorId||currentUser?.id||null};
+  try{const saved=await persistAppreciation(row);if(a)Object.assign(a,row,saved);else d.appreciations.push({...row,...saved});localStorage.setItem(STORE,JSON.stringify(d));window.app.closeModal?.();window.app.go?.('appreciations');toast(status==='validated'?'Appréciation enregistrée dans la base centrale.':'Brouillon enregistré dans la base centrale.')}
+  catch(error){console.error('Appréciation serveur',error);toast('Appréciation non enregistrée : vérifiez votre connexion puis réessayez.',4800)}
+ };
+ window.app.saveAppDraft=studentId=>saveAppreciationServer(studentId,'draft');
  window.app.validateApp=async studentId=>{
-  if(!currentRole.startsWith('educator_'))return;
-  const d0=window.app.readData();const lic=(d0.licenses||[]).find(x=>String(x.studentId)===String(studentId));const allowed=['Section Football','Option Escalade','Sport-études Gymnastique'];const roleSpecialty={educator_football:'Section Football',educator_escalade:'Option Escalade',educator_gymnastique:'Sport-études Gymnastique'}[currentRole]||null;if(!lic||!allowed.includes(lic.sectionOption)||(roleSpecialty&&lic.sectionOption!==roleSpecialty))return;
+  if(!canWriteAppreciation(studentId))return;
   if(cfg.enableExternalGrammar===true&&origValidate)return origValidate(studentId);
-  const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
-  const d=window.app.readData();let a=(d.appreciations||[]).find(x=>x.studentId===studentId&&Number(x.term||1)===term);if(a){a.text=text;a.status='validated';a.term=term;a.educatorId=a.educatorId||currentUser?.id}else{d.appreciations.push({id:uid('a'),studentId,term,text,status:'validated',educatorId:currentUser?.id||null})}
-  localStorage.setItem(STORE,JSON.stringify(d));window.app.closeModal?.();toast('Appréciation validée. La correction externe est désactivée par défaut.');location.reload();
+  return saveAppreciationServer(studentId,'validated');
  };
 }
 function enhanceA11y(root=document){
