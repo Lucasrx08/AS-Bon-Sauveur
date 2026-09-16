@@ -65,6 +65,6 @@ function enforce(){
 
 window.addEventListener('bs-role-verified',()=>setTimeout(enforce,0));
 window.addEventListener('pageshow',enforce);
-new MutationObserver(()=>requestAnimationFrame(enforce)).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(enforce));
 enforce();
 })();
