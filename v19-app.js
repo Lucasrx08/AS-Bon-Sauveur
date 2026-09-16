@@ -198,7 +198,7 @@ function homePage(){
  const title=sp||"L’Association Sportive du Bon Sauveur";
  const sub=sp?'Rendez-vous, informations et suivi de votre espace.':'Compétitions, entraînements, convocations et informations.';
  const upcoming=eventsVisible().filter(e=>String(e.date||'')>=todayKey());
- const ev=upcoming.slice().sort((a,b)=>Number(eventRegistrationAvailable(b))-Number(eventRegistrationAvailable(a))||(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||''))).slice(0,5);
+ const ev=upcoming.slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||''))).slice(0,5);
  return `<div class="v19-container">
   <section class="v19-hero"><div class="v19-kicker">SAINT-LÔ · ${sp?esc(sp).toUpperCase():'ASSOCIATION SPORTIVE'}</div><h1>${esc(title)}</h1><p>${esc(sub)}</p></section>
   ${specialtyNote()}
@@ -207,7 +207,7 @@ function homePage(){
  </div>`;
 }
 function calendarPage(){
- const actions=(isManager()?`<button class="v19-btn" onclick="app.editEvent()">+ Événement</button>`:'')+`<button class="v19-btn yellow" onclick="app.exportCalendarPDF()">Exporter le calendrier</button>`;
+ const actions=(isManager()?`<button class="v19-btn v27-compact-action" onclick="app.editEvent()">+ Événement</button>`:'')+`<button class="v19-btn yellow v27-compact-action v27-calendar-pdf" onclick="app.exportCalendarPDF()">Exporter PDF</button>`;
  const q=norm(state.search), list=eventsVisible().filter(e=>String(e.date||'')>=todayKey()).filter(e=>!q||norm(`${e.title} ${e.place} ${e.ageCategory} ${e.specialty}`).includes(q));
  return `<div class="v19-container">${pageTitle('CALENDRIER','À venir',roleSpecialty()?`Uniquement les rendez-vous liés à ${roleSpecialty()}.`:'Compétitions, entraînements et rendez-vous.',actions)}
  <input class="v19-search" placeholder="Rechercher…" value="${esc(state.search)}" oninput="app.search(this.value)">
@@ -333,7 +333,7 @@ function shopPage(){
 function documentsPage(){
  const rows=(state.data.documents||[]).filter(d=>state.role!=='public'||/^https?:\/\//i.test(String(d.url||'')));
  return `<div class="v19-container">${pageTitle('DOCUMENTS','Documents','Ressources utiles.')}
- <div class="v19-grid">${rows.map(d=>`<article class="v19-card"><div class="v19-row"><div>${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions">${/^https?:\/\//i.test(String(d.url||''))?`<button class="v19-btn secondary" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn" onclick="app.openDoc('${d.id}')">Télécharger</button>`:(isManager()?`<span class="v19-meta">Fichier non associé — à compléter dans l’administration.</span>`:'')}</div></article>`).join('')||'<div class="v19-empty">Aucun document publié pour le moment.</div>'}</div></div>`;
+ <div class="v19-grid">${rows.map(d=>`<article class="v19-card v27-document-card"><div class="v19-row"><div class="v27-document-copy">${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions v27-document-actions">${/^https?:\/\//i.test(String(d.url||''))?`<button class="v19-btn secondary small" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn small" onclick="app.openDoc('${d.id}')">Télécharger</button>`:(isManager()?`<span class="v19-meta">Fichier non associé — à compléter dans l’administration.</span>`:'')}</div></article>`).join('')||'<div class="v19-empty">Aucun document publié pour le moment.</div>'}</div></div>`;
 }
 function morePage(){
  if(!isManager()) return denied();
@@ -359,6 +359,7 @@ function render(){
  const pages={home:homePage,calendar:calendarPage,convocations:convocationsPage,licenses:licensesPage,orders:ordersPage,reports:reportsPage,appreciations:appreciationsPage,registrations:registrationsPage,appreciationReview:appreciationReviewPage,shop:shopPage,documents:documentsPage,more:morePage,admin:adminPage};
  root.innerHTML=layout((pages[state.route]||homePage)());
  window.scrollTo({top:0,behavior:'instant'});
+ window.dispatchEvent(new CustomEvent('bs-app-rendered',{detail:{route:state.route,role:state.role}}));
 }
 
 function modal(title,html,wide=false){
