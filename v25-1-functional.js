@@ -69,13 +69,13 @@ function editLicense(id){
   const student={id:studentId,fullName,className:license.className,specialty:license.sectionOption};
   const previousStudent=(data.students||[]).find(x=>String(x.id)===String(studentId));
   button.disabled=true;button.textContent='Enregistrement…';status.textContent='Enregistrement dans la base centrale…';status.className='full v2115-form-status';
-  try{await persistLicenseRows(student,license,!current,previousStudent?{...previousStudent}:null);data.students=data.students||[];data.licenses=data.licenses||[];const s=data.students.find(x=>String(x.id)===String(studentId));s?Object.assign(s,student):data.students.push(student);const l=data.licenses.find(x=>String(x.id)===String(license.id));l?Object.assign(l,license):data.licenses.push(license);persist(data);closeLicenseModal();app()?.go?.('licenses');toast('Licence enregistrée dans la base centrale.')}catch(error){console.error('V25.1 licence',error);button.disabled=false;button.textContent='Enregistrer';status.textContent='Enregistrement impossible : '+(error?.message||'erreur serveur');status.className='full v2115-form-status error'}
+  try{await persistLicenseRows(student,license,!current,previousStudent?{...previousStudent}:null);data.students=data.students||[];data.licenses=data.licenses||[];const s=data.students.find(x=>String(x.id)===String(studentId));s?Object.assign(s,student):data.students.push(student);const l=data.licenses.find(x=>String(x.id)===String(license.id));l?Object.assign(l,license):data.licenses.push(license);persist(data);closeLicenseModal();app()?.go?.('licenses');(window.__BS_SAVED?window.__BS_SAVED('Licence enregistrée'):toast('Licence enregistrée dans la base centrale.'))}catch(error){console.error('V25.1 licence',error);button.disabled=false;button.textContent='Enregistrer';status.textContent='Enregistrement impossible : '+(error?.message||'erreur serveur');status.className='full v2115-form-status error'}
  };
 }
 async function updateLicenseField(id,column,localKey,next){
  if(!manager())return toast('Accès gestion requis.');const data=app()?.readData?.(),license=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!license)return;
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');
- try{const payload={};payload[column]=next;const {error}=await client.from('v20_licenses').update(payload).eq('id',String(id));if(error)throw error;license[localKey]=next;persist(data);app()?.go?.('licenses')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
+ try{const payload={};payload[column]=next;const {error}=await client.from('v20_licenses').update(payload).eq('id',String(id));if(error)throw error;license[localKey]=next;persist(data);app()?.go?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licence mise à jour')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
 }
 function toggleLicensePayment(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'payment_status','paymentStatus',l.paymentStatus==='Payé'?'En attente':'Payé')}
 function toggleLicenseCharter(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'charter_signed','charterSigned',l.charterSigned==='Oui'?'Non':'Oui')}
@@ -92,7 +92,7 @@ async function commitImport(){
   const previousStudent=data.students.find(x=>String(x.id)===String(studentId)),nextStudent={id:studentId,fullName:row.fullName,className:row.className,specialty:sp};
   try{await persistLicenseRows(nextStudent,nextLicense,isNew,previousStudent?{...previousStudent}:null);if(license)Object.assign(license,nextLicense);else data.licenses.push(nextLicense);if(previousStudent)Object.assign(previousStudent,nextStudent);else data.students.push(nextStudent);isNew?added++:updated++}catch(error){failed++;console.error('V25.1 import licence',row,error)}
  }
- persist(data);app()?.closeModal?.();app()?.go?.('licenses');if(failed)alert(`${added} ajouté(s) · ${updated} mis à jour · ${failed} échec(s). Les lignes en échec n’ont pas été ajoutées localement.`);else toast(`${added} élève(s) ajouté(s) · ${updated} mis à jour.`);
+ persist(data);app()?.closeModal?.();app()?.go?.('licenses');if(failed)alert(`${added} ajouté(s) · ${updated} mis à jour · ${failed} échec(s). Les lignes en échec n’ont pas été ajoutées localement.`);else (window.__BS_SAVED?window.__BS_SAVED('Import validé',`${added} élève(s) ajouté(s) · ${updated} mis à jour · base centrale synchronisée.`):toast(`${added} élève(s) ajouté(s) · ${updated} mis à jour.`));
 }
 
 async function bulkLicensePaymentMode(){
@@ -107,7 +107,7 @@ async function bulkLicensePaymentMode(){
  try{
   const {error}=await client.from('v20_licenses').update({contribution:mode}).in('id',ids);if(error)throw error;
   const data=app()?.readData?.();if(data){(data.licenses||[]).forEach(l=>{if(ids.includes(String(l.id)))l.contribution=mode});persist(data)}
-  app()?.go?.('licenses');toast(`${ids.length} licence(s) mises à jour : ${mode}.`);
+  app()?.go?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licences mises à jour',`${ids.length} licence(s) · ${mode} · base centrale synchronisée.`);else toast(`${ids.length} licence(s) mises à jour : ${mode}.`);
  }catch(error){console.error('V27.8 paiement licences en masse',error);if(button){button.disabled=false;button.textContent=`Appliquer à ${ids.length} licence(s)`}toast('Mise à jour impossible : '+(error?.message||'erreur serveur'),4800)}
 }
 
@@ -116,7 +116,7 @@ function normalizeOrderDates(){const data=app()?.readData?.();if(!data)return;(d
 async function toggleOrder(id,kind){
  if(!manager()||!['paid','distributed'].includes(kind))return;const data=app()?.readData?.(),order=(data?.orders||[]).find(x=>String(x.id)===String(id));if(!order)return;
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');const next=!order[kind],payload={};payload[kind]=next;
- try{const {error}=await client.from('v20_orders').update(payload).eq('id',String(id));if(error)throw error;order[kind]=next;persist(data);app()?.go?.('orders')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
+ try{const {error}=await client.from('v20_orders').update(payload).eq('id',String(id));if(error)throw error;order[kind]=next;persist(data);app()?.go?.('orders');if(window.__BS_SAVED)window.__BS_SAVED('Commande mise à jour')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
 }
 
 /* ---------- Interface ---------- */
