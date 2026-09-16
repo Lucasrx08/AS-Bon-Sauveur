@@ -150,7 +150,7 @@ function currentNav(){
   if((state.data.documents||[]).some(d=>/^https?:\/\//i.test(String(d.url||''))))items.push(['documents','doc','Documents']);
   return items;
  }
- if(isEducator()) return [['home','home','Accueil'],['calendar','cal','Calendrier']];
+ if(isEducator()) return [['home','home','Accueil'],['calendar','cal','Calendrier'],['appreciations','app','Appréciations']];
  return [['home','home','Accueil'],['calendar','cal','Calendrier'],['convocations','flag','Convocations'],['reports','chart','Bilans'],['more','more','Plus']];
 }
 function header(){
@@ -267,13 +267,16 @@ function reportsPage(){
 }
 function currentApp(studentId,term=state.term){return (state.data.appreciations||[]).filter(a=>a.studentId===studentId&&Number(a.term)===Number(term)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null}
 function appreciationsPage(){
- if(!isAdmin()) return denied();
- const licensed=(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption));
+ if(!isEducator()&&!isAdmin()) return denied();
+ const sp=roleSpecialty();
+ const licensed=(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&(!sp||l.sectionOption===sp));
  const st=state.data.termSettings?.[state.term]||{};
- return `<div class="v19-container">${pageTitle('ADMINISTRATION','Appréciations','Réservé à l’administrateur · Football, Escalade et Sport-études Gymnastique.',`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
+ const kicker=isAdmin()?'ADMINISTRATION':sp;
+ const subtitle=isAdmin()?'Vue globale des élèves de Football, Escalade et Sport-études Gymnastique.':'Rédiger les appréciations des élèves de votre section.';
+ return `<div class="v19-container">${pageTitle(kicker||'APPRÉCIATIONS','Appréciations',subtitle,`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
   <div class="v19-term-tabs">${[1,2,3].map(t=>`<button class="${t===state.term?'active':''}" onclick="app.setTerm(${t})">Trimestre ${t}</button>`).join('')}</div>
   <div class="v19-term-info"><div><span>Date limite de saisie</span><strong>${fmtLong(st.deadline)}</strong></div><div><span>Fin du trimestre</span><strong>${fmtLong(st.end)}</strong></div><div class="grammar">✓ Vérification orthographe + grammaire à la validation</div></div>
-  <div class="v19-app-list">${licensed.map(l=>appCard(l)).join('')||'<div class="v19-empty">Aucun élève en Football, Escalade ou Sport-études Gymnastique.</div>'}</div>
+  <div class="v19-app-list">${licensed.map(l=>appCard(l)).join('')||'<div class="v19-empty">Aucun élève concerné dans cette section.</div>'}</div>
  </div>`;
 }
 function appCard(l){
@@ -488,17 +491,23 @@ function order(productId){
 function toggleOrder(id,kind){const o=(state.data.orders||[]).find(x=>x.id===id);if(!o)return;o[kind]=!o[kind];save();render()}
 
 function setTerm(t){state.term=t;render()}
+function canManageAppreciation(studentId){
+ const l=(state.data.licenses||[]).find(x=>x.studentId===studentId);
+ if(!l||!EDU_SPECIALTIES.includes(l.sectionOption))return false;
+ if(isAdmin())return true;
+ return isEducator()&&l.sectionOption===roleSpecialty();
+}
 function editApp(studentId){
- if(!isAdmin())return;const l=(state.data.licenses||[]).find(x=>x.studentId===studentId);if(!l||!EDU_SPECIALTIES.includes(l.sectionOption))return;const a=currentApp(studentId);
+ if(!canManageAppreciation(studentId))return;const l=(state.data.licenses||[]).find(x=>x.studentId===studentId),a=currentApp(studentId);
  const m=modal(`Appréciation — ${l?.fullName||''}`,`<form id="v19-app-form"><div class="v19-app-editor"><div><strong>${esc(l?.fullName||'')}</strong><span>${esc(l?.className||'')}</span></div><textarea id="v19-app-text" rows="10" placeholder="Rédiger l’appréciation…">${esc(a?.text||'')}</textarea><div class="v19-modal-actions"><button type="button" class="v19-btn secondary" onclick="app.saveAppDraft('${studentId}')">Enregistrer le brouillon</button><button type="button" class="v19-btn" onclick="app.validateApp('${studentId}')">Vérifier & valider</button></div></div></form>`,true);
  setTimeout(()=>m.querySelector('#v19-app-text')?.focus(),50);
 }
 function upsertApp(studentId,text,status){
  let a=currentApp(studentId);if(a){a.text=text;a.status=status}else{state.data.appreciations.push({id:uid('a'),studentId,term:state.term,text,status})}save()
 }
-function saveAppDraft(studentId){if(!isAdmin())return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();upsertApp(studentId,text,'draft');closeModal();render()}
+function saveAppDraft(studentId){if(!canManageAppreciation(studentId))return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();upsertApp(studentId,text,'draft');closeModal();render()}
 async function validateApp(studentId){
- if(!isAdmin())return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
+ if(!canManageAppreciation(studentId))return;const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
  const url=cfg.languageToolUrl||'https://api.languagetool.org/v2/check';
  try{
   const body=new URLSearchParams({text,language:'fr-FR'});const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});if(!r.ok)throw new Error('service');const j=await r.json();
@@ -511,7 +520,7 @@ async function validateApp(studentId){
  }catch{alert('La vérification orthographe/grammaire est momentanément indisponible. La validation est bloquée pour éviter d’enregistrer sans contrôle.')}
 }
 async function copyApp(studentId){
- if(!isAdmin())return;const text=currentApp(studentId)?.text||'';if(!text)return;
+ if(!canManageAppreciation(studentId))return;const text=currentApp(studentId)?.text||'';if(!text)return;
  try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}
  toast('Appréciation copiée');
 }
@@ -635,7 +644,7 @@ async function exportExcel(kind){
   orders:{title:'COMMANDES',headers:['Élève','Classe','Produit','Taille','Qté','Couleur','Paiement','Payé','Distribué','Date'],rows:(state.data.orders||[]).map(o=>[o.studentName,o.className,productName(o.productId),o.size,o.quantity||1,o.color||'',o.paymentMethod,o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',o.createdAt])},
   reports:{title:'BILANS AS',headers:['Date','Activité','Enseignant(s)','Niveau','Lieu','Catégorie','Nombre d’élèves','Commentaire'],rows:(state.data.reports||[]).map(r=>[r.date,r.activity,r.teacher,r.level,r.place,r.category,Number(r.participants||0),r.comment])},
   convocations:{title:'CONVOCATIONS',headers:['Date','Titre','Activité','Spécialité','Catégorie','Lieu','Départ','Retour','Rendez-vous','Professeur','Informations','Élèves'],rows:(state.data.convocations||[]).map(c=>[c.date,c.title,c.activity,c.specialty,c.ageCategory,c.place,c.departure,c.returnTime,c.meetingPoint,c.teacher,c.extraInfo,(c.studentIds||[]).map(studentName).join(' · ')])},
-  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:isAdmin()?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
+  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:(isAdmin()||isEducator())?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&(!roleSpecialty()||l.sectionOption===roleSpecialty())).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
  };
  const d=defs[kind];if(!d)return;
  ws.mergeCells(1,1,1,d.headers.length);const t=ws.getCell(1,1);t.value=d.title;t.font={name:'Aptos Display',size:24,bold:true,color:{argb:'FFFFFFFF'}};t.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};t.alignment={horizontal:'left',vertical:'middle'};ws.getRow(1).height=38;
