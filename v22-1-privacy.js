@@ -39,7 +39,7 @@ function injectFooter(){
   const shell=document.querySelector('.v19-shell'); if(!shell)return;
   if(shell.querySelector('.v221-privacy-footer'))return;
   const f=document.createElement('footer'); f.className='v221-privacy-footer';
-  f.innerHTML='<button type="button" data-privacy>Données personnelles & RGPD</button><span>V25</span>';
+  f.innerHTML='<button type="button" data-privacy>Données personnelles & RGPD</button><span>'+(window.__BS_RELEASE?.label||'V29')+'</span>';
   f.querySelector('[data-privacy]').onclick=openPrivacy;
   shell.appendChild(f);
 }
