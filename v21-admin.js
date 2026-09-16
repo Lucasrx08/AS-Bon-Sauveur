@@ -84,5 +84,5 @@ function inject(){
 
 window.app=window.app||{};
 Object.assign(window.app,{v21Documents:documentsManager,v21DocumentForm:documentForm,v21Products:productsManager,v21ProductForm:productForm,v21Orders:ordersManager,v21OrderForm:orderForm});
-new MutationObserver(inject).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});inject();
+window.addEventListener('bs-app-rendered',inject);inject();
 })();
