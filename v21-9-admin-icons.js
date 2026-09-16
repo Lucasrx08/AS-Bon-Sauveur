@@ -17,6 +17,6 @@ function apply(){
  });
 }
 let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;apply()})}
-new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+window.addEventListener('bs-app-rendered',schedule);
 apply();
 })();
