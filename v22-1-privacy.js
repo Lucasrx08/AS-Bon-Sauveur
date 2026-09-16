@@ -47,7 +47,7 @@ function install(){
   window.app=window.app||{};
   window.app.privacy=openPrivacy;
   injectFooter();
-  new MutationObserver(()=>requestAnimationFrame(injectFooter)).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+  window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(injectFooter));
 }
 install();
 setTimeout(()=>{
