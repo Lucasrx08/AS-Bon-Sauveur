@@ -44,7 +44,7 @@ function buildPoleSection(){
   const section=document.createElement('section');section.className='v20-poles-section';section.setAttribute('aria-label','Nos pôles sportifs');
   section.innerHTML=`<div class="v20-poles-head"><div><span class="v20-poles-kicker">BON SAUVEUR SPORT</span><h2>Nos pôles</h2><p>Retrouvez rapidement les informations de votre activité.</p></div><span class="v20-poles-hint">Choisir un pôle</span></div>`;
   const grid=document.createElement('div');grid.className='v20-poles-grid';
-  POLES.forEach((p,index)=>{const btn=document.createElement('button');btn.type='button';btn.className=`v20-pole-card ${p.key}`;btn.setAttribute('aria-label',`Ouvrir ${p.label}`);btn.innerHTML=`<span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span><span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async"></span><span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span><span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;btn.addEventListener('click',()=>goPole(p.search));grid.appendChild(btn)});
+  POLES.forEach((p,index)=>{const btn=document.createElement('button');btn.type='button';btn.className=`v20-pole-card ${p.key}`;btn.setAttribute('aria-label',`Ouvrir ${p.label}`);btn.innerHTML=`<span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span><span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async" loading="eager" fetchpriority="high" width="92" height="92"></span><span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span><span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;btn.addEventListener('click',()=>goPole(p.search));grid.appendChild(btn)});
   section.appendChild(grid);return section;
 }
 
@@ -111,7 +111,7 @@ function setFallbackRole(r){if(!ROLES.some(([x])=>x===r))return;localStorage.set
 function installFallbackAccess(){if(!(cfg.demoMode===true&&!hasSupabase)||!window.app)return;const keep=localStorage.getItem(FALLBACK_ROLE);if(ROLES.some(([r])=>r===keep))localStorage.setItem(ROLE_KEY,keep);window.app.profile=openFallbackAccess;window.app.setRole=setFallbackRole}
 
 let queued=false;
-function enhance(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess();window.ASV2114_PDF?.installTvButton?.()})}
+function enhance(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;repairBrand();cleanInjectedDocumentTabs();enhanceHome();enhanceConvocationLogos();installFallbackAccess()})}
 enhance();
-new MutationObserver(enhance).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+window.addEventListener('bs-app-rendered',enhance);
 })();
