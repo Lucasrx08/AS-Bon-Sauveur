@@ -45,5 +45,5 @@ document.head.appendChild(style);
 let queued=false;
 function run(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;replaceInstagram()})}
 run();
-new MutationObserver(run).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+window.addEventListener('bs-app-rendered',run);
 })();
