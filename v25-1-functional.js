@@ -80,18 +80,35 @@ async function updateLicenseField(id,column,localKey,next){
 function toggleLicensePayment(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'payment_status','paymentStatus',l.paymentStatus==='Payé'?'En attente':'Payé')}
 function toggleLicenseCharter(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'charter_signed','charterSigned',l.charterSigned==='Oui'?'Non':'Oui')}
 async function commitImport(){
- if(!manager())return toast('Accès gestion requis.');const rows=(window.__v19ImportRows||[]).filter(x=>x.valid),sp=document.querySelector('#v19-import-sp')?.value||'Association Sportive';if(!rows.length)return alert('Aucune ligne valide à importer.');
+ if(!manager())return toast('Accès gestion requis.');const rows=(window.__v19ImportRows||[]).filter(x=>x.valid),sp=document.querySelector('#v19-import-sp')?.value||'Association Sportive',defaultPayment=document.querySelector('#v19-import-payment')?.value||'Chèque';if(!rows.length)return alert('Aucune ligne valide à importer.');
  const data=app()?.readData?.();if(!data)return;data.students=data.students||[];data.licenses=data.licenses||[];
  const button=document.querySelector('#v19-import-preview .v19-btn');if(button){button.disabled=true;button.textContent='Import en cours…'}
  let added=0,updated=0,failed=0;
  for(const row of rows){
   let license=data.licenses.find(x=>norm(x.fullName)===norm(row.fullName)&&norm(x.className)===norm(row.className));
   const isNew=!license,studentId=license?.studentId||uid('s');
-  const nextLicense=license?{...license,fullName:row.fullName,className:row.className,category:row.category,sectionOption:sp}:{id:uid('l'),studentId,fullName:row.fullName,className:row.className,category:row.category,contribution:'',paymentStatus:'En attente',amount:20,charterSigned:'Non',sectionOption:sp};
+  const payment=PAYMENTS.includes(row.contribution)?row.contribution:defaultPayment;
+  const nextLicense=license?{...license,fullName:row.fullName,className:row.className,category:row.category,contribution:payment,sectionOption:sp}:{id:uid('l'),studentId,fullName:row.fullName,className:row.className,category:row.category,contribution:payment,paymentStatus:'En attente',amount:20,charterSigned:'Non',sectionOption:sp};
   const previousStudent=data.students.find(x=>String(x.id)===String(studentId)),nextStudent={id:studentId,fullName:row.fullName,className:row.className,specialty:sp};
   try{await persistLicenseRows(nextStudent,nextLicense,isNew,previousStudent?{...previousStudent}:null);if(license)Object.assign(license,nextLicense);else data.licenses.push(nextLicense);if(previousStudent)Object.assign(previousStudent,nextStudent);else data.students.push(nextStudent);isNew?added++:updated++}catch(error){failed++;console.error('V25.1 import licence',row,error)}
  }
  persist(data);app()?.closeModal?.();app()?.go?.('licenses');if(failed)alert(`${added} ajouté(s) · ${updated} mis à jour · ${failed} échec(s). Les lignes en échec n’ont pas été ajoutées localement.`);else toast(`${added} élève(s) ajouté(s) · ${updated} mis à jour.`);
+}
+
+async function bulkLicensePaymentMode(){
+ if(!manager())return toast('Accès gestion requis.');
+ const mode=document.querySelector('#v19-bulk-license-payment')?.value||'';
+ if(!PAYMENTS.includes(mode))return toast('Choisissez un mode de paiement.');
+ const ids=(window.__v19VisibleLicenseIds||[]).map(String).filter(Boolean);
+ if(!ids.length)return toast('Aucune licence dans la sélection.');
+ if(!confirm(`Appliquer « ${mode} » à ${ids.length} licence(s) de la sélection actuelle ?`))return;
+ const client=sb();if(!client)return toast('Connexion à la base indisponible.');
+ const button=document.querySelector('.v19-license-bulk .v19-btn');if(button){button.disabled=true;button.textContent='Mise à jour…'}
+ try{
+  const {error}=await client.from('v20_licenses').update({contribution:mode}).in('id',ids);if(error)throw error;
+  const data=app()?.readData?.();if(data){(data.licenses||[]).forEach(l=>{if(ids.includes(String(l.id)))l.contribution=mode});persist(data)}
+  app()?.go?.('licenses');toast(`${ids.length} licence(s) mises à jour : ${mode}.`);
+ }catch(error){console.error('V27.8 paiement licences en masse',error);if(button){button.disabled=false;button.textContent=`Appliquer à ${ids.length} licence(s)`}toast('Mise à jour impossible : '+(error?.message||'erreur serveur'),4800)}
 }
 
 /* ---------- Commandes fiables ---------- */
@@ -124,7 +141,7 @@ function wrapNavigation(target){if(target.__v251GoWrapped)return;const original=
 
 function install(){
  const target=app();if(!target)return setTimeout(install,80);
- target.editLicense=editLicense;target.toggleLicensePayment=toggleLicensePayment;target.toggleLicenseCharter=toggleLicenseCharter;target.commitImport=commitImport;target.toggleOrder=toggleOrder;
+ target.editLicense=editLicense;target.toggleLicensePayment=toggleLicensePayment;target.toggleLicenseCharter=toggleLicenseCharter;target.commitImport=commitImport;target.bulkLicensePaymentMode=bulkLicensePaymentMode;target.toggleOrder=toggleOrder;
  wrapNavigation(target);injectSafetyCss();afterRender();
  window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(afterRender));
  window.ASV25={version:VERSION,features:['server-first-deletes','server-first-licenses','reliable-license-import','clickable-charter','server-first-order-status','order-date-normalization','chronological-home','bottom-nav-safe-area','30-minute-inactivity-timeout']};
