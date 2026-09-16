@@ -102,7 +102,8 @@ const state = {
  dark:localStorage.getItem('bs-dark')==='1',
  term:1,
  filters:{licenses:{},registrations:{specialty:'',eventId:''},appreciationReview:{specialty:'',term:1}},
- search:''
+ search:'',
+ publicSpecialty:''
 };
 if(state.dark) document.body.classList.add('dark');
 
@@ -116,6 +117,7 @@ function fmtDateTime(d){if(!d)return'—';const value=new Date(d);return Number.
 function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function money(n){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0))}
 function roleSpecialty(){return ROLE_SPECIALTY[state.role]||null}
+function calendarSpecialty(){return roleSpecialty()||(state.role==='public'?state.publicSpecialty||null:null)}
 function isManager(){return ['teacher_as','admin'].includes(state.role)}
 function isAdmin(){return state.role==='admin'}
 function isEducator(){return !!roleSpecialty()}
@@ -168,7 +170,7 @@ function pageTitle(kicker,title,sub='',actions=''){
  return `<div class="v19-page-head"><div><div class="v19-kicker">${esc(kicker)}</div><h1>${esc(title)}</h1>${sub?`<p>${esc(sub)}</p>`:''}</div>${actions?`<div class="v19-head-actions">${actions}</div>`:''}</div>`;
 }
 function eventsVisible(){
- const sp=roleSpecialty();
+ const sp=calendarSpecialty();
  return (state.data.events||[]).filter(e=>!sp||e.specialty===sp).slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
 }
 function eventConvocation(e){
@@ -208,10 +210,12 @@ function homePage(){
 }
 function calendarPage(){
  const actions=(isManager()?`<button class="v19-btn v27-compact-action" onclick="app.editEvent()">+ Événement</button>`:'')+`<button class="v19-btn yellow v27-compact-action v27-calendar-pdf" onclick="app.exportCalendarPDF()">Exporter PDF</button>`;
- const q=norm(state.search), list=eventsVisible().filter(e=>String(e.date||'')>=todayKey()).filter(e=>!q||norm(`${e.title} ${e.place} ${e.ageCategory} ${e.specialty}`).includes(q));
- return `<div class="v19-container">${pageTitle('CALENDRIER','À venir',roleSpecialty()?`Uniquement les rendez-vous liés à ${roleSpecialty()}.`:'Compétitions, entraînements et rendez-vous.',actions)}
+ const sp=calendarSpecialty(),q=norm(state.search), list=eventsVisible().filter(e=>String(e.date||'')>=todayKey()).filter(e=>!q||norm(`${e.title} ${e.place} ${e.ageCategory} ${e.specialty}`).includes(q));
+ const title=sp?`Calendrier — ${sp}`:'À venir';
+ const subtitle=sp?`Uniquement les rendez-vous liés à ${sp}.`:'Compétitions, entraînements et rendez-vous.';
+ return `<div class="v19-container">${pageTitle('CALENDRIER',title,subtitle,actions)}
  <input class="v19-search" placeholder="Rechercher…" value="${esc(state.search)}" oninput="app.search(this.value)">
- <div class="v19-stack">${list.map(eventCard).join('')||'<div class="v19-empty">Aucun rendez-vous.</div>'}</div></div>`;
+ <div class="v19-stack">${list.map(eventCard).join('')||`<div class="v19-empty">Aucun rendez-vous prévu pour ${esc(sp||'cette sélection')}.</div>`}</div></div>`;
 }
 function convCard(c){
  const names=(c.studentIds||[]).map(studentName).filter(Boolean);
@@ -373,8 +377,9 @@ function profile(){
  const roles=Object.entries(ROLE_LABELS);
  modal('Choisir un espace',`<div class="v19-role-list">${roles.map(([r,l])=>`<button class="${r===state.role?'active':''}" onclick="app.setRole('${r}')"><span>${esc(l)}</span>${r===state.role?'✓':''}</button>`).join('')}</div>`);
 }
-function setRole(r){state.role=r;localStorage.setItem(ROLE_KEY,r);state.route='home';closeModal();render()}
-function go(r){state.route=r;state.search='';render();if(r==='registrations'&&isManager())refreshEventRegistrations(true);if(r==='appreciationReview'&&isAdmin())refreshAppreciationReview(true)}
+function setRole(r){state.role=r;state.publicSpecialty='';localStorage.setItem(ROLE_KEY,r);state.route='home';closeModal();render()}
+function openPublicSpecialty(sp){if(state.role!=='public'||!SPECIALTIES.includes(sp))return;state.publicSpecialty=sp;state.route='calendar';state.search='';render()}
+function go(r){if(state.role==='public')state.publicSpecialty='';state.route=r;state.search='';render();if(r==='registrations'&&isManager())refreshEventRegistrations(true);if(r==='appreciationReview'&&isAdmin())refreshAppreciationReview(true)}
 function theme(){state.dark=!state.dark;localStorage.setItem('bs-dark',state.dark?'1':'0');document.body.classList.toggle('dark',state.dark);render()}
 function search(v){
  state.search=String(v||'');
@@ -664,7 +669,7 @@ async function exportRegistrationsExcel(){
 }
 
 window.app={
- go,theme,profile,setRole,closeModal,search,
+ go,openPublicSpecialty,theme,profile,setRole,closeModal,search,
  editEvent,deleteEvent,openConv,editConv,deleteConv,
  editLicense,toggleLicensePayment,licenseFilter,clearLicenseFilters,
  editReport,deleteReport,order,toggleOrder,
