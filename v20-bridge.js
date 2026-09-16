@@ -102,6 +102,15 @@ async function persistEvent(event){
  return true;
 }
 window.__BS_PERSIST_EVENT=persistEvent;
+
+async function persistReport(report){
+ if(!sb)throw new Error('SERVICE_UNAVAILABLE');
+ const payload=cleanRow({...report,updatedAt:new Date().toISOString()});
+ const {data,error}=await sb.from('v20_reports').upsert(payload).select('*').single();
+ if(error)throw error;
+ return camel(data);
+}
+window.__BS_PERSIST_REPORT=persistReport;
 async function syncSnapshot(){
  if(!hasSupabase||hydrating)return;const data=safeJson(localStorage.getItem(STORE),{});
  await submitPublicOrders(data.orders||[]);
