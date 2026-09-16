@@ -13,7 +13,7 @@ const passwordSetupFlow=()=>sessionStorage.getItem(PASSWORD_SETUP)==='1';
 const appRedirect=()=>location.origin+location.pathname;
 const sb=hasSupabase?(window.__BS_SUPABASE_CLIENT||window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey)):null;
 if(sb)window.__BS_SUPABASE_CLIENT=sb;
-let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false;
+let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false,liveChannel=null,liveTimer=null;
 
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
 const snake=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/[A-Z]/g,m=>'_'+m.toLowerCase()),v]));
@@ -71,6 +71,7 @@ async function hydrateUser(user,forceReload=false,suppressReload=false){
   if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));return}
  }
  await hydrateAll();
+ setupRealtime().catch(()=>{});
  const marker='bs-v20-role-applied';
  if(!suppressReload&&(forceReload||sessionStorage.getItem(marker)!==currentRole)){sessionStorage.setItem(marker,currentRole);location.reload()}
  else sessionStorage.setItem(marker,currentRole);
@@ -80,7 +81,7 @@ async function hydratePublic(){
  data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
- localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');
+ localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');setupRealtime().catch(()=>{});
 }
 async function hydrateAll(){
  hydrating=true;const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};
@@ -162,6 +163,28 @@ async function refreshFromServer(){
 window.__BS_REFRESH_DATA=refreshFromServer;
 window.addEventListener('focus',()=>{if(currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
+
+function realtimeTables(){
+ if(!currentUser)return ['v20_events','v20_documents','v20_products','v20_convocations','v20_specialty_notes'];
+ if(currentRole.startsWith('educator_'))return ['v20_events','v20_documents','v20_products','v20_students','v20_licenses','v20_convocations','v20_appreciations','v20_specialty_notes','v20_term_settings'];
+ return ['v20_events','v20_documents','v20_products','v20_orders','v20_students','v20_licenses','v20_convocations','v20_convocation_students','v20_reports','v20_specialty_notes','v20_term_settings','v20_event_registrations'];
+}
+function scheduleRealtimeRefresh(){
+ clearTimeout(liveTimer);
+ liveTimer=setTimeout(async()=>{
+  if(hydrating)return;
+  try{currentUser?await hydrateAll():await hydratePublic();lastServerRefresh=Date.now()}
+  catch(error){console.warn('Actualisation temps réel',error)}
+ },350);
+}
+async function setupRealtime(){
+ if(!sb)return;
+ if(liveChannel){try{await sb.removeChannel(liveChannel)}catch{}liveChannel=null}
+ let channel=sb.channel('as-bon-sauveur-live-'+Math.random().toString(36).slice(2,8));
+ for(const table of realtimeTables())channel=channel.on('postgres_changes',{event:'*',schema:'public',table},scheduleRealtimeRefresh);
+ liveChannel=channel.subscribe();
+}
+window.__BS_REALTIME_REFRESH=setupRealtime;
 
 async function syncSnapshot(){
  if(!hasSupabase||hydrating)return;
