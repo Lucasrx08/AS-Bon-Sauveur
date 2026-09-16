@@ -629,12 +629,37 @@ function commitImport(){
 async function downloadLicenseTemplate(){
  if(!window.ExcelJS)return alert('Le module Excel est encore en chargement.');
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Import');
- ws.mergeCells('A1:C1');ws.getCell('A1').value='IMPORT LICENCIÉS — AS BON SAUVEUR';ws.getCell('A1').font={name:'Aptos Display',size:20,bold:true,color:{argb:'FF0757C9'}};ws.getCell('A1').alignment={horizontal:'center'};ws.getRow(1).height=32;
- ['Nom & prénom','Classe','Catégorie'].forEach((h,i)=>{const c=ws.getCell(3,i+1);c.value=h;c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};c.font={name:'Aptos',size:11,bold:true,color:{argb:'FFFFFFFF'}};c.alignment={horizontal:'center'}});
- ws.getCell('A4').value='NOM Prénom';ws.getCell('B4').value=CLASSES[0];ws.getCell('C4').value=LICENSE_CATEGORIES[0];ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;
- const help=wb.addWorksheet('Aide');help.getCell('A1').value='CATÉGORIES AUTORISÉES';LICENSE_CATEGORIES.forEach((x,i)=>help.getCell(i+2,1).value=x);help.getCell('C1').value='CLASSES AUTORISÉES';CLASSES.forEach((x,i)=>help.getCell(i+2,3).value=x);help.getColumn(1).width=24;help.getColumn(3).width=34;
- for(let r=4;r<=200;r++){ws.getCell(r,2).dataValidation={type:'list',formulae:[`Aide!$C$2:$C${CLASSES.length+1}`]};ws.getCell(r,3).dataValidation={type:'list',formulae:[`"${LICENSE_CATEGORIES.join(',')}"`]}}
- const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
+ wb.creator='Association Sportive du Bon Sauveur';wb.company='Bon Sauveur Saint-Lô';
+
+ ws.mergeCells('A1:C1');const title=ws.getCell('A1');title.value='IMPORT LICENCIÉS — AS BON SAUVEUR';title.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1460CC'}};title.font={name:'Aptos Display',size:24,bold:true,color:{argb:'FFFFFFFF'}};title.alignment={horizontal:'left',vertical:'middle'};ws.getRow(1).height=38;
+ ws.mergeCells('A2:C2');const sub=ws.getCell('A2');sub.value='ASSOCIATION SPORTIVE DU BON SAUVEUR · SAINT-LÔ';sub.font={name:'Aptos',size:11,color:{argb:'FF13213A'}};sub.alignment={vertical:'middle'};ws.getRow(2).height=24;
+
+ ['Nom & prénom','Classe','Catégorie'].forEach((h,i)=>{const cell=ws.getCell(4,i+1);cell.value=h;cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD21A'}};cell.font={name:'Aptos',size:12,bold:true,color:{argb:'FF13213A'}};cell.alignment={horizontal:'center',vertical:'middle'};cell.border={bottom:{style:'thin',color:{argb:'FF1460CC'}}}});ws.getRow(4).height=28;
+
+ ws.getCell('A5').value='MARTIN Léo';ws.getCell('B5').value='5e Jacqueline AURIOL';ws.getCell('C5').value='Benjamin';
+ ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;
+ for(let r=5;r<=200;r++){ws.getRow(r).height=22}
+
+ // Listes internes au même onglet : Excel et Google Sheets conservent mieux les menus déroulants.
+ ws.getCell('X1').value='CLASSES';CLASSES.forEach((x,i)=>ws.getCell(i+2,24).value=x);
+ ws.getCell('Y1').value='CATÉGORIES';LICENSE_CATEGORIES.forEach((x,i)=>ws.getCell(i+2,25).value=x);
+ ws.getColumn(24).hidden=true;ws.getColumn(25).hidden=true;
+
+ for(let r=5;r<=200;r++){
+  ws.getCell(r,2).dataValidation={type:'list',allowBlank:true,formulae:[`$X$2:$X$${CLASSES.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Classe invalide',error:'Choisissez une classe dans la liste déroulante.'};
+  ws.getCell(r,3).dataValidation={type:'list',allowBlank:true,formulae:[`$Y$2:$Y$${LICENSE_CATEGORIES.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Catégorie invalide',error:'Choisissez une catégorie dans la liste déroulante.'};
+ }
+
+ const help=wb.addWorksheet('Aide');
+ help.getCell('A1').value='CATÉGORIES AUTORISÉES';help.getCell('A1').font={bold:true};
+ LICENSE_CATEGORIES.forEach((x,i)=>help.getCell(i+2,1).value=x);
+ help.getCell('C1').value='CLASSES AUTORISÉES';help.getCell('C1').font={bold:true};
+ CLASSES.forEach((x,i)=>help.getCell(i+2,3).value=x);
+ help.getColumn(1).width=24;help.getColumn(3).width=34;
+
+ ws.views=[{state:'frozen',ySplit:4}];
+ const buf=await wb.xlsx.writeBuffer();
+ downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
 function openDoc(id){const d=(state.data.documents||[]).find(x=>x.id===id);if(!d)return;if(/^https?:\/\//.test(d.url||''))window.open(d.url,'_blank','noopener');else toast('Document de démonstration : aucun fichier distant associé.')}
 
