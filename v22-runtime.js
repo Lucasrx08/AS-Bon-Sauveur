@@ -121,7 +121,7 @@ function install(){
   window.app.order=secureOrder;
   window.app.openEventRegistration=secureRegistration;
   window.ASV22={version:'22.1.0',features:['privacy-session-storage','secure-public-orders','secure-public-registrations','rate-limits','automatic-retention']};
-  document.documentElement.dataset.appVersion='22';
+  if(!window.__BS_RELEASE)document.documentElement.dataset.appVersion='22';
 }
 install();
 })();
