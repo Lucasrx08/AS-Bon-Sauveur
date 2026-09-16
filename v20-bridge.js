@@ -227,7 +227,7 @@ function overrideSecurityUI(){
   const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(status==='validated'&&!text)return alert('Saisissez une appréciation.');
   const d=window.app.readData();let a=(d.appreciations||[]).find(x=>String(x.studentId)===String(studentId)&&Number(x.term||1)===Number(term));
   const row={id:a?.id||uid('a'),studentId,term:Number(term)||1,text,status,educatorId:a?.educatorId||currentUser?.id||null};
-  try{const saved=await persistAppreciation(row);if(a)Object.assign(a,row,saved);else d.appreciations.push({...row,...saved});localStorage.setItem(STORE,JSON.stringify(d));window.app.closeModal?.();window.app.go?.('appreciations');toast(status==='validated'?'Appréciation enregistrée dans la base centrale.':'Brouillon enregistré dans la base centrale.')}
+  try{const saved=await persistAppreciation(row);if(a)Object.assign(a,row,saved);else d.appreciations.push({...row,...saved});localStorage.setItem(STORE,JSON.stringify(d));window.app.closeModal?.();window.app.go?.('appreciations');const label=status==='validated'?'Appréciation enregistrée':'Brouillon enregistré';window.__BS_SAVED?window.__BS_SAVED(label):toast(label)}
   catch(error){console.error('Appréciation serveur',error);toast('Appréciation non enregistrée : vérifiez votre connexion puis réessayez.',4800)}
  };
  window.app.saveAppDraft=studentId=>saveAppreciationServer(studentId,'draft');
