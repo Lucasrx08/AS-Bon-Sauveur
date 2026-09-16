@@ -33,6 +33,7 @@ const rememberedRole=localStorage.getItem(FALLBACK_ROLE);
 if(cfg.demoMode===true&&!hasSupabase&&ROLES.some(([r])=>r===rememberedRole))localStorage.setItem(ROLE_KEY,rememberedRole);
 
 function goPole(search){
+  if(typeof window.app?.openPublicSpecialty==='function')return window.app.openPublicSpecialty(search);
   window.app?.go?.('calendar');
   setTimeout(()=>{
     if(typeof window.app?.search==='function') return window.app.search(search);
