@@ -126,6 +126,7 @@ async function registerPwa(){
  }catch(error){console.warn('V26 service worker',error)}
 }
 function patchVersion(){
+ if(document.documentElement.dataset.appVersion==='27')return;
  document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V26');
  document.documentElement.dataset.appVersion='26';
 }
@@ -140,7 +141,7 @@ function install(){
  injectCss();afterRender();registerPwa();
  window.addEventListener('bs-admin-mfa-required',ensureAdminMfa);
  window.addEventListener('bs-admin-mfa-error',ensureAdminMfa);
- new MutationObserver(()=>requestAnimationFrame(afterRender)).observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+ window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(afterRender));
  setTimeout(ensureAdminMfa,250);
  window.ASV26={version:VERSION,mfa:'admin-required',pwa:'registered'};
 }
