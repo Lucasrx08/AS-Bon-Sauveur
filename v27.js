@@ -3,6 +3,7 @@
 const VERSION='27.9.0';
 
 function patch(){
+ if(window.__BS_RELEASE?.major>=29)return;
  document.documentElement.dataset.appVersion='27';
  document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V27.9');
  document.querySelectorAll('[data-v241-tv-export]').forEach(x=>x.remove());
