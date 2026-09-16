@@ -89,5 +89,5 @@ function inject(){
  const grid=document.querySelector('.v19-admin-cards');if(!grid||grid.querySelector('[data-v20-users]'))return;
  const b=document.createElement('button');b.className='v19-card v19-admin-action';b.dataset.v20Users='1';b.innerHTML='<div><h3>Utilisateurs & accès</h3><p>Créer les accès par nom + PIN, modifier les codes et supprimer les accès.</p></div>';b.onclick=openUsers;grid.appendChild(b);
 }
-new MutationObserver(inject).observe(document.body,{childList:true,subtree:true});inject();
+window.addEventListener('bs-app-rendered',inject);inject();
 })();
