@@ -84,7 +84,7 @@ async function hydratePublic(){
 async function hydrateAll(){
  hydrating=true;const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['students','v20_students'],['licenses','v20_licenses'],['convocations','v20_convocations'],['reports','v20_reports'],['orders','v20_orders']];
- if(currentRole==='admin')maps.push(['appreciations','v20_appreciations']);else data.appreciations=[];
+ if(currentRole==='admin'||currentRole.startsWith('educator_'))maps.push(['appreciations','v20_appreciations']);else data.appreciations=[];
  if(['teacher_as','admin'].includes(currentRole))maps.push(['eventRegistrations','v20_event_registrations']);else data.eventRegistrations=[];
  for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows))data[key]=rows.map(camel)}
  const {data:links,error:linkErr}=await sb.from('v20_convocation_students').select('*');if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
@@ -120,7 +120,7 @@ async function syncSnapshot(){
   const notes=Object.entries(data.specialtyNotes||{}).map(([specialty,n])=>({specialty,message:n.message||'',expires_at:n.expiresAt||null,active:!!n.active,public_visible:true}));if(notes.length)await sb.from('v20_specialty_notes').upsert(notes);
   const terms=Object.entries(data.termSettings||{}).map(([t,v])=>({term:Number(t),deadline:v.deadline||null,term_end:v.end||null}));if(currentRole==='admin'&&terms.length)await sb.from('v20_term_settings').upsert(terms);
  }
- if(currentRole==='admin'){
+ if(currentRole==='admin'||currentRole.startsWith('educator_')){
   const apps=(data.appreciations||[]).map(a=>({...a,educatorId:a.educatorId||currentUser.id,term:a.term||term}));await upsertTable('v20_appreciations',apps)
  }
 }
@@ -148,7 +148,8 @@ function overrideSecurityUI(){
  const origSetTerm=window.app.setTerm;if(origSetTerm)window.app.setTerm=t=>{term=Number(t)||1;return origSetTerm(t)};
  const origValidate=window.app.validateApp;
  window.app.validateApp=async studentId=>{
-  if(currentRole!=='admin')return;
+  if(!(currentRole==='admin'||currentRole.startsWith('educator_')))return;
+  const d0=window.app.readData();const lic=(d0.licenses||[]).find(x=>String(x.studentId)===String(studentId));const allowed=['Section Football','Option Escalade','Sport-études Gymnastique'];const roleSpecialty={educator_football:'Section Football',educator_escalade:'Option Escalade',educator_gymnastique:'Sport-études Gymnastique'}[currentRole]||null;if(!lic||!allowed.includes(lic.sectionOption)||(roleSpecialty&&lic.sectionOption!==roleSpecialty))return;
   if(cfg.enableExternalGrammar===true&&origValidate)return origValidate(studentId);
   const text=String(document.querySelector('#v19-app-text')?.value||'').trim();if(!text)return alert('Saisissez une appréciation.');
   const d=window.app.readData();let a=(d.appreciations||[]).find(x=>x.studentId===studentId&&Number(x.term||1)===term);if(a){a.text=text;a.status='validated';a.term=term;a.educatorId=a.educatorId||currentUser?.id}else{d.appreciations.push({id:uid('a'),studentId,term,text,status:'validated',educatorId:currentUser?.id||null})}
