@@ -161,7 +161,7 @@ function enhanceA11y(root=document){
  root.querySelectorAll('.v19-modal-head .v19-icon-btn').forEach(b=>b.setAttribute('aria-label','Fermer'));
  root.querySelectorAll('.v19-product img').forEach(img=>{img.loading='lazy';img.decoding='async'});
 }
-function observeA11y(){enhanceA11y();new MutationObserver(()=>enhanceA11y()).observe(document.body,{childList:true,subtree:true})}
+function observeA11y(){enhanceA11y();window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(()=>enhanceA11y()))}
 
 async function init(){
  installStorageSync();wrapLazyDependencies();overrideSecurityUI();observeA11y();
