@@ -267,13 +267,11 @@ function reportsPage(){
 }
 function currentApp(studentId,term=state.term){return (state.data.appreciations||[]).filter(a=>a.studentId===studentId&&Number(a.term)===Number(term)).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')))[0]||null}
 function appreciationsPage(){
- if(!isEducator()&&!isAdmin()) return denied();
+ if(!isEducator()) return denied();
  const sp=roleSpecialty();
- const licensed=(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&(!sp||l.sectionOption===sp));
+ const licensed=(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&l.sectionOption===sp);
  const st=state.data.termSettings?.[state.term]||{};
- const kicker=isAdmin()?'ADMINISTRATION':sp;
- const subtitle=isAdmin()?'Vue globale des élèves de Football, Escalade et Sport-études Gymnastique.':'Rédiger les appréciations des élèves de votre section.';
- return `<div class="v19-container">${pageTitle(kicker||'APPRÉCIATIONS','Appréciations',subtitle,`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
+ return `<div class="v19-container">${pageTitle(sp||'APPRÉCIATIONS','Appréciations','Rédiger les appréciations des élèves de votre section.',`<button class="v19-btn secondary" onclick="app.exportExcel('appreciations')">Exporter Excel</button>`)}
   <div class="v19-term-tabs">${[1,2,3].map(t=>`<button class="${t===state.term?'active':''}" onclick="app.setTerm(${t})">Trimestre ${t}</button>`).join('')}</div>
   <div class="v19-term-info"><div><span>Date limite de saisie</span><strong>${fmtLong(st.deadline)}</strong></div><div><span>Fin du trimestre</span><strong>${fmtLong(st.end)}</strong></div><div class="grammar">✓ Vérification orthographe + grammaire à la validation</div></div>
   <div class="v19-app-list">${licensed.map(l=>appCard(l)).join('')||'<div class="v19-empty">Aucun élève concerné dans cette section.</div>'}</div>
@@ -324,7 +322,7 @@ function appreciationReviewPage(){
    <label class="v19-filter"><span>Trimestre</span><select onchange="app.setAppreciationReviewFilter('term',this.value)">${[1,2,3].map(t=>`<option value="${t}" ${t===term?'selected':''}>Trimestre ${t}</option>`).join('')}</select></label>
   </div>
   <div class="v19-stats v2115-stats"><div><strong>${rows.length}</strong><span>Élève${rows.length>1?'s':''}</span></div><div><strong>${completed}</strong><span>Appréciation${completed>1?'s':''} rédigée${completed>1?'s':''}</span></div><div><strong>${validated}</strong><span>Validée${validated>1?'s':''}</span></div></div>
-  <div class="v2115-review-list">${rows.map(({license:l,appreciation:a})=>{const text=String(a?.text||'').trim(),status=a?.status==='validated'?'Validée':a?.status==='draft'?'Brouillon':'À faire';return `<article class="v19-card v2115-review-card"><div class="v2115-review-student"><div><h3>${esc(l.fullName)}</h3><p>${esc(l.className)} · ${esc(l.sectionOption)}</p></div><span class="v2115-review-status ${a?.status||'todo'}">${esc(status)}</span></div><div class="v2115-review-copy"><span>TRIMESTRE ${term}</span><p class="${text?'':'muted'}">${esc(text||'Aucune appréciation rédigée')}</p></div><div class="v19-card-actions"><button class="v19-btn secondary" ${text?'':'disabled'} onclick="app.copyReviewApp('${l.studentId}',${term})">${icon('copy')} Copier pour ÉcoleDirecte</button><button class="v19-btn" onclick="app.setTerm(${term});app.editApp('${l.studentId}')">${text?'Modifier':'Rédiger'}</button></div></article>`}).join('')||'<div class="v19-empty">Aucun élève pour cette sélection.</div>'}</div>
+  <div class="v2115-review-list">${rows.map(({license:l,appreciation:a})=>{const text=String(a?.text||'').trim(),status=a?.status==='validated'?'Validée':a?.status==='draft'?'Brouillon':'À faire';return `<article class="v19-card v2115-review-card"><div class="v2115-review-student"><div><h3>${esc(l.fullName)}</h3><p>${esc(l.className)} · ${esc(l.sectionOption)}</p></div><span class="v2115-review-status ${a?.status||'todo'}">${esc(status)}</span></div><div class="v2115-review-copy"><span>TRIMESTRE ${term}</span><p class="${text?'':'muted'}">${esc(text||'Aucune appréciation rédigée')}</p></div><button class="v19-btn secondary" ${text?'':'disabled'} onclick="app.copyReviewApp('${l.studentId}',${term})">${icon('copy')} Copier pour ÉcoleDirecte</button></article>`}).join('')||'<div class="v19-empty">Aucun élève pour cette sélection.</div>'}</div>
  </div>`;
 }
 function shopPage(){
@@ -494,7 +492,6 @@ function setTerm(t){state.term=t;render()}
 function canManageAppreciation(studentId){
  const l=(state.data.licenses||[]).find(x=>x.studentId===studentId);
  if(!l||!EDU_SPECIALTIES.includes(l.sectionOption))return false;
- if(isAdmin())return true;
  return isEducator()&&l.sectionOption===roleSpecialty();
 }
 function editApp(studentId){
@@ -644,7 +641,7 @@ async function exportExcel(kind){
   orders:{title:'COMMANDES',headers:['Élève','Classe','Produit','Taille','Qté','Couleur','Paiement','Payé','Distribué','Date'],rows:(state.data.orders||[]).map(o=>[o.studentName,o.className,productName(o.productId),o.size,o.quantity||1,o.color||'',o.paymentMethod,o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',o.createdAt])},
   reports:{title:'BILANS AS',headers:['Date','Activité','Enseignant(s)','Niveau','Lieu','Catégorie','Nombre d’élèves','Commentaire'],rows:(state.data.reports||[]).map(r=>[r.date,r.activity,r.teacher,r.level,r.place,r.category,Number(r.participants||0),r.comment])},
   convocations:{title:'CONVOCATIONS',headers:['Date','Titre','Activité','Spécialité','Catégorie','Lieu','Départ','Retour','Rendez-vous','Professeur','Informations','Élèves'],rows:(state.data.convocations||[]).map(c=>[c.date,c.title,c.activity,c.specialty,c.ageCategory,c.place,c.departure,c.returnTime,c.meetingPoint,c.teacher,c.extraInfo,(c.studentIds||[]).map(studentName).join(' · ')])},
-  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:(isAdmin()||isEducator())?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&(!roleSpecialty()||l.sectionOption===roleSpecialty())).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
+  appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:isEducator()?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&l.sectionOption===roleSpecialty()).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
  };
  const d=defs[kind];if(!d)return;
  ws.mergeCells(1,1,1,d.headers.length);const t=ws.getCell(1,1);t.value=d.title;t.font={name:'Aptos Display',size:24,bold:true,color:{argb:'FFFFFFFF'}};t.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF0757C9'}};t.alignment={horizontal:'left',vertical:'middle'};ws.getRow(1).height=38;
