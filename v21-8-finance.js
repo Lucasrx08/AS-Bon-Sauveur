@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='v21.8.1-20260909';
+const VERSION='v27.6-20260916';
 const STORE='bs-app-data-v4';
 const money=n=>Number(n||0);
 
@@ -133,8 +133,31 @@ async function downloadLicenseTemplate(){
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Import',{views:[{showGridLines:false}]});
  styleTitle(ws,'IMPORT LICENCIÉS — AS BON SAUVEUR',3);styleHeaderRow(ws,4,['Nom & prénom','Classe','Catégorie']);
  styleDataRow(ws,5,['MARTIN Léo','5e Jacqueline AURIOL','Benjamin']);ws.getColumn(1).width=32;ws.getColumn(2).width=32;ws.getColumn(3).width=22;
- const cats=['Benjamin','Benjamine','Minime fille','Minime garçon','Lycéen','Lycéenne'];for(let r=5;r<=200;r++)ws.getCell(r,3).dataValidation={type:'list',allowBlank:true,formulae:[`"${cats.join(',')}"`]};
- const help=wb.addWorksheet('Aide',{views:[{showGridLines:false}]});help.getCell('A1').value='CATÉGORIES AUTORISÉES';setFont(help.getCell('A1'),{header:true});cats.forEach((x,i)=>{help.getCell(i+2,1).value=x;setFont(help.getCell(i+2,1))});help.getColumn(1).width=28;
+
+ const classes=[
+  '6e AVIGNON','6e Georges BIZET','6e Paul CEZANNE','6e Alphonse DAUDET',
+  '5e Jacqueline AURIOL','5e Adrienne BOLLAND','5e Bessie COLEMAN','5e Elise DEROCHE',
+  '4e ESTANGUET','4e FLESSEL','4e Cyril MORE','4e DELAUNAY',
+  '3e Antonio GAUDI','3e BARCELONE','3e CASTILLE','3e DALI','3e ESPINOZA',
+  'Seconde Pro ECP','Seconde Pro Maslow','Seconde Pro Henderson','Seconde GT',
+  'Première Pro ECP','Première Pro Curie','Première Pro Pasteur','Première ST2S',
+  'Terminale ST2S','Terminale ASSP'
+ ];
+ const cats=['Benjamin','Benjamine','Minime fille','Minime garçon','Lycéen','Lycéenne'];
+
+ // Sources de validation conservées dans le même onglet : plus fiable dans Excel et Google Sheets.
+ ws.getCell('X1').value='CLASSES';classes.forEach((x,i)=>ws.getCell(i+2,24).value=x);
+ ws.getCell('Y1').value='CATÉGORIES';cats.forEach((x,i)=>ws.getCell(i+2,25).value=x);
+ ws.getColumn(24).hidden=true;ws.getColumn(25).hidden=true;
+ for(let r=5;r<=200;r++){
+  ws.getCell(r,2).dataValidation={type:'list',allowBlank:true,formulae:[`$X$2:$X${classes.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Classe invalide',error:'Choisissez une classe dans la liste déroulante.'};
+  ws.getCell(r,3).dataValidation={type:'list',allowBlank:true,formulae:[`$Y$2:$Y${cats.length+1}`],showErrorMessage:true,errorStyle:'stop',errorTitle:'Catégorie invalide',error:'Choisissez une catégorie dans la liste déroulante.'};
+ }
+
+ const help=wb.addWorksheet('Aide',{views:[{showGridLines:false}]});
+ help.getCell('A1').value='CATÉGORIES AUTORISÉES';setFont(help.getCell('A1'),{header:true});cats.forEach((x,i)=>{help.getCell(i+2,1).value=x;setFont(help.getCell(i+2,1))});help.getColumn(1).width=28;
+ help.getCell('C1').value='CLASSES AUTORISÉES';setFont(help.getCell('C1'),{header:true});classes.forEach((x,i)=>{help.getCell(i+2,3).value=x;setFont(help.getCell(i+2,3))});help.getColumn(3).width=34;
+
  const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
 function install(){
