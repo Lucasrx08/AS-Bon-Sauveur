@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='31.0.0';
+const VERSION='31.1.0';
 const SW_URL='./sw.js';
 const LAST_CHECK_KEY='bs-v31-sw-last-check';
 const READY_KEY='bs-v31-update-ready';
@@ -37,8 +37,6 @@ function watchWorker(worker,registration){
   const onState=()=>{
     if(worker.state!=='installed')return;
     if(swContainer?.controller)showUpdateReady();
-    // Activation immédiate du moteur, mais jamais de reload de la page courante.
-    // Ainsi la prochaine ouverture est forcément sur la nouvelle version sans boucle.
     try{worker.postMessage({type:'SKIP_WAITING'})}catch{}
   };
   if(worker.state==='installed')onState();
@@ -77,8 +75,6 @@ async function registerPwa({forceCheck=false}={}){
   return reg;
 }
 
-// Compatibilité avec les anciennes couches V19/V27/V28/V29 : tout appel vers sw.js
-// est redirigé vers l'unique enregistrement V31 au lieu de créer un concurrent.
 if(swContainer&&nativeRegister){
   try{
     swContainer.register=function(scriptURL,options){
@@ -91,14 +87,10 @@ if(swContainer&&nativeRegister){
   }catch(error){console.warn('PWA V31 compatibilité',error)}
 }
 
-// Enregistrer immédiatement, avant les anciennes couches. L'enregistrement lui-même
-// vérifie le service worker ; les vérifications supplémentaires sont espacées de 6 h.
 registerPwa({forceCheck:false});
 window.addEventListener('load',()=>registerPwa({forceCheck:false}),{once:true});
 window.addEventListener('online',()=>registerPwa({forceCheck:false}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)registerPwa({forceCheck:false})});
-
-// Aucun reload automatique sur controllerchange : la page courante reste stable.
 swContainer?.addEventListener('controllerchange',()=>{});
 
 window.__BS_CHECK_UPDATE=()=>registerPwa({forceCheck:true});
