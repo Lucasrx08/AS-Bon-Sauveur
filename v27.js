@@ -8,12 +8,11 @@ function patch(){
  document.querySelectorAll('.v221-privacy-footer span').forEach(x=>x.textContent='V27.9');
  document.querySelectorAll('[data-v241-tv-export]').forEach(x=>x.remove());
 }
-async function register(){
+function register(){
+ // V31 possède l'unique enregistrement du service worker via v31-runtime.js.
+ if(window.__BS_RELEASE?.major>=30)return;
  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
- try{
-  const reg=await navigator.serviceWorker.register('./sw.js?v=27.9.0',{scope:'./'});
-  reg.update().catch(()=>{});
- }catch(error){console.warn('V27 service worker',error)}
+ navigator.serviceWorker.register('./sw.js?v=27.9.0',{scope:'./'}).catch(error=>console.warn('V27 service worker',error));
 }
 patch();
 window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(patch));
