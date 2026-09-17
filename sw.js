@@ -1,5 +1,5 @@
-const APP_VERSION='31.0.0';
-const BUILD_ID='20260917-consolidation';
+const APP_VERSION='31.1.0';
+const BUILD_ID='20260917-mobile-session';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const NAV_CACHE='as-bon-sauveur-navigation';
@@ -9,8 +9,9 @@ const OFFLINE_URL='./offline.html';
 
 const PRECACHE=[
   OFFLINE_URL,
-  './manifest.webmanifest?v=31.0.0',
-  './assets/logo-as.png?v=31.0.0'
+  './manifest.webmanifest?v=31.1.0',
+  './assets/logo-as.png?v=31.1.0',
+  './v31-mobile.css?v=31.1.0'
 ];
 
 self.addEventListener('install',event=>{
@@ -22,8 +23,6 @@ self.addEventListener('install',event=>{
       if(response?.ok)await cache.put(url,response.clone());
     }));
     await cache.put(META_KEY,new Response(JSON.stringify({version:APP_VERSION,build:BUILD_ID,installedAt:Date.now()}),{headers:{'Content-Type':'application/json'}}));
-    // Une mise à jour reste en attente tant que l'ancienne application est ouverte.
-    // Cela évite de changer de moteur en plein formulaire ou en pleine navigation.
   })());
 });
 
@@ -86,17 +85,13 @@ async function staticResponse(request){
   const current=await caches.open(CACHE_NAME);
   const currentHit=await current.match(request);
   if(currentHit)return currentHit;
-
   const previousHit=await caches.match(request);
   if(previousHit)return previousHit;
-
   try{
     const response=await fetch(request);
     if(response?.ok&&response.type==='basic')current.put(request,response.clone()).catch(()=>{});
     return response;
-  }catch{
-    return Response.error();
-  }
+  }catch{return Response.error()}
 }
 
 self.addEventListener('fetch',event=>{
@@ -104,17 +99,14 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET')return;
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
-
   if(url.pathname.endsWith('/sw.js')||url.pathname.endsWith('/version.json')){
     event.respondWith(fetch(request,{cache:'no-store'}));
     return;
   }
-
   if(request.mode==='navigate'){
     event.respondWith(navigationResponse(request));
     return;
   }
-
   const isStatic=['script','style','image','font'].includes(request.destination)||url.pathname.endsWith('.webmanifest');
   if(isStatic)event.respondWith(staticResponse(request));
 });

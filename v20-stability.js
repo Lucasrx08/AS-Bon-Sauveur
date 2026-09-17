@@ -6,34 +6,48 @@ const CACHE_KEY='bs-v21-role-cache';
 const SESSION_USER='bs-v21-session-user-id';
 const allowed=new Set(['public','educator_escalade','educator_football','educator_gymnastique','teacher_as','admin']);
 
-function authUserId(){
+function authRecord(){
+  let present=false,userId='';
   try{
     for(let i=0;i<localStorage.length;i++){
       const k=localStorage.key(i)||'';
       if(!/^sb-.*-auth-token$/.test(k))continue;
-      const raw=JSON.parse(localStorage.getItem(k)||'null');
-      const user=raw?.user||raw?.currentSession?.user||raw?.session?.user;
-      if(user?.id)return String(user.id);
+      const stored=localStorage.getItem(k);
+      if(!stored)continue;
+      present=true;
+      try{
+        const raw=JSON.parse(stored);
+        const user=raw?.user||raw?.currentSession?.user||raw?.session?.user||raw?.data?.session?.user||raw?.[0]?.user;
+        if(user?.id){userId=String(user.id);break}
+      }catch{}
     }
   }catch{}
-  return '';
+  return {present,userId};
 }
+function authUserId(){return authRecord().userId}
 function readCache(){try{return JSON.parse(localStorage.getItem(CACHE_KEY)||'{}')||{}}catch{return {}}}
 function writeCache(cache){try{localStorage.setItem(CACHE_KEY,JSON.stringify(cache))}catch{}}
 
-const uid=authUserId();
+const auth=authRecord();
+const uid=auth.userId;
 const cache=readCache();
 const cachedRole=uid&&allowed.has(cache[uid])?cache[uid]:null;
 const sessionUid=sessionStorage.getItem(SESSION_USER)||'';
 const sessionRole=sessionStorage.getItem(VERIFIED)||'';
+const previousRole=allowed.has(localStorage.getItem(ROLE_KEY))?localStorage.getItem(ROLE_KEY):'public';
 
-// Ne jamais réutiliser le rôle d'un autre compte dans le même navigateur.
+// Au redémarrage d'une PWA, sessionStorage est vidé mais la session Supabase persiste.
+// On ne doit donc jamais écraser prématurément un espace authentifié par "public".
 if(uid&&sessionUid===uid&&allowed.has(sessionRole)){
   localStorage.setItem(ROLE_KEY,sessionRole);
 }else if(uid&&cachedRole){
   sessionStorage.setItem(SESSION_USER,uid);
   sessionStorage.setItem(VERIFIED,cachedRole);
   localStorage.setItem(ROLE_KEY,cachedRole);
+}else if(auth.present&&previousRole!=='public'){
+  // Session stockée présente : conserver l'espace affiché le temps que Supabase la valide.
+  if(uid)sessionStorage.setItem(SESSION_USER,uid);
+  localStorage.setItem(ROLE_KEY,previousRole);
 }else{
   sessionStorage.removeItem(VERIFIED);
   if(uid)sessionStorage.setItem(SESSION_USER,uid);else sessionStorage.removeItem(SESSION_USER);
@@ -53,6 +67,7 @@ if(!window.__BS_STORAGE_STABILITY_PATCHED){
           nativeSet.call(sessionStorage,SESSION_USER,currentUid);
           const c=readCache();c[currentUid]=String(v);writeCache(c);
         }
+        nativeSet.call(localStorage,ROLE_KEY,String(v));
         window.dispatchEvent(new CustomEvent('bs-role-verified',{detail:{role:String(v),userId:currentUid||''}}));
       }
     }catch{}
@@ -62,8 +77,9 @@ if(!window.__BS_STORAGE_STABILITY_PATCHED){
     try{
       if(this===sessionStorage&&k===VERIFIED){
         nativeRemove.call(sessionStorage,SESSION_USER);
-        nativeSet.call(localStorage,ROLE_KEY,'public');
-        window.dispatchEvent(new CustomEvent('bs-role-verified',{detail:{role:'public',userId:''}}));
+        // Ne repasser en public que s'il n'existe réellement plus de session Supabase persistée.
+        if(!authRecord().present)nativeSet.call(localStorage,ROLE_KEY,'public');
+        window.dispatchEvent(new CustomEvent('bs-role-verified',{detail:{role:authRecord().present?(localStorage.getItem(ROLE_KEY)||'public'):'public',userId:''}}));
       }
     }catch{}
   };
