@@ -1,6 +1,6 @@
 (() => {
 'use strict';
-const VERSION='28.1.0';
+const VERSION='28.1.1';
 
 function isPinSession(){return sessionStorage.getItem('bs-auth-method')==='pin'}
 
@@ -31,19 +31,18 @@ function savedMessage(title='Saisie validée',detail='Enregistrée dans la base 
 }
 window.__BS_SAVED=savedMessage;
 
-async function register(){
+function register(){
+ // Depuis V29+, l'enregistrement PWA est géré par la couche de release courante.
  if(window.__BS_RELEASE?.major>=29)return;
  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
- try{
-  const reg=await navigator.serviceWorker.register('./sw.js?v=28.1.0',{scope:'./'});
-  reg.update().catch(()=>{});
- }catch(error){console.warn('V28 service worker',error)}
+ navigator.serviceWorker.register('./sw.js?v=28.1.0',{scope:'./'}).catch(error=>console.warn('V28 service worker',error));
 }
 
+function schedulePatch(){requestAnimationFrame(patchVersion)}
 patchVersion();
-window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(patchVersion));
+document.addEventListener('DOMContentLoaded',schedulePatch,{once:true});
+window.addEventListener('bs-app-rendered',schedulePatch);
 window.addEventListener('bs-admin-mfa-required',()=>setTimeout(protectPinOperationalSession,0));
-new MutationObserver(()=>requestAnimationFrame(protectPinOperationalSession)).observe(document.body,{childList:true,subtree:true});
 register();
 
 window.ASV28={
