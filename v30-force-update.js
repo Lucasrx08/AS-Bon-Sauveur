@@ -19,6 +19,28 @@ let activationNoticeShown=false;
 
 const safeMode=()=>new URLSearchParams(location.search).get('bs_safe')==='1';
 
+// Un seul composant a le droit d'enregistrer sw.js. Les anciens modules V19/V29
+// tentaient encore de l'enregistrer sans identifiant de build et provoquaient des
+// changements de contrôleur successifs. On neutralise uniquement ces appels hérités.
+const swContainer=navigator.serviceWorker;
+const nativeRegister=swContainer?.register?.bind(swContainer)||null;
+if(swContainer&&nativeRegister&&!swContainer.__bsSingleOwnerRegister){
+  try{
+    swContainer.register=function(scriptURL,options){
+      try{
+        const url=new URL(String(scriptURL||''),location.href);
+        if(url.pathname.endsWith('/sw.js')&&!url.searchParams.has('build')){
+          return Promise.reject(new Error('LEGACY_SW_REGISTRATION_BLOCKED'));
+        }
+      }catch{}
+      return nativeRegister(scriptURL,options);
+    };
+    Object.defineProperty(swContainer,'__bsSingleOwnerRegister',{value:true,configurable:false,enumerable:false});
+  }catch(error){
+    console.warn('Protection service worker',error);
+  }
+}
+
 function semver(value){
   return String(value||'0').split('.').map(part=>Number.parseInt(part,10)||0).slice(0,3);
 }
@@ -144,9 +166,9 @@ function watchInstallingWorker(worker,remote){
 }
 
 async function installRemote(remote){
-  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  if(!swContainer||!window.isSecureContext||!nativeRegister)return;
   const script=`./${String(remote.serviceWorker||'sw.js').replace(/^\.\//,'')}?v=${encodeURIComponent(remote.version)}&build=${encodeURIComponent(remote.build||'stable')}`;
-  const registration=await navigator.serviceWorker.register(script,{scope:'./',updateViaCache:'none'});
+  const registration=await nativeRegister(script,{scope:'./',updateViaCache:'none'});
 
   if(registration.waiting){
     const waitingVersion=await queryWorkerVersion(registration.waiting);
@@ -227,10 +249,8 @@ function installHealthGuard(){
   },HEALTH_TIMEOUT);
 }
 
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    // Un changement de contrôleur ne doit JAMAIS provoquer un reload s'il n'a pas été
-    // explicitement demandé par notre mécanisme de mise à jour.
+if(swContainer){
+  swContainer.addEventListener('controllerchange',()=>{
     const target=localStorage.getItem(PENDING_KEY)||'';
     if(!target)return;
     if(localStorage.getItem(APPLIED_KEY)===target){
@@ -245,7 +265,7 @@ if('serviceWorker' in navigator){
     sessionStorage.setItem(SUCCESS_KEY,target);
     location.reload();
   });
-  navigator.serviceWorker.addEventListener('message',event=>{
+  swContainer.addEventListener('message',event=>{
     if(event.data?.type==='BS_SW_ACTIVATED')tryPendingActivation();
   });
 }
