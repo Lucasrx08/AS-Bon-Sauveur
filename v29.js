@@ -21,19 +21,11 @@ const observer=new MutationObserver(()=>{
 });
 observer.observe(document.body,{childList:true,subtree:true,characterData:true});
 
-async function registerPwa(){
-  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
-  try{
-    const reg=await navigator.serviceWorker.register('./sw.js?v=29.1.0-final',{scope:'./'});
-    if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-    reg.addEventListener('updatefound',()=>{
-      const worker=reg.installing;
-      worker?.addEventListener('statechange',()=>{
-        if(worker.state==='installed'&&navigator.serviceWorker.controller)worker.postMessage?.({type:'SKIP_WAITING'});
-      });
-    });
-    reg.update().catch(()=>{});
-  }catch(error){console.warn('V29.1 service worker',error)}
+// À partir de la V30, un seul module pilote le service worker : v30-force-update.js.
+// L'ancien enregistrement V29 créait une concurrence avec la V30 et pouvait provoquer
+// un changement de contrôleur puis un rechargement à chaque ouverture.
+function registerPwa(){
+  return;
 }
 
 function refreshOperationalData(){
