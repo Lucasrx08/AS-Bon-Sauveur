@@ -1,0 +1,36 @@
+:root{
+  --gym:#8A2446;
+  --escalade:#C7A45A;
+}
+
+/* Codes couleur des spécialités */
+.v19-badge.gym{
+  color:#7A1F3E !important;
+  background:#F7E8EE !important;
+  border-color:#8A2446 !important;
+}
+
+.v19-badge.escalade{
+  color:#735615 !important;
+  background:#FFF3CF !important;
+  border-color:#C7A45A !important;
+}
+
+.v20-pole-card.gym{
+  --accent:#8A2446 !important;
+}
+
+.v20-pole-card.escalade{
+  --accent:#C7A45A !important;
+}
+
+/* Garde les couleurs déjà validées pour les autres pôles */
+.v19-badge.as{
+  color:#8B7310;
+  background:#FFF7C7;
+}
+
+.v19-badge.football{
+  color:#1762B3;
+  background:#EAF3FF;
+}
