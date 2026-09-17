@@ -12,20 +12,26 @@ async function clearAppCaches(){
   }catch(error){console.warn('V30 cache reset',error)}
 }
 
+function reloadOnce(){
+  if(sessionStorage.getItem(RELOAD_KEY)==='1')return;
+  sessionStorage.setItem(RELOAD_KEY,'1');
+  location.reload();
+}
+
 async function forceServiceWorkerUpdate(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
     await clearAppCaches();
     const registration=await navigator.serviceWorker.register(`./sw.js?v=${FORCE_VERSION}`,{scope:'./',updateViaCache:'none'});
+    registration.active?.postMessage({type:'CLEAR_APP_CACHES'});
     if(registration.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});
     await registration.update().catch(()=>{});
   }catch(error){console.warn('V30 service worker update',error)}
 }
 
-navigator.serviceWorker?.addEventListener?.('controllerchange',()=>{
-  if(sessionStorage.getItem(RELOAD_KEY)==='1')return;
-  sessionStorage.setItem(RELOAD_KEY,'1');
-  location.reload();
+navigator.serviceWorker?.addEventListener?.('controllerchange',reloadOnce);
+navigator.serviceWorker?.addEventListener?.('message',event=>{
+  if(event.data?.type==='BS_V30_FORCE_REFRESH')reloadOnce();
 });
 
 window.addEventListener('load',()=>{
