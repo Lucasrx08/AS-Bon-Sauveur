@@ -4,26 +4,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#0757C9" />
-  <meta name="description" content="Application officielle de l'Association Sportive du Bon Sauveur à Saint-Lô : calendrier, convocations, boutique, documents et suivi sportif." />
-  <meta name="robots" content="index,follow" />
-  <meta name="bs-app-version" content="30.0.4" />
+  <meta name="description" content="Mode de secours de l'application Association Sportive du Bon Sauveur." />
+  <meta name="robots" content="noindex,nofollow" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="AS Bon Sauveur" />
-  <meta property="og:type" content="website" />
-  <meta property="og:locale" content="fr_FR" />
-  <meta property="og:title" content="Association Sportive du Bon Sauveur" />
-  <meta property="og:description" content="Calendrier, convocations, boutique et informations de l'Association Sportive du Bon Sauveur." />
-  <meta property="og:url" content="https://lucasrx08.github.io/AS-Bon-Sauveur/" />
-  <meta property="og:image" content="https://lucasrx08.github.io/AS-Bon-Sauveur/assets/logo-as.png" />
-  <meta name="twitter:card" content="summary" />
-  <link rel="canonical" href="https://lucasrx08.github.io/AS-Bon-Sauveur/" />
-  <link rel="manifest" href="manifest.webmanifest?v=30.0.4" />
+  <link rel="manifest" href="manifest.webmanifest?v=30.0.2-stable-20260917" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <link rel="preconnect" href="https://qafwwsxmhiesbfaydcih.supabase.co" crossorigin />
-  <link rel="preload" as="image" href="assets/logo-as.png?v=30.0.4" />
-  <link rel="icon" type="image/png" href="assets/logo-as.png?v=30.0.4" />
-  <link rel="apple-touch-icon" href="assets/logo-as.png?v=30.0.4" />
+  <link rel="preload" as="image" href="assets/logo-as.png?v=30.0.2-stable-20260917" />
+  <link rel="icon" type="image/png" href="assets/logo-as.png?v=30.0.2-stable-20260917" />
+  <link rel="apple-touch-icon" href="assets/logo-as.png?v=30.0.2-stable-20260917" />
   <link rel="stylesheet" href="v19.css?v=30.0.1-force-20260917" />
   <link rel="stylesheet" href="v20.css?v=30.0.1-force-20260917" />
   <link rel="stylesheet" href="v21.css?v=30.0.1-force-20260917" />
@@ -36,16 +27,15 @@
   <link rel="stylesheet" href="v22-1.css?v=30.0.1-force-20260917" />
   <link rel="stylesheet" href="v27.css?v=30.0.1-force-20260917" />
   <link rel="stylesheet" href="v30-specialty-colors.css?v=30.0.3-colors-20260917" />
-  <title>Association Sportive du Bon Sauveur</title>
+  <title>AS Bon Sauveur — mode de secours</title>
 </head>
 <body>
-  <noscript><p style="padding:2rem;font-family:Arial,sans-serif">JavaScript est nécessaire pour utiliser l'application de l'Association Sportive du Bon Sauveur.</p></noscript>
+  <noscript><p style="padding:2rem;font-family:Arial,sans-serif">JavaScript est nécessaire pour utiliser l'application.</p></noscript>
   <div id="app"></div>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0"></script>
   <script defer src="config.js?v=30.0.1-force-20260917"></script>
-  <script defer src="v30-force-update.js?v=30.0.4-update-system-20260917"></script>
   <script defer src="v29-bootstrap.js?v=30.0.1-force-20260917"></script>
-  <script defer src="v30-release.js?v=30.0.4-update-system-20260917"></script>
+  <script defer src="v30-release-safe-30.0.3.js?v=30.0.3-safe-20260917"></script>
   <script defer src="v22-preflight.js?v=30.0.1-force-20260917"></script>
   <script defer src="v20-stability.js?v=30.0.1-force-20260917"></script>
   <script defer src="v20-preflight.js?v=30.0.1-force-20260917"></script>
@@ -74,5 +64,17 @@
   <script defer src="v28.js?v=30.0.1-force-20260917"></script>
   <script defer src="v29.js?v=30.0.1-force-20260917"></script>
   <script defer src="v30-multispecialty.js?v=30.0.1-force-20260917"></script>
+  <script>
+    window.addEventListener('load',()=>{
+      setTimeout(()=>{
+        if(!document.body)return;
+        const bar=document.createElement('div');
+        bar.textContent='Mode de secours actif — la dernière version stable est utilisée.';
+        bar.style.cssText='position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:3000;padding:10px 14px;border-radius:999px;background:#fff4b9;color:#54450d;border:1px solid #f0cf3f;font:700 12px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;box-shadow:0 10px 28px rgba(19,33,58,.14)';
+        document.body.appendChild(bar);
+        setTimeout(()=>bar.remove(),7000);
+      },250);
+    },{once:true});
+  </script>
 </body>
 </html>

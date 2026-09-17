@@ -1,0 +1,8 @@
+{
+  "version": "30.0.4",
+  "build": "20260917-update-system",
+  "channel": "stable",
+  "releasedAt": "2026-09-17",
+  "message": "Mise à jour automatique et sécurisée",
+  "serviceWorker": "sw.js"
+}
