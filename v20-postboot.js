@@ -45,7 +45,7 @@ function buildPoleSection(){
   const section=document.createElement('section');section.className='v20-poles-section';section.setAttribute('aria-label','Nos pôles sportifs');
   section.innerHTML=`<div class="v20-poles-head"><div><span class="v20-poles-kicker">BON SAUVEUR SPORT</span><h2>Nos pôles</h2><p>Retrouvez rapidement les informations de votre activité.</p></div><span class="v20-poles-hint">Choisir un pôle</span></div>`;
   const grid=document.createElement('div');grid.className='v20-poles-grid';
-  POLES.forEach((p,index)=>{const btn=document.createElement('button');btn.type='button';btn.className=`v20-pole-card ${p.key}`;btn.setAttribute('aria-label',`Ouvrir ${p.label}`);btn.innerHTML=`<span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span><span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async" loading="eager" fetchpriority="high" width="92" height="92"></span><span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span><span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;btn.addEventListener('click',()=>goPole(p.search));grid.appendChild(btn)});
+  POLES.forEach((p,index)=>{const btn=document.createElement('button');btn.type='button';btn.className=`v20-pole-card ${p.key}`;btn.setAttribute('aria-label',`Ouvrir ${p.label}`);const eager=index===0;btn.innerHTML=`<span class="v20-pole-topline"><span>${p.eyebrow}</span><b>0${index+1}</b></span><span class="v20-pole-medallion"><img src="${p.logo}" alt="" decoding="async" loading="${eager?'eager':'lazy'}" fetchpriority="${eager?'auto':'low'}" width="92" height="92"></span><span class="v20-pole-text"><strong>${p.label}</strong><small>${p.desc}</small></span><span class="v20-pole-footer"><span>Voir le calendrier</span><b aria-hidden="true">→</b></span>`;btn.addEventListener('click',()=>goPole(p.search),{passive:true});grid.appendChild(btn)});
   section.appendChild(grid);return section;
 }
 
@@ -58,15 +58,32 @@ async function fetchInstagram(){
   })();
   return instagramPromise;
 }
-function buildInstagramSection(){
-  const section=document.createElement('section');section.className='v21-instagram';section.dataset.v21Instagram='1';
-  section.innerHTML=`<div class="v21-instagram-head"><div><span class="v21-instagram-kicker">LA VIE DE L’AS</span><h2>Sur Instagram</h2><p>Les dernières images de l’Association Sportive.</p></div>${cfg.instagramUrl?`<a class="v21-instagram-profile" href="${esc(cfg.instagramUrl)}" target="_blank" rel="noopener noreferrer">@as_bs50 ↗</a>`:''}</div><div class="v21-instagram-grid"><div class="v21-instagram-loading">Chargement des dernières photos…</div></div>`;
-  const grid=section.querySelector('.v21-instagram-grid');
+function loadInstagramSection(section){
+  if(!section?.isConnected||section.dataset.loaded==='1')return;
+  section.dataset.loaded='1';
+  const grid=section.querySelector('.v21-instagram-grid');if(!grid)return;
   fetchInstagram().then(items=>{
     if(!section.isConnected)return;
     if(!items.length){grid.innerHTML=`<div class="v21-instagram-empty">Le flux photo est momentanément indisponible. Les publications restent accessibles depuis @as_bs50.</div>`;return}
-    grid.innerHTML=items.slice(0,8).map(item=>{const src=item.media_type==='VIDEO'?(item.thumbnail_url||item.media_url):(item.media_url||item.thumbnail_url);const caption=String(item.caption||'Publication Instagram').trim();return `<a class="v21-instagram-item" href="${esc(item.permalink||cfg.instagramUrl||'#')}" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la publication Instagram"><img src="${esc(src)}" alt="${esc(caption.slice(0,120))}" loading="lazy" decoding="async"><span>${esc(caption||'Publication Instagram')}</span></a>`}).join('');
+    grid.innerHTML=items.slice(0,8).map(item=>{const src=item.media_type==='VIDEO'?(item.thumbnail_url||item.media_url):(item.media_url||item.thumbnail_url);const caption=String(item.caption||'Publication Instagram').trim();return `<a class="v21-instagram-item" href="${esc(item.permalink||cfg.instagramUrl||'#')}" target="_blank" rel="noopener noreferrer" aria-label="Ouvrir la publication Instagram"><img src="${esc(src)}" alt="${esc(caption.slice(0,120))}" loading="lazy" decoding="async" fetchpriority="low"><span>${esc(caption||'Publication Instagram')}</span></a>`}).join('');
   });
+}
+function scheduleInstagramLoad(section){
+  setTimeout(()=>{
+    if(!section.isConnected)return;
+    if('IntersectionObserver' in window){
+      const io=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){io.disconnect();loadInstagramSection(section)}},{rootMargin:'280px 0px'});
+      io.observe(section);
+      return;
+    }
+    if('requestIdleCallback' in window)requestIdleCallback(()=>loadInstagramSection(section),{timeout:1600});
+    else setTimeout(()=>loadInstagramSection(section),700);
+  },0);
+}
+function buildInstagramSection(){
+  const section=document.createElement('section');section.className='v21-instagram';section.dataset.v21Instagram='1';
+  section.innerHTML=`<div class="v21-instagram-head"><div><span class="v21-instagram-kicker">LA VIE DE L’AS</span><h2>Sur Instagram</h2><p>Les dernières images de l’Association Sportive.</p></div>${cfg.instagramUrl?`<a class="v21-instagram-profile" href="${esc(cfg.instagramUrl)}" target="_blank" rel="noopener noreferrer">@as_bs50 ↗</a>`:''}</div><div class="v21-instagram-grid"><div class="v21-instagram-loading">Les dernières photos se chargent à l’approche de cette section…</div></div>`;
+  scheduleInstagramLoad(section);
   return section;
 }
 
@@ -86,7 +103,7 @@ function enhanceHome(){
   hero.classList.add('v20-hero-clean');
   hero.querySelectorAll('.v20-home-links,.v20-home-hub,.v20-hero-logo').forEach(el=>el.remove());
   let copy=hero.querySelector('.v20-hero-copy');if(!copy){copy=document.createElement('div');copy.className='v20-hero-copy';hero.insertBefore(copy,hero.firstChild);[...hero.children].filter(el=>el!==copy&&el.matches('.v19-kicker,h1,p')).forEach(el=>copy.appendChild(el))}
-  let seal=hero.querySelector('.v20-hero-seal');if(!seal){seal=document.createElement('div');seal.className='v20-hero-seal';seal.innerHTML='<span class="v20-seal-glow"></span><img alt="" decoding="async">';hero.appendChild(seal)}
+  let seal=hero.querySelector('.v20-hero-seal');if(!seal){seal=document.createElement('div');seal.className='v20-hero-seal';seal.innerHTML='<span class="v20-seal-glow"></span><img alt="" decoding="async" fetchpriority="low">';hero.appendChild(seal)}
   const sealImg=seal.querySelector('img');if(sealImg&&sealImg.getAttribute('src')!==brand.logo){sealImg.src=brand.logo;sealImg.alt=brand.label.replace(/\n/g,' ')}
   let poles=container.querySelector(':scope > .v20-poles-section');
   let insta=container.querySelector(':scope > .v21-instagram');
@@ -99,7 +116,7 @@ function enhanceHome(){
 }
 function enhanceConvocationLogos(){
   const logos={'Association Sportive':'assets/logo-as.png','Section Football':'assets/logo-football.png','Sport-études Gymnastique':'assets/logo-gymnastique.png','Option Escalade':'assets/logo-escalade.png'};
-  document.querySelectorAll('.v19-conv-detail-head').forEach(head=>{if(head.querySelector('.v20-specialty-logo-tile'))return;const badge=head.querySelector('.v19-badge'),specialty=(badge?.textContent||'').trim(),src=logos[specialty],titleBlock=head.firstElementChild;if(!src||!titleBlock)return;const wrap=document.createElement('div');wrap.className='v20-conv-brandline';const tile=document.createElement('span');tile.className='v20-specialty-logo-tile';tile.innerHTML=`<img src="${src}" alt="" decoding="async">`;head.insertBefore(wrap,titleBlock);wrap.append(tile,titleBlock)});
+  document.querySelectorAll('.v19-conv-detail-head').forEach(head=>{if(head.querySelector('.v20-specialty-logo-tile'))return;const badge=head.querySelector('.v19-badge'),specialty=(badge?.textContent||'').trim(),src=logos[specialty],titleBlock=head.firstElementChild;if(!src||!titleBlock)return;const wrap=document.createElement('div');wrap.className='v20-conv-brandline';const tile=document.createElement('span');tile.className='v20-specialty-logo-tile';tile.innerHTML=`<img src="${src}" alt="" decoding="async" loading="lazy" fetchpriority="low">`;head.insertBefore(wrap,titleBlock);wrap.append(tile,titleBlock)});
 }
 
 function closeFallbackModal(){document.getElementById('v20-fallback-access')?.remove()}
