@@ -1,11 +1,11 @@
 (() => {
 'use strict';
-window.__BS_RELEASE={major:29,label:'V29.1',version:'29.1.0',channel:'stable'};
-document.documentElement.dataset.appVersion='29';
+if(!window.__BS_RELEASE)window.__BS_RELEASE={major:29,label:'V29.1',version:'29.1.0',channel:'stable'};
 
 function applyReleaseLabel(){
-  document.documentElement.dataset.appVersion='29';
-  document.querySelectorAll('.v221-privacy-footer span').forEach(el=>{if(el.textContent!=='V29.1')el.textContent='V29.1'});
+  const release=window.__BS_RELEASE||{major:29,label:'V29.1'};
+  document.documentElement.dataset.appVersion=String(release.major||29);
+  document.querySelectorAll('.v221-privacy-footer span').forEach(el=>{if(el.textContent!==release.label)el.textContent=release.label});
 }
 window.__BS_APPLY_RELEASE_LABEL=applyReleaseLabel;
 applyReleaseLabel();
