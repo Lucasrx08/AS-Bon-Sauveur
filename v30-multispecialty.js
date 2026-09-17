@@ -1,19 +1,12 @@
 (() => {
 'use strict';
 
-const VERSION='30.1.0';
 const SPECIALTIES=['Association Sportive','Section Football','Option Escalade','Sport-études Gymnastique'];
 const AGE_CATEGORIES=['Benjamin','Benjamine','Minime fille','Minime garçon','Lycéen','Lycéenne','Toutes catégories'];
 const ROLE_SPECIALTY={
   educator_escalade:'Option Escalade',
   educator_football:'Section Football',
   educator_gymnastique:'Sport-études Gymnastique'
-};
-const BADGE_CLASS={
-  'Association Sportive':'as',
-  'Section Football':'football',
-  'Option Escalade':'escalade',
-  'Sport-études Gymnastique':'gym'
 };
 
 const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -55,7 +48,6 @@ function primarySpecialty(event){
 }
 
 function roleSpecialty(role){return ROLE_SPECIALTY[role]||''}
-function isManagerRole(role){return role==='teacher_as'||role==='admin'}
 
 function applyCalendarContext(specialty=''){
   const data=window.app?.readData?.();
@@ -81,10 +73,6 @@ function options(items,current){
   return items.map(x=>`<option value="${esc(x)}" ${x===current?'selected':''}>${esc(x)}</option>`).join('');
 }
 
-function specialtyBadge(sp){
-  return `<span class="v19-badge ${BADGE_CLASS[sp]||'as'}">${esc(sp)}</span>`;
-}
-
 function injectCss(){
   if(document.getElementById('v30-multi-css'))return;
   const style=document.createElement('style');
@@ -98,57 +86,9 @@ function injectCss(){
   .v30-specialty-option span{font-weight:800;line-height:1.2}
   .v30-specialty-help{display:block;margin-top:8px;color:var(--muted);font-size:12px;line-height:1.4}
   .v30-specialty-option:has(input:checked){border-color:#4b8fe8;background:color-mix(in srgb,#0757C9 7%,var(--card));box-shadow:0 0 0 1px color-mix(in srgb,#0757C9 25%,transparent)}
-  .v30-event-badges{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
-  .v30-event-badges .v19-badge{margin:0!important;white-space:nowrap}
-  @media(max-width:640px){.v30-specialty-picker{grid-template-columns:1fr}.v30-event-badges{gap:5px}}
+  @media(max-width:640px){.v30-specialty-picker{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
-}
-
-function cardEvent(card,candidates,used){
-  const title=(card.querySelector('.v19-event-body h3')?.textContent||'').trim();
-  const day=Number(card.querySelector('.v19-date strong')?.textContent||0);
-  const month=(card.querySelector('.v19-date span')?.textContent||'').trim().toUpperCase();
-  const meta=(card.querySelector('.v19-event-body .v19-meta')?.textContent||'').trim();
-  const exact=candidates.find((event,index)=>{
-    if(used.has(index)||String(event.title||'').trim()!==title)return false;
-    const date=new Date(`${event.date}T12:00:00`);
-    const eventMonth=date.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').toUpperCase();
-    if(date.getDate()!==day||eventMonth!==month)return false;
-    if(event.startTime&&!meta.includes(event.startTime))return false;
-    if(event.place&&!meta.includes(event.place))return false;
-    return true;
-  });
-  if(exact)return exact;
-  return candidates.find((event,index)=>!used.has(index)&&String(event.title||'').trim()===title)||null;
-}
-
-function decorateManagerEventBadges(){
-  const app=window.app;if(!app)return;
-  const role=app.role?.()||'public';
-  if(!isManagerRole(role))return;
-  const data=app.readData?.()||{};
-  const today=new Date();
-  const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-  const candidates=(data.events||[]).filter(e=>String(e.date||'')>=todayKey).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
-  const used=new Set();
-  document.querySelectorAll('.v19-event-card').forEach(card=>{
-    const event=cardEvent(card,candidates,used);if(!event)return;
-    const index=candidates.indexOf(event);if(index>=0)used.add(index);
-    const specialties=eventSpecialties(event);
-    if(specialties.length<=1)return;
-    const body=card.querySelector('.v19-event-body');if(!body)return;
-    let wrap=body.querySelector('.v30-event-badges');
-    if(!wrap){
-      wrap=document.createElement('div');wrap.className='v30-event-badges';
-      const existing=body.querySelector('.v19-badge');
-      if(existing)existing.replaceWith(wrap);else body.appendChild(wrap);
-    }
-    const signature=specialties.join('|');
-    if(wrap.dataset.specialties===signature)return;
-    wrap.dataset.specialties=signature;
-    wrap.innerHTML=specialties.map(specialtyBadge).join('');
-  });
 }
 
 function modal(title,html){
@@ -168,7 +108,7 @@ function modal(title,html){
 async function editEventMulti(id){
   const app=window.app;if(!app)return;
   const role=app.role?.()||'public';
-  if(!isManagerRole(role))return;
+  if(!['teacher_as','admin'].includes(role))return;
 
   restorePrimarySpecialties();
   const data=app.readData?.()||{};
@@ -226,7 +166,7 @@ async function editEventMulti(id){
       const msg=specialties.length>1?`Événement enregistré dans ${specialties.length} calendriers`:'Événement enregistré';
       if(typeof window.__BS_SAVED==='function')window.__BS_SAVED(msg,'Une seule fiche événement est synchronisée pour toutes les spécialités sélectionnées.');
     }catch(error){
-      console.warn('V30.1 événement multi-spécialités',error);
+      console.warn('V30 événement multi-spécialités',error);
       button.disabled=false;button.textContent='Enregistrer';
       status.textContent='L’événement n’a pas pu être enregistré dans la base centrale. Réessayez.';
       status.className='full v2115-form-status error';
@@ -248,11 +188,9 @@ function patchApp(){
 
   if(originalGo){
     window.app.go=function(route){
-      const role=window.app.role?.()||'public';
-      applyCalendarContext(roleSpecialty(role));
-      const out=originalGo(route);
-      if(isManagerRole(role))requestAnimationFrame(decorateManagerEventBadges);
-      return out;
+      const sp=roleSpecialty(window.app.role?.());
+      applyCalendarContext(sp);
+      return originalGo(route);
     };
   }
 
@@ -272,9 +210,7 @@ function patchApp(){
         const primary=primarySpecialty(event);
         event.specialty=sp&&event.specialties.includes(sp)?sp:primary;
       });
-      const out=originalHydrate(data,role);
-      if(isManagerRole(role))requestAnimationFrame(decorateManagerEventBadges);
-      return out;
+      return originalHydrate(data,role);
     };
   }
 
@@ -284,20 +220,14 @@ function patchApp(){
   const currentRole=window.app.role?.()||'public';
   const sp=roleSpecialty(currentRole);
   if(sp){applyCalendarContext(sp);originalGo?.('home')}
-  else if(isManagerRole(currentRole))requestAnimationFrame(decorateManagerEventBadges);
 }
 
-let decorateFrame=0;
 window.addEventListener('bs-app-rendered',()=>{
   const role=window.app?.role?.()||'public';
   const sp=roleSpecialty(role);
   if(sp)applyCalendarContext(sp);
-  if(isManagerRole(role)){
-    cancelAnimationFrame(decorateFrame);
-    decorateFrame=requestAnimationFrame(decorateManagerEventBadges);
-  }
 });
 
 patchApp();
-window.ASV30_MULTI={version:VERSION,feature:'multi-specialty-events',managerBadges:true};
+window.ASV30_MULTI={version:'30.0.0',feature:'multi-specialty-events'};
 })();

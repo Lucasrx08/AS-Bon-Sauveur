@@ -1,7 +1,13 @@
 (() => {
 'use strict';
 
+// V30 — accès équipe simplifié : une seule authentification (nom + PIN,
+// ou compte administrateur de secours). La couche MFA historique n'est plus
+// exigée par l'interface. Les droits Supabase et les rôles restent inchangés.
 const AUTH_METHOD='bs-auth-method';
+
+// v20-bridge utilise la valeur "pin" comme accès opérationnel à facteur unique.
+// La session Supabase reste, elle, la source d'identité et de rôle.
 sessionStorage.setItem(AUTH_METHOD,'pin');
 window.__BS_ADMIN_MFA_DISABLED=true;
 
@@ -12,21 +18,18 @@ function cleanLegacyMfaUi(){
 
 function updateLegacyCopy(root=document){
   root.querySelectorAll?.('.v19-meta,.v26-security-lead p').forEach(el=>{
-    const text=el.textContent||'';
-    if(text.includes('La double authentification protège en plus le compte administrateur.')){
-      el.textContent=text.replace('La double authentification protège en plus le compte administrateur.','Votre compte reste protégé par votre authentification et les droits associés à votre profil.');
+    if((el.textContent||'').includes('La double authentification protège en plus le compte administrateur.')){
+      el.textContent=(el.textContent||'').replace('La double authentification protège en plus le compte administrateur.','Votre compte reste protégé par votre authentification et les droits associés à votre profil.');
     }
   });
 }
 
-function clean(){
+cleanLegacyMfaUi();
+updateLegacyCopy();
+new MutationObserver(()=>{
   cleanLegacyMfaUi();
   updateLegacyCopy();
-}
+}).observe(document.body,{childList:true,subtree:true});
 
-clean();
-document.addEventListener('DOMContentLoaded',clean,{once:true});
-window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(clean));
-
-window.ASV30_AUTH={version:'30.1.0',mode:'single-factor-team-access',mfaRequired:false};
+window.ASV30_AUTH={version:'30.0.0',mode:'single-factor-team-access',mfaRequired:false};
 })();
