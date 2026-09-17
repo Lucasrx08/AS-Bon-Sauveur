@@ -1,8 +1,8 @@
 {
-  "version": "31.1.0",
-  "build": "20260917-mobile-session",
+  "version": "31.2.0",
+  "build": "20260917-mobile-lock",
   "channel": "stable",
   "releasedAt": "2026-09-17",
-  "message": "Stabilité mobile et maintien de session",
+  "message": "Verrouillage du viewport mobile",
   "serviceWorker": "sw.js"
 }

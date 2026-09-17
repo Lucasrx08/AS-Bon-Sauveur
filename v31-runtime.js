@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='31.1.0';
+const VERSION='31.2.0';
 const SW_URL='./sw.js';
 const LAST_CHECK_KEY='bs-v31-sw-last-check';
 const READY_KEY='bs-v31-update-ready';

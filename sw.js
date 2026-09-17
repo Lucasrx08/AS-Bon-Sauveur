@@ -1,5 +1,5 @@
-const APP_VERSION='31.1.0';
-const BUILD_ID='20260917-mobile-session';
+const APP_VERSION='31.2.0';
+const BUILD_ID='20260917-mobile-lock';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const NAV_CACHE='as-bon-sauveur-navigation';
@@ -9,9 +9,10 @@ const OFFLINE_URL='./offline.html';
 
 const PRECACHE=[
   OFFLINE_URL,
-  './manifest.webmanifest?v=31.1.0',
-  './assets/logo-as.png?v=31.1.0',
-  './v31-mobile.css?v=31.1.0'
+  './manifest.webmanifest?v=31.2.0',
+  './assets/logo-as.png?v=31.2.0',
+  './v31-mobile.css?v=31.2.0',
+  './v31-mobile-lock.js?v=31.2.0'
 ];
 
 self.addEventListener('install',event=>{
