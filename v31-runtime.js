@@ -15,7 +15,7 @@ function showUpdateReady(){
   sessionStorage.setItem(READY_KEY,'1');
   const notify=()=>{
     if(typeof window.__BS_SAVED==='function'){
-      window.__BS_SAVED('Mise à jour prête','Elle sera appliquée automatiquement à la prochaine ouverture de l’application.');
+      window.__BS_SAVED('Mise à jour prête','La nouvelle version sera utilisée à la prochaine ouverture de l’application.');
       return;
     }
     if(document.getElementById('bs-v31-update-ready'))return;
@@ -23,7 +23,7 @@ function showUpdateReady(){
     el.id='bs-v31-update-ready';
     el.setAttribute('role','status');
     el.setAttribute('aria-live','polite');
-    el.textContent='Mise à jour prête — elle sera appliquée à la prochaine ouverture.';
+    el.textContent='Mise à jour prête — nouvelle version à la prochaine ouverture.';
     el.style.cssText='position:fixed;z-index:3000;right:18px;bottom:92px;max-width:min(420px,calc(100vw - 36px));padding:12px 15px;border-radius:15px;background:#fff;border:1px solid #dce5f0;color:#13213a;box-shadow:0 16px 40px rgba(19,33,58,.14);font:700 12px -apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif';
     document.body.appendChild(el);
     setTimeout(()=>el.remove(),5200);
@@ -36,23 +36,27 @@ function watchWorker(worker,registration){
   if(!worker)return;
   const onState=()=>{
     if(worker.state!=='installed')return;
-    if(swContainer?.controller){
-      showUpdateReady();
-      return;
-    }
-    // Première installation uniquement : aucune ancienne version ne contrôle la page.
+    if(swContainer?.controller)showUpdateReady();
+    // Activation immédiate du moteur, mais jamais de reload de la page courante.
+    // Ainsi la prochaine ouverture est forcément sur la nouvelle version sans boucle.
     try{worker.postMessage({type:'SKIP_WAITING'})}catch{}
   };
   if(worker.state==='installed')onState();
   else worker.addEventListener('statechange',onState);
-  if(registration?.waiting&&swContainer?.controller)showUpdateReady();
+  if(registration?.waiting){
+    if(swContainer?.controller)showUpdateReady();
+    try{registration.waiting.postMessage({type:'SKIP_WAITING'})}catch{}
+  }
 }
 
 async function registerPwa({forceCheck=false}={}){
   if(!swContainer||!nativeRegister||!window.isSecureContext)return null;
   if(!registrationPromise){
     registrationPromise=nativeRegister(SW_URL,{scope:'./',updateViaCache:'none'}).then(reg=>{
-      if(reg.waiting)showUpdateReady();
+      if(reg.waiting){
+        if(swContainer.controller)showUpdateReady();
+        try{reg.waiting.postMessage({type:'SKIP_WAITING'})}catch{}
+      }
       if(reg.installing)watchWorker(reg.installing,reg);
       reg.addEventListener('updatefound',()=>watchWorker(reg.installing,reg));
       return reg;
@@ -87,9 +91,10 @@ if(swContainer&&nativeRegister){
   }catch(error){console.warn('PWA V31 compatibilité',error)}
 }
 
-// Enregistrer immédiatement, avant les anciennes couches, puis vérifier une seule fois au chargement.
+// Enregistrer immédiatement, avant les anciennes couches. L'enregistrement lui-même
+// vérifie le service worker ; les vérifications supplémentaires sont espacées de 6 h.
 registerPwa({forceCheck:false});
-window.addEventListener('load',()=>registerPwa({forceCheck:true}),{once:true});
+window.addEventListener('load',()=>registerPwa({forceCheck:false}),{once:true});
 window.addEventListener('online',()=>registerPwa({forceCheck:false}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)registerPwa({forceCheck:false})});
 
