@@ -6,6 +6,8 @@ const SW_URL='./sw.js';
 const LAST_CHECK_KEY='bs-v31-sw-last-check';
 const READY_KEY='bs-v31-update-ready';
 const CHECK_COOLDOWN=6*60*60*1000;
+const swContainer=navigator.serviceWorker;
+const nativeRegister=swContainer?.register?.bind(swContainer)||null;
 let registrationPromise=null;
 
 function showUpdateReady(){
@@ -16,8 +18,7 @@ function showUpdateReady(){
       window.__BS_SAVED('Mise à jour prête','Elle sera appliquée automatiquement à la prochaine ouverture de l’application.');
       return;
     }
-    const existing=document.getElementById('bs-v31-update-ready');
-    if(existing)return;
+    if(document.getElementById('bs-v31-update-ready'))return;
     const el=document.createElement('div');
     el.id='bs-v31-update-ready';
     el.setAttribute('role','status');
@@ -35,22 +36,22 @@ function watchWorker(worker,registration){
   if(!worker)return;
   const onState=()=>{
     if(worker.state!=='installed')return;
-    if(navigator.serviceWorker.controller){
+    if(swContainer?.controller){
       showUpdateReady();
       return;
     }
-    // Première installation : on peut activer immédiatement puisqu'aucune ancienne version ne contrôle la page.
+    // Première installation uniquement : aucune ancienne version ne contrôle la page.
     try{worker.postMessage({type:'SKIP_WAITING'})}catch{}
   };
   if(worker.state==='installed')onState();
   else worker.addEventListener('statechange',onState);
-  if(registration?.waiting&&navigator.serviceWorker.controller)showUpdateReady();
+  if(registration?.waiting&&swContainer?.controller)showUpdateReady();
 }
 
 async function registerPwa({forceCheck=false}={}){
-  if(!('serviceWorker' in navigator)||!window.isSecureContext)return null;
+  if(!swContainer||!nativeRegister||!window.isSecureContext)return null;
   if(!registrationPromise){
-    registrationPromise=navigator.serviceWorker.register(SW_URL,{scope:'./',updateViaCache:'none'}).then(reg=>{
+    registrationPromise=nativeRegister(SW_URL,{scope:'./',updateViaCache:'none'}).then(reg=>{
       if(reg.waiting)showUpdateReady();
       if(reg.installing)watchWorker(reg.installing,reg);
       reg.addEventListener('updatefound',()=>watchWorker(reg.installing,reg));
@@ -72,15 +73,28 @@ async function registerPwa({forceCheck=false}={}){
   return reg;
 }
 
+// Compatibilité avec les anciennes couches V19/V27/V28/V29 : tout appel vers sw.js
+// est redirigé vers l'unique enregistrement V31 au lieu de créer un concurrent.
+if(swContainer&&nativeRegister){
+  try{
+    swContainer.register=function(scriptURL,options){
+      try{
+        const url=new URL(String(scriptURL||''),location.href);
+        if(url.origin===location.origin&&url.pathname.endsWith('/sw.js'))return registerPwa({forceCheck:false});
+      }catch{}
+      return nativeRegister(scriptURL,options);
+    };
+  }catch(error){console.warn('PWA V31 compatibilité',error)}
+}
+
+// Enregistrer immédiatement, avant les anciennes couches, puis vérifier une seule fois au chargement.
+registerPwa({forceCheck:false});
 window.addEventListener('load',()=>registerPwa({forceCheck:true}),{once:true});
 window.addEventListener('online',()=>registerPwa({forceCheck:false}));
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden)registerPwa({forceCheck:false});
-});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)registerPwa({forceCheck:false})});
 
-// Aucun rechargement automatique n'est déclenché par un changement de contrôleur.
-// La version courante continue jusqu'à la prochaine ouverture : pas de boucle, pas de perte de saisie.
-navigator.serviceWorker?.addEventListener('controllerchange',()=>{});
+// Aucun reload automatique sur controllerchange : la page courante reste stable.
+swContainer?.addEventListener('controllerchange',()=>{});
 
 window.__BS_CHECK_UPDATE=()=>registerPwa({forceCheck:true});
 window.ASV31_RUNTIME={version:VERSION,singleServiceWorkerOwner:true,autoReload:false,updateOnNextOpen:true};
