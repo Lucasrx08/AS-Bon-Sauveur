@@ -1,8 +1,9 @@
-const CACHE_NAME='as-bon-sauveur-v30-0-1-force-20260917';
+const CACHE_PREFIX='as-bon-sauveur-';
+const CACHE_NAME='as-bon-sauveur-v30-1-performance-20260917';
 const OFFLINE_URL='./offline.html';
 const PRECACHE=[
   OFFLINE_URL,
-  './manifest.webmanifest?v=30.0.1-force-20260917',
+  './manifest.webmanifest?v=30.1.0',
   './assets/logo-as.png'
 ];
 
@@ -17,22 +18,21 @@ self.addEventListener('install',event=>{
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
     const keys=await caches.keys();
-    await Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)));
+    await Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)));
     await self.clients.claim();
-    const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    clients.forEach(client=>client.postMessage({type:'BS_V30_FORCE_REFRESH'}));
   })());
 });
 
 self.addEventListener('message',event=>{
   if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
-  if(event.data?.type==='CLEAR_APP_CACHES'){
-    event.waitUntil((async()=>{
-      const keys=await caches.keys();
-      await Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)));
-    })());
-  }
 });
+
+async function putIfCacheable(cache,request,response){
+  if(response&&response.ok&&response.type==='basic'){
+    try{await cache.put(request,response.clone())}catch{}
+  }
+  return response;
+}
 
 self.addEventListener('fetch',event=>{
   const request=event.request;
@@ -42,26 +42,27 @@ self.addEventListener('fetch',event=>{
 
   if(request.mode==='navigate'){
     event.respondWith((async()=>{
-      try{return await fetch(request,{cache:'no-store'})}
+      try{return await fetch(request,{cache:'no-cache'})}
       catch{return (await caches.match(OFFLINE_URL))||Response.error()}
     })());
     return;
   }
 
-  const cacheable=['image','font'].includes(request.destination)||url.pathname.endsWith('.webmanifest');
-  if(!cacheable){
-    event.respondWith(fetch(request,{cache:'no-store'}).catch(()=>caches.match(request)));
-    return;
-  }
+  const staticAsset=['script','style','image','font'].includes(request.destination)||url.pathname.endsWith('.webmanifest');
+  if(!staticAsset)return;
 
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE_NAME);
+    const cached=await cache.match(request);
+    if(cached){
+      event.waitUntil(fetch(request).then(response=>putIfCacheable(cache,request,response)).catch(()=>null));
+      return cached;
+    }
     try{
-      const response=await fetch(request,{cache:'reload'});
-      if(response&&response.ok&&response.type==='basic')cache.put(request,response.clone()).catch(()=>{});
-      return response;
+      const response=await fetch(request);
+      return await putIfCacheable(cache,request,response);
     }catch{
-      return (await cache.match(request))||Response.error();
+      return Response.error();
     }
   })());
 });
