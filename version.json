@@ -1,8 +1,8 @@
 {
-  "version": "30.0.5",
-  "build": "20260917-stop-reload-loop",
+  "version": "31.0.0",
+  "build": "20260917-consolidation",
   "channel": "stable",
   "releasedAt": "2026-09-17",
-  "message": "Correctif du rechargement en boucle",
+  "message": "Consolidation stabilité et réactivité",
   "serviceWorker": "sw.js"
 }
