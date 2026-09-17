@@ -1,112 +1,56 @@
-const APP_VERSION='30.0.5';
-const BUILD_ID='20260917-stop-reload-loop';
-const CACHE_PREFIX='as-bon-sauveur-';
-const CACHE_NAME=`as-bon-sauveur-build-${APP_VERSION}-${BUILD_ID}`;
+const APP_VERSION='31.0.0';
+const BUILD_ID='20260917-consolidation';
+const CACHE_PREFIX='as-bon-sauveur-build-';
+const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const NAV_CACHE='as-bon-sauveur-navigation';
 const META_KEY='./__bs_build_meta__';
 const NAV_KEY='./__bs_last_navigation__';
 const OFFLINE_URL='./offline.html';
-const SAFE_URL='./safe-v30.0.3.html';
 
-const CORE_ASSETS=[
+const PRECACHE=[
   OFFLINE_URL,
-  SAFE_URL,
-  './manifest.webmanifest?v=30.0.5',
-  './assets/logo-as.png?v=30.0.5',
-  './assets/logo-football.png',
-  './assets/logo-gymnastique.png',
-  './assets/logo-escalade.png',
-  './v19.css?v=30.0.1-force-20260917',
-  './v20.css?v=30.0.1-force-20260917',
-  './v21.css?v=30.0.1-force-20260917',
-  './v21-8-design.css?v=30.0.1-force-20260917',
-  './v21-9-polish.css?v=30.0.1-force-20260917',
-  './v21-10-ui.css?v=30.0.1-force-20260917',
-  './v21-12-pdf.css?v=30.0.1-force-20260917',
-  './v21-15.css?v=30.0.1-force-20260917',
-  './v22.css?v=30.0.1-force-20260917',
-  './v22-1.css?v=30.0.1-force-20260917',
-  './v27.css?v=30.0.1-force-20260917',
-  './v30-specialty-colors.css?v=30.0.3-colors-20260917',
-  './config.js?v=30.0.1-force-20260917',
-  './v30-force-update.js?v=30.0.5-stop-loop-20260917',
-  './v29-bootstrap.js?v=30.0.1-force-20260917',
-  './v30-release.js?v=30.0.5-stop-loop-20260917',
-  './v22-preflight.js?v=30.0.1-force-20260917',
-  './v20-stability.js?v=30.0.1-force-20260917',
-  './v20-preflight.js?v=30.0.1-force-20260917',
-  './v19-app.js?v=30.0.1-force-20260917',
-  './v24-time.js?v=30.0.1-force-20260917',
-  './v20-exports.js?v=30.0.1-force-20260917',
-  './v30-auth-simple.js?v=30.0.1-force-20260917',
-  './v20-bridge.js?v=30.0.1-force-20260917',
-  './v20-admin.js?v=30.0.1-force-20260917',
-  './v20-postboot.js?v=30.0.1-force-20260917',
-  './v21-admin.js?v=30.0.1-force-20260917',
-  './v21-auth-fix.js?v=30.0.1-force-20260917',
-  './v21-role-guard.js?v=30.0.1-force-20260917',
-  './v21-instagram-button.js?v=30.0.1-force-20260917',
-  './v21-pin-auth.js?v=30.0.1-force-20260917',
-  './v21-8-finance.js?v=30.0.1-force-20260917',
-  './v21-9-admin-icons.js?v=30.0.1-force-20260917',
-  './v21-9-finance.js?v=30.0.1-force-20260917',
-  './v21-10.js?v=30.0.1-force-20260917',
-  './v21-11-reports.js?v=30.0.1-force-20260917',
-  './v21-12-pdf.js?v=30.0.1-force-20260917',
-  './v22-runtime.js?v=30.0.1-force-20260917',
-  './v22-1-privacy.js?v=30.0.1-force-20260917',
-  './v25-audit-fixes.js?v=30.0.1-force-20260917',
-  './v27.js?v=30.0.1-force-20260917',
-  './v28.js?v=30.0.1-force-20260917',
-  './v29.js?v=30.0.5-stop-loop-20260917',
-  './v30-multispecialty.js?v=30.0.1-force-20260917',
-  './v30-release-safe-30.0.3.js?v=30.0.3-safe-20260917'
+  './manifest.webmanifest?v=31.0.0',
+  './assets/logo-as.png?v=31.0.0'
 ];
-
-async function fetchFresh(url){
-  const response=await fetch(new Request(url,{cache:'reload'}));
-  if(!response||!response.ok)throw new Error(`Asset indisponible: ${url}`);
-  return response;
-}
 
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(CACHE_NAME);
-    for(const url of CORE_ASSETS){
-      const response=await fetchFresh(url);
-      await cache.put(url,response.clone());
-    }
+    await cache.add(new Request(OFFLINE_URL,{cache:'reload'}));
+    await Promise.allSettled(PRECACHE.slice(1).map(async url=>{
+      const response=await fetch(new Request(url,{cache:'reload'}));
+      if(response?.ok)await cache.put(url,response.clone());
+    }));
     await cache.put(META_KEY,new Response(JSON.stringify({version:APP_VERSION,build:BUILD_ID,installedAt:Date.now()}),{headers:{'Content-Type':'application/json'}}));
+    // Une mise à jour reste en attente tant que l'ancienne application est ouverte.
+    // Cela évite de changer de moteur en plein formulaire ou en pleine navigation.
   })());
 });
 
-async function cleanupOldBuildCaches(){
+async function installedAt(cacheName){
+  try{
+    const cache=await caches.open(cacheName);
+    const meta=await cache.match(META_KEY);
+    if(!meta)return 0;
+    const parsed=await meta.json();
+    return Number(parsed?.installedAt)||0;
+  }catch{return 0}
+}
+
+async function cleanupBuildCaches(){
   const keys=await caches.keys();
-  const buildKeys=keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME&&key!==NAV_CACHE);
+  const previous=keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME);
   const dated=[];
-  for(const key of buildKeys){
-    let installedAt=0;
-    try{
-      const cache=await caches.open(key);
-      const meta=await cache.match(META_KEY);
-      if(meta){
-        const parsed=await meta.json();
-        installedAt=Number(parsed?.installedAt)||0;
-      }
-    }catch{}
-    dated.push({key,installedAt});
-  }
+  for(const key of previous)dated.push({key,installedAt:await installedAt(key)});
   dated.sort((a,b)=>b.installedAt-a.installedAt);
-  const keepPrevious=dated[0]?.key;
+  const keepPrevious=dated[0]?.key||null;
   await Promise.all(dated.filter(item=>item.key!==keepPrevious).map(item=>caches.delete(item.key)));
 }
 
 self.addEventListener('activate',event=>{
   event.waitUntil((async()=>{
+    await cleanupBuildCaches();
     await self.clients.claim();
-    await cleanupOldBuildCaches();
-    const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    clients.forEach(client=>client.postMessage({type:'BS_SW_ACTIVATED',version:APP_VERSION,build:BUILD_ID}));
   })());
 });
 
@@ -120,37 +64,35 @@ self.addEventListener('message',event=>{
   }
 });
 
-async function networkWithTimeout(request,timeoutMs=6000){
+async function networkWithTimeout(request,timeoutMs=4500){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{return await fetch(request,{cache:'no-store',signal:controller.signal})}
   finally{clearTimeout(timer)}
 }
 
-async function normalNavigation(request){
+async function navigationResponse(request){
   const navCache=await caches.open(NAV_CACHE);
   try{
-    const response=await networkWithTimeout(request,6000);
-    if(response&&response.ok)await navCache.put(NAV_KEY,response.clone());
+    const response=await networkWithTimeout(request);
+    if(response?.ok)navCache.put(NAV_KEY,response.clone()).catch(()=>{});
     return response;
   }catch{
-    return (await navCache.match(NAV_KEY))||(await caches.match(SAFE_URL))||(await caches.match(OFFLINE_URL))||Response.error();
+    return (await navCache.match(NAV_KEY))||(await caches.match(OFFLINE_URL))||Response.error();
   }
 }
 
-async function safeNavigation(){
-  return (await caches.match(SAFE_URL))||fetch(SAFE_URL,{cache:'no-store'});
-}
-
-async function cacheFirst(request){
+async function staticResponse(request){
   const current=await caches.open(CACHE_NAME);
-  const own=await current.match(request);
-  if(own)return own;
-  const older=await caches.match(request);
-  if(older)return older;
+  const currentHit=await current.match(request);
+  if(currentHit)return currentHit;
+
+  const previousHit=await caches.match(request);
+  if(previousHit)return previousHit;
+
   try{
     const response=await fetch(request);
-    if(response&&response.ok&&response.type==='basic')current.put(request,response.clone()).catch(()=>{});
+    if(response?.ok&&response.type==='basic')current.put(request,response.clone()).catch(()=>{});
     return response;
   }catch{
     return Response.error();
@@ -163,17 +105,16 @@ self.addEventListener('fetch',event=>{
   const url=new URL(request.url);
   if(url.origin!==self.location.origin)return;
 
-  if(url.pathname.endsWith('/version.json')||url.pathname.endsWith('/sw.js')){
+  if(url.pathname.endsWith('/sw.js')||url.pathname.endsWith('/version.json')){
     event.respondWith(fetch(request,{cache:'no-store'}));
     return;
   }
 
   if(request.mode==='navigate'){
-    if(url.searchParams.get('bs_safe')==='1')event.respondWith(safeNavigation());
-    else event.respondWith(normalNavigation(request));
+    event.respondWith(navigationResponse(request));
     return;
   }
 
-  const staticAsset=['script','style','image','font'].includes(request.destination)||url.pathname.endsWith('.webmanifest');
-  if(staticAsset)event.respondWith(cacheFirst(request));
+  const isStatic=['script','style','image','font'].includes(request.destination)||url.pathname.endsWith('.webmanifest');
+  if(isStatic)event.respondWith(staticResponse(request));
 });
