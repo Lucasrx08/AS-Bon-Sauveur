@@ -1,8 +1,8 @@
 {
-  "version": "31.0.0",
-  "build": "20260917-consolidation",
+  "version": "31.1.0",
+  "build": "20260917-mobile-session",
   "channel": "stable",
   "releasedAt": "2026-09-17",
-  "message": "Consolidation stabilité et réactivité",
+  "message": "Stabilité mobile et maintien de session",
   "serviceWorker": "sw.js"
 }
