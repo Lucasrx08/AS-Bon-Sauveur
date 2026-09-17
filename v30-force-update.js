@@ -1,15 +1,15 @@
 (() => {
 'use strict';
 
-const UPDATER_VERSION='30.0.4';
+const UPDATER_VERSION='30.0.5';
 const VERSION_URL='./version.json';
 const APPLIED_KEY='bs-app-version-applied';
 const PENDING_KEY='bs-app-update-pending';
-const RELOAD_KEY='bs-app-update-reload';
+const RELOADED_KEY='bs-app-update-reloaded-version';
 const SUCCESS_KEY='bs-app-update-success';
 const PAUSE_KEY='bs-app-update-paused-until';
 const CHECK_INTERVAL=60*1000;
-const HEALTH_TIMEOUT=15000;
+const HEALTH_TIMEOUT=18000;
 
 let checking=false;
 let lastCheck=0;
@@ -19,20 +19,68 @@ let activationNoticeShown=false;
 
 const safeMode=()=>new URLSearchParams(location.search).get('bs_safe')==='1';
 
+// Un seul composant a le droit d'enregistrer sw.js. Les anciens modules V19/V29
+// tentaient encore de l'enregistrer sans identifiant de build et provoquaient des
+// changements de contrôleur successifs. On neutralise uniquement ces appels hérités.
+const swContainer=navigator.serviceWorker;
+const nativeRegister=swContainer?.register?.bind(swContainer)||null;
+if(swContainer&&nativeRegister&&!swContainer.__bsSingleOwnerRegister){
+  try{
+    swContainer.register=function(scriptURL,options){
+      try{
+        const url=new URL(String(scriptURL||''),location.href);
+        if(url.pathname.endsWith('/sw.js')&&!url.searchParams.has('build')){
+          return Promise.reject(new Error('LEGACY_SW_REGISTRATION_BLOCKED'));
+        }
+      }catch{}
+      return nativeRegister(scriptURL,options);
+    };
+    Object.defineProperty(swContainer,'__bsSingleOwnerRegister',{value:true,configurable:false,enumerable:false});
+  }catch(error){
+    console.warn('Protection service worker',error);
+  }
+}
+
 function semver(value){
   return String(value||'0').split('.').map(part=>Number.parseInt(part,10)||0).slice(0,3);
 }
 function compareVersions(a,b){
   const av=semver(a),bv=semver(b);
-  for(let i=0;i<3;i++){if(av[i]!==bv[i])return av[i]-bv[i]}
+  for(let i=0;i<3;i++){
+    if(av[i]!==bv[i])return av[i]-bv[i];
+  }
   return 0;
 }
-function controllerVersion(){
+function pageVersion(){
+  return document.querySelector('meta[name="bs-app-version"]')?.content||window.__BS_RELEASE?.version||'';
+}
+function versionFromScript(worker){
   try{
-    const src=navigator.serviceWorker?.controller?.scriptURL;
-    if(!src)return'';
-    return new URL(src,location.href).searchParams.get('v')||'';
+    if(!worker?.scriptURL)return'';
+    return new URL(worker.scriptURL,location.href).searchParams.get('v')||'';
   }catch{return''}
+}
+function queryWorkerVersion(worker){
+  return new Promise(resolve=>{
+    if(!worker)return resolve('');
+    const fallback=versionFromScript(worker);
+    if(typeof MessageChannel==='undefined')return resolve(fallback);
+    const channel=new MessageChannel();
+    let done=false;
+    const finish=value=>{
+      if(done)return;
+      done=true;
+      clearTimeout(timer);
+      resolve(value||fallback);
+    };
+    const timer=setTimeout(()=>finish(fallback),1400);
+    channel.port1.onmessage=event=>finish(event.data?.type==='BS_SW_VERSION'?event.data?.version:fallback);
+    try{worker.postMessage({type:'GET_VERSION'},[channel.port2])}
+    catch{finish(fallback)}
+  });
+}
+async function controllerVersion(){
+  return queryWorkerVersion(navigator.serviceWorker?.controller||null);
 }
 function paused(){return Number(localStorage.getItem(PAUSE_KEY)||0)>Date.now()}
 
@@ -76,20 +124,6 @@ async function fetchRemoteVersion(){
   return remote;
 }
 
-function verifyWorker(worker,expectedVersion){
-  return new Promise(resolve=>{
-    if(!worker)return resolve(false);
-    const channel=new MessageChannel();
-    const timer=setTimeout(()=>resolve(false),2500);
-    channel.port1.onmessage=event=>{
-      clearTimeout(timer);
-      resolve(event.data?.type==='BS_SW_VERSION'&&event.data?.version===expectedVersion);
-    };
-    try{worker.postMessage({type:'GET_VERSION'},[channel.port2])}
-    catch{clearTimeout(timer);resolve(false)}
-  });
-}
-
 async function activateWorkerWhenSafe(worker,version){
   if(!worker||!version)return;
   pendingWorker=worker;
@@ -101,9 +135,9 @@ async function activateWorkerWhenSafe(worker,version){
     }
     return;
   }
-  const verified=await verifyWorker(worker,version);
-  if(!verified){
-    console.warn('Mise à jour différée : service worker non vérifié',version);
+  const verified=await queryWorkerVersion(worker);
+  if(verified!==version){
+    console.warn('Mise à jour différée : service worker non vérifié',version,verified);
     return;
   }
   localStorage.setItem(PENDING_KEY,version);
@@ -111,7 +145,9 @@ async function activateWorkerWhenSafe(worker,version){
 }
 
 function tryPendingActivation(){
-  if(pendingWorker&&pendingVersion&&safeToActivate())activateWorkerWhenSafe(pendingWorker,pendingVersion).catch(()=>{});
+  if(pendingWorker&&pendingVersion&&safeToActivate()){
+    activateWorkerWhenSafe(pendingWorker,pendingVersion).catch(()=>{});
+  }
 }
 
 function watchInstallingWorker(worker,remote){
@@ -130,33 +166,31 @@ function watchInstallingWorker(worker,remote){
 }
 
 async function installRemote(remote){
-  if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  if(!swContainer||!window.isSecureContext||!nativeRegister)return;
   const script=`./${String(remote.serviceWorker||'sw.js').replace(/^\.\//,'')}?v=${encodeURIComponent(remote.version)}&build=${encodeURIComponent(remote.build||'stable')}`;
-  const registration=await navigator.serviceWorker.register(script,{scope:'./',updateViaCache:'none'});
+  const registration=await nativeRegister(script,{scope:'./',updateViaCache:'none'});
+
   if(registration.waiting){
-    const valid=await verifyWorker(registration.waiting,remote.version);
-    if(valid)await activateWorkerWhenSafe(registration.waiting,remote.version);
+    const waitingVersion=await queryWorkerVersion(registration.waiting);
+    if(waitingVersion===remote.version){
+      await activateWorkerWhenSafe(registration.waiting,remote.version);
+    }
   }
   if(registration.installing)watchInstallingWorker(registration.installing,remote);
   registration.addEventListener('updatefound',()=>watchInstallingWorker(registration.installing,remote));
   await registration.update().catch(()=>{});
-
-  const activeVersion=controllerVersion();
-  if(activeVersion===remote.version&&!registration.waiting&&!registration.installing){
-    localStorage.setItem(APPLIED_KEY,remote.version);
-    localStorage.removeItem(PENDING_KEY);
-  }
 }
 
 async function checkVersion(force=false){
   if(safeMode()||paused()||checking||!navigator.onLine)return;
   const now=Date.now();
   if(!force&&now-lastCheck<CHECK_INTERVAL)return;
-  lastCheck=now;checking=true;
+  lastCheck=now;
+  checking=true;
   try{
     const remote=await fetchRemoteVersion();
-    const controlled=controllerVersion();
-    if(controlled&&compareVersions(remote.version,controlled)<0)return;
+    const controlled=await controllerVersion();
+    if(controlled&&compareVersions(controlled,remote.version)>0)return;
     if(controlled===remote.version){
       localStorage.setItem(APPLIED_KEY,remote.version);
       localStorage.removeItem(PENDING_KEY);
@@ -165,18 +199,19 @@ async function checkVersion(force=false){
     await installRemote(remote);
   }catch(error){
     console.warn('Vérification de mise à jour',error);
-  }finally{checking=false}
+  }finally{
+    checking=false;
+  }
 }
 
 function markHealthy(){
   const success=sessionStorage.getItem(SUCCESS_KEY);
-  const controlled=controllerVersion();
-  if(controlled)localStorage.setItem(APPLIED_KEY,controlled);
+  const currentPage=pageVersion();
+  if(currentPage)localStorage.setItem(APPLIED_KEY,currentPage);
   if(!success)return;
   localStorage.setItem(APPLIED_KEY,success);
   localStorage.removeItem(PENDING_KEY);
   sessionStorage.removeItem(SUCCESS_KEY);
-  sessionStorage.removeItem(RELOAD_KEY);
   setTimeout(()=>showStatus(`Application mise à jour — V${success}`,'La nouvelle version est installée et prête sur cet appareil.',5000),300);
 }
 
@@ -214,16 +249,23 @@ function installHealthGuard(){
   },HEALTH_TIMEOUT);
 }
 
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-    const target=localStorage.getItem(PENDING_KEY)||controllerVersion();
+if(swContainer){
+  swContainer.addEventListener('controllerchange',()=>{
+    const target=localStorage.getItem(PENDING_KEY)||'';
     if(!target)return;
-    if(sessionStorage.getItem(RELOAD_KEY)===target)return;
-    sessionStorage.setItem(RELOAD_KEY,target);
+    if(localStorage.getItem(APPLIED_KEY)===target){
+      localStorage.removeItem(PENDING_KEY);
+      return;
+    }
+    if(localStorage.getItem(RELOADED_KEY)===target){
+      localStorage.removeItem(PENDING_KEY);
+      return;
+    }
+    localStorage.setItem(RELOADED_KEY,target);
     sessionStorage.setItem(SUCCESS_KEY,target);
     location.reload();
   });
-  navigator.serviceWorker.addEventListener('message',event=>{
+  swContainer.addEventListener('message',event=>{
     if(event.data?.type==='BS_SW_ACTIVATED')tryPendingActivation();
   });
 }
@@ -237,12 +279,11 @@ window.addEventListener('focus',()=>{tryPendingActivation();checkVersion(false)}
 window.addEventListener('pageshow',()=>{tryPendingActivation();checkVersion(false)});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){tryPendingActivation();checkVersion(false)}});
 window.addEventListener('bs-app-rendered',()=>{markHealthy();tryPendingActivation()});
-setInterval(()=>checkVersion(false),5*60*1000);
+setInterval(()=>checkVersion(false),15*60*1000);
 
-// Si l'application est déjà rendue avant l'installation de cet écouteur.
-document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(appLooksHealthy())markHealthy()},500),{once:true});
+document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(appLooksHealthy())markHealthy()},600),{once:true});
 
 window.__BS_CHECK_UPDATE=()=>checkVersion(true);
 window.__BS_FORCE_UPDATE=window.__BS_CHECK_UPDATE;
-window.ASV30_FORCE_UPDATE={version:UPDATER_VERSION,mode:'transactional',cacheReset:false,autoReload:'once-after-ready',rollback:true};
+window.ASV30_FORCE_UPDATE={version:UPDATER_VERSION,mode:'single-owner-transactional',cacheReset:false,autoReload:'once-per-version',rollback:true};
 })();

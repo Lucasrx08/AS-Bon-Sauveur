@@ -1,5 +1,5 @@
-const APP_VERSION='30.0.4';
-const BUILD_ID='20260917-update-system';
+const APP_VERSION='30.0.5';
+const BUILD_ID='20260917-stop-reload-loop';
 const CACHE_PREFIX='as-bon-sauveur-';
 const CACHE_NAME=`as-bon-sauveur-build-${APP_VERSION}-${BUILD_ID}`;
 const NAV_CACHE='as-bon-sauveur-navigation';
@@ -8,13 +8,11 @@ const NAV_KEY='./__bs_last_navigation__';
 const OFFLINE_URL='./offline.html';
 const SAFE_URL='./safe-v30.0.3.html';
 
-// Tous les fichiers indispensables sont téléchargés avant l'activation de la nouvelle version.
-// Si l'un d'eux échoue, l'ancien service worker reste actif et l'utilisateur conserve sa version fonctionnelle.
 const CORE_ASSETS=[
   OFFLINE_URL,
   SAFE_URL,
-  './manifest.webmanifest?v=30.0.4',
-  './assets/logo-as.png?v=30.0.4',
+  './manifest.webmanifest?v=30.0.5',
+  './assets/logo-as.png?v=30.0.5',
   './assets/logo-football.png',
   './assets/logo-gymnastique.png',
   './assets/logo-escalade.png',
@@ -31,9 +29,9 @@ const CORE_ASSETS=[
   './v27.css?v=30.0.1-force-20260917',
   './v30-specialty-colors.css?v=30.0.3-colors-20260917',
   './config.js?v=30.0.1-force-20260917',
-  './v30-force-update.js?v=30.0.4-update-system-20260917',
+  './v30-force-update.js?v=30.0.5-stop-loop-20260917',
   './v29-bootstrap.js?v=30.0.1-force-20260917',
-  './v30-release.js?v=30.0.4-update-system-20260917',
+  './v30-release.js?v=30.0.5-stop-loop-20260917',
   './v22-preflight.js?v=30.0.1-force-20260917',
   './v20-stability.js?v=30.0.1-force-20260917',
   './v20-preflight.js?v=30.0.1-force-20260917',
@@ -60,7 +58,7 @@ const CORE_ASSETS=[
   './v25-audit-fixes.js?v=30.0.1-force-20260917',
   './v27.js?v=30.0.1-force-20260917',
   './v28.js?v=30.0.1-force-20260917',
-  './v29.js?v=30.0.1-force-20260917',
+  './v29.js?v=30.0.5-stop-loop-20260917',
   './v30-multispecialty.js?v=30.0.1-force-20260917',
   './v30-release-safe-30.0.3.js?v=30.0.3-safe-20260917'
 ];
@@ -79,7 +77,6 @@ self.addEventListener('install',event=>{
       await cache.put(url,response.clone());
     }
     await cache.put(META_KEY,new Response(JSON.stringify({version:APP_VERSION,build:BUILD_ID,installedAt:Date.now()}),{headers:{'Content-Type':'application/json'}}));
-    // Pas de skipWaiting ici : l'application n'active la nouvelle version qu'une fois le cache complet et à un moment sûr.
   })());
 });
 
@@ -100,7 +97,6 @@ async function cleanupOldBuildCaches(){
     dated.push({key,installedAt});
   }
   dated.sort((a,b)=>b.installedAt-a.installedAt);
-  // Conserver une version précédente complète pour pouvoir démarrer même en cas de problème réseau.
   const keepPrevious=dated[0]?.key;
   await Promise.all(dated.filter(item=>item.key!==keepPrevious).map(item=>caches.delete(item.key)));
 }
