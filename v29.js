@@ -13,27 +13,13 @@ function restoreTvExport(){
   if(typeof install==='function')install();
 }
 
-let applying=false;
-const observer=new MutationObserver(()=>{
-  if(applying)return;
-  applying=true;
-  requestAnimationFrame(()=>{applyReleaseLabel();applying=false});
-});
-observer.observe(document.body,{childList:true,subtree:true,characterData:true});
-
 async function registerPwa(){
   if(!('serviceWorker' in navigator)||!window.isSecureContext)return;
   try{
-    const reg=await navigator.serviceWorker.register('./sw.js?v=29.1.0-final',{scope:'./'});
+    const version=String(RELEASE.version||'30.1.0').replace(/[^a-zA-Z0-9._-]/g,'');
+    const reg=await navigator.serviceWorker.register(`./sw.js?v=${version}`,{scope:'./',updateViaCache:'none'});
     if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-    reg.addEventListener('updatefound',()=>{
-      const worker=reg.installing;
-      worker?.addEventListener('statechange',()=>{
-        if(worker.state==='installed'&&navigator.serviceWorker.controller)worker.postMessage?.({type:'SKIP_WAITING'});
-      });
-    });
-    reg.update().catch(()=>{});
-  }catch(error){console.warn('V29.1 service worker',error)}
+  }catch(error){console.warn('Service worker',error)}
 }
 
 function refreshOperationalData(){
@@ -50,6 +36,10 @@ window.addEventListener('online',refreshOperationalData);
 window.addEventListener('focus',()=>{applyReleaseLabel();restoreTvExport()});
 window.addEventListener('bs-app-rendered',afterAppRender);
 
+document.addEventListener('DOMContentLoaded',()=>{
+  applyReleaseLabel();
+  restoreTvExport();
+},{once:true});
 applyReleaseLabel();
 restoreTvExport();
 registerPwa();
