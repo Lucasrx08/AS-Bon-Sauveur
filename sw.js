@@ -117,7 +117,11 @@ self.addEventListener('activate',event=>{
 self.addEventListener('message',event=>{
   const data=event.data||{};
   if(data.type==='SKIP_WAITING')self.skipWaiting();
-  if(data.type==='GET_VERSION')event.source?.postMessage?.({type:'BS_SW_VERSION',version:APP_VERSION,build:BUILD_ID});
+  if(data.type==='GET_VERSION'){
+    const payload={type:'BS_SW_VERSION',version:APP_VERSION,build:BUILD_ID};
+    if(event.ports?.[0])event.ports[0].postMessage(payload);
+    else event.source?.postMessage?.(payload);
+  }
 });
 
 async function networkWithTimeout(request,timeoutMs=6000){
