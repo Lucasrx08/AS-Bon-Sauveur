@@ -1,4 +1,16 @@
-# Association Sportive du Bon Sauveur — V24
+# Association Sportive du Bon Sauveur — V31.3
+
+## V31.3 — connexion, cache PWA et mobile
+
+- connexion PIN ou administrateur appliquée en une seule passe, sans rechargement concurrent ;
+- déconnexion et expiration de session sans rechargement brutal de la page ;
+- chargement parallèle des données du profil afin de réduire le temps d’ouverture ;
+- suppression du correctif d’authentification historique devenu concurrent ;
+- purge de tous les anciens caches de l’application lors de l’activation du service worker ;
+- navigation toujours récupérée sur le réseau, avec une vraie page hors ligne plutôt qu’une ancienne version ;
+- aucune ressource JavaScript ou CSS reprise depuis un cache de version antérieure ;
+- champs mobiles à 16 px minimum pour empêcher le zoom automatique d’iOS ;
+- correction des largeurs mobiles et suppression du recentrage horizontal pendant la saisie.
 
 ## V23 — version stable et sécurisée
 
@@ -154,7 +166,7 @@ Une fois connecté avec un compte `admin`, l’espace Administration affiche **U
 
 ## PWA
 
-Le service worker V20 ne met plus en cache les anciennes versions V3 à V18. Seul le shell réellement utilisé est préchargé. Les bibliothèques lourdes Excel et PDF sont chargées à la demande.
+Le service worker V31.3 purge toutes les anciennes versions de l’application. Les pages sont récupérées sur le réseau ; en cas d’absence de connexion, une page hors ligne dédiée est affichée. Les bibliothèques lourdes Excel et PDF restent chargées à la demande.
 
 ## Correction grammaticale
 
@@ -186,4 +198,4 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Mise en production
 
-La V23 est la version de production. Les migrations V22, V22.1 et V23 sont appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
+La V31.3 est la version corrective prête à publier. Les migrations V22, V22.1 et V23 restent appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.

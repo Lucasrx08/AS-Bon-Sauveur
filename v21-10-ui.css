@@ -8,8 +8,8 @@
 #v19-modal .v19-form{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--v2110-gap) 14px;align-items:end}
 #v19-modal .v19-form>label,#v19-modal .v19-form>.full{min-width:0}
 #v19-modal .v19-form label>span,#v19-modal .v19-label{display:block;margin-bottom:5px;font-size:12px;line-height:1.15;font-weight:700}
-#v19-modal .v19-form input:not([type="checkbox"]),#v19-modal .v19-form select{height:var(--v2110-control-h);min-height:var(--v2110-control-h);padding:8px 12px;font-size:15px}
-#v19-modal .v19-form textarea{min-height:70px;height:70px;padding:10px 12px;font-size:15px;resize:none}
+#v19-modal .v19-form input:not([type="checkbox"]),#v19-modal .v19-form select{height:var(--v2110-control-h);min-height:var(--v2110-control-h);padding:8px 12px;font-size:16px}
+#v19-modal .v19-form textarea{min-height:70px;height:70px;padding:10px 12px;font-size:16px;resize:none}
 #v19-modal .v19-modal-actions{margin-top:2px;gap:8px;align-items:center}
 #v19-modal .v19-modal-actions.full{grid-column:1/-1!important}
 

@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const cfg=window.APP_CONFIG||{};
-const STORE='bs-app-data-v4',ROLE_KEY='bs-demo-role-v4',VERIFIED='bs-v20-verified-role',SENT_ORDERS='bs-v20-sent-orders',PASSWORD_SETUP='bs-v20-password-setup';
+const STORE='bs-app-data-v4',ROLE_KEY='bs-demo-role-v4',VERIFIED='bs-v20-verified-role',SENT_ORDERS='bs-v20-sent-orders',PASSWORD_SETUP='bs-v20-password-setup',AUTH_METHOD='bs-auth-method-v31',LEGACY_AUTH_METHOD='bs-auth-method';
 const roleLabels={public:'Élèves / Parents',educator_escalade:'Option Escalade',educator_football:'Section Football',educator_gymnastique:'Sport-études Gymnastique',teacher_as:'Association Sportive',admin:'Administrateur'};
 const hasSupabase=!!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase);
 const hashParams=new URLSearchParams((location.hash||'').replace(/^#/,''));
@@ -14,10 +14,12 @@ const appRedirect=()=>location.origin+location.pathname;
 const sb=hasSupabase?(window.__BS_SUPABASE_CLIENT||window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey)):null;
 if(sb)window.__BS_SUPABASE_CLIENT=sb;
 let currentUser=null,currentRole='public',term=1,syncTimer=null,hydrating=false,liveChannel=null,liveTimer=null;
+let userHydration=null,signedOutHydration=null,lastHydratedUserId='',lastHydratedAt=0,authEpoch=0;
 
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
 const snake=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/[A-Z]/g,m=>'_'+m.toLowerCase()),v]));
 const safeJson=(s,f)=>{try{const value=JSON.parse(s);return value&&typeof value==='object'?value:f}catch{return f}};
+const selectAll=async table=>{try{return await sb.from(table).select('*')}catch(error){return{data:null,error}}};
 const emptyData=()=>({events:[],documents:[],products:[],students:[],appreciations:[],licenses:[],convocations:[],reports:[],orders:[],eventRegistrations:[],specialtyNotes:{},termSettings:{}});
 const uid=(p='x')=>p+Math.random().toString(36).slice(2,10);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
@@ -45,55 +47,94 @@ function profileModal(){
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${currentUser.email||''}</strong><div class="v19-meta">${roleLabels[currentRole]||currentRole}</div></div><button class="v19-btn secondary" id="v20-change-password">Définir / modifier mon mot de passe</button><button class="v19-btn" id="v20-logout">Se déconnecter</button></div>`);
  w.querySelector('#v20-logout').onclick=logout;w.querySelector('#v20-change-password').onclick=passwordModal;return w;
 }
-async function logout(){await sb?.auth.signOut();sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);sessionStorage.removeItem('bs-auth-method');clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload()}
+async function applySignedOut(){
+ if(signedOutHydration)return signedOutHydration;
+ signedOutHydration=(async()=>{
+  const epoch=++authEpoch;
+  sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem(PASSWORD_SETUP);sessionStorage.removeItem(AUTH_METHOD);sessionStorage.removeItem(LEGACY_AUTH_METHOD);
+  clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';lastHydratedUserId='';lastHydratedAt=0;
+  await hydratePublic(epoch);
+  if(epoch!==authEpoch)return false;
+  document.getElementById('v20-modal')?.remove();document.getElementById('v21-pin-modal')?.remove();
+  return true;
+ })();
+ try{return await signedOutHydration}finally{signedOutHydration=null}
+}
+async function logout(){
+ try{await sb?.auth.signOut()}catch(error){console.warn('Déconnexion',error)}
+ await applySignedOut();
+}
 
 async function authenticateSession(){
  if(!hasSupabase){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');return}
  sb.auth.onAuthStateChange(async(evt,session)=>{
-  if(evt==='SIGNED_OUT'||!session?.user){sessionStorage.removeItem(VERIFIED);clearPrivateCache();localStorage.setItem(ROLE_KEY,'public');currentUser=null;currentRole='public';location.reload();return}
-  if(evt==='PASSWORD_RECOVERY'){sessionStorage.setItem(PASSWORD_SETUP,'1');await hydrateUser(session.user,false,true);setTimeout(passwordModal,60);return}
-  if(['SIGNED_IN','USER_UPDATED'].includes(evt)){await hydrateUser(session.user,false,true);if(passwordSetupFlow())setTimeout(passwordModal,60)}
+  if(evt==='SIGNED_OUT'||!session?.user){await applySignedOut();return}
+  if(evt==='PASSWORD_RECOVERY'){sessionStorage.setItem(PASSWORD_SETUP,'1');await hydrateUser(session.user);setTimeout(passwordModal,60);return}
+  if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(evt)){await hydrateUser(session.user);if(passwordSetupFlow())setTimeout(passwordModal,60)}
  });
  const {data:{session}}=await sb.auth.getSession();
- if(!session?.user){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');await hydratePublic();return}
- await hydrateUser(session.user,false,true);
+ if(!session?.user){await applySignedOut();return}
+ await hydrateUser(session.user);
  if(passwordSetupFlow())setTimeout(passwordModal,80);
 }
-async function hydrateUser(user,forceReload=false,suppressReload=false){
- const {data:profile,error}=await sb.from('profiles').select('display_name,email,role').eq('id',user.id).single();
- if(error){toast('Profil utilisateur inaccessible');return}
- currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
- sessionStorage.setItem(VERIFIED,currentRole);localStorage.setItem(ROLE_KEY,currentRole);
- const authMethod=sessionStorage.getItem('bs-auth-method')||'email';
- if(currentRole==='admin'&&authMethod!=='pin'&&sb?.auth?.mfa){
-  const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if(aalError){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-error',{detail:{message:aalError.message||'Vérification MFA impossible'}}));return}
-  if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));return}
- }
- await hydrateAll();
- setupRealtime().catch(()=>{});
- const marker='bs-v20-role-applied';
- if(!suppressReload&&(forceReload||sessionStorage.getItem(marker)!==currentRole)){sessionStorage.setItem(marker,currentRole);location.reload()}
- else sessionStorage.setItem(marker,currentRole);
+async function hydrateUser(user){
+ if(!user?.id)return applySignedOut();
+ if(userHydration?.userId===String(user.id))return userHydration.promise;
+ if(lastHydratedUserId===String(user.id)&&Date.now()-lastHydratedAt<2000&&sessionStorage.getItem(VERIFIED)===currentRole)return{user:currentUser,role:currentRole};
+ const promise=(async()=>{
+  const epoch=++authEpoch;
+  const {data:profile,error}=await sb.from('profiles').select('display_name,email,role').eq('id',user.id).single();
+  if(error){toast('Profil utilisateur inaccessible');throw error}
+  currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
+  const authMethod=sessionStorage.getItem(AUTH_METHOD)||'email';
+  if(currentRole==='admin'&&!window.__BS_ADMIN_MFA_DISABLED&&authMethod!=='pin'&&sb?.auth?.mfa){
+   const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+   if(aalError){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-error',{detail:{message:aalError.message||'Vérification MFA impossible'}}));throw aalError}
+   if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));throw new Error('MFA_REQUIRED')}
+  }
+  const data=await hydrateAll(false);
+  if(epoch!==authEpoch)return{user:currentUser,role:currentRole,stale:true};
+  sessionStorage.setItem(VERIFIED,currentRole);localStorage.setItem(ROLE_KEY,currentRole);
+  window.app?.hydrateFromServer?.(data,currentRole);
+  lastHydratedUserId=String(user.id);lastHydratedAt=Date.now();lastServerRefresh=lastHydratedAt;
+  setupRealtime().catch(()=>{});
+  return{user:currentUser,role:currentRole};
+ })();
+ userHydration={userId:String(user.id),promise};
+ try{return await promise}finally{if(userHydration?.promise===promise)userHydration=null}
 }
-async function hydratePublic(){
+async function hydratePublic(expectedEpoch=authEpoch){
  const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};hydrating=true;
  data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
- for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
+ const results=await Promise.all(maps.map(async([key,table])=>[key,await selectAll(table)]));
+ for(const [key,{data:rows,error}] of results){if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
+ if(expectedEpoch!==authEpoch){hydrating=false;return data}
  localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');setupRealtime().catch(()=>{});
+ return data;
 }
-async function hydrateAll(){
+async function hydrateAll(apply=true){
  hydrating=true;const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['students','v20_students'],['licenses','v20_licenses'],['convocations','v20_convocations'],['reports','v20_reports'],['orders','v20_orders']];
  if(currentRole==='admin'||currentRole.startsWith('educator_'))maps.push(['appreciations','v20_appreciations']);else data.appreciations=[];
  if(['teacher_as','admin'].includes(currentRole))maps.push(['eventRegistrations','v20_event_registrations']);else data.eventRegistrations=[];
- for(const [key,table] of maps){const {data:rows,error}=await sb.from(table).select('*');if(!error&&Array.isArray(rows))data[key]=rows.map(camel)}
- const {data:links,error:linkErr}=await sb.from('v20_convocation_students').select('*');if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
- const {data:notes,error:nErr}=await sb.from('v20_specialty_notes').select('*');if(!nErr){data.specialtyNotes={};(notes||[]).map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}
- const {data:terms,error:tErr}=await sb.from('v20_term_settings').select('*');if(!tErr){data.termSettings={};(terms||[]).map(camel).forEach(r=>data.termSettings[r.term]={deadline:r.deadline||'',end:r.termEnd||''})}
- localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,currentRole);
+ const [tableResults,linksResult,notesResult,termsResult]=await Promise.all([
+  Promise.all(maps.map(async([key,table])=>[key,await selectAll(table)])),
+  selectAll('v20_convocation_students'),
+  selectAll('v20_specialty_notes'),
+  selectAll('v20_term_settings')
+ ]);
+ for(const [key,{data:rows,error}] of tableResults)if(!error&&Array.isArray(rows))data[key]=rows.map(camel);
+ const {data:links,error:linkErr}=linksResult;if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
+ const {data:notes,error:nErr}=notesResult;if(!nErr){data.specialtyNotes={};(notes||[]).map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}
+ const {data:terms,error:tErr}=termsResult;if(!tErr){data.termSettings={};(terms||[]).map(camel).forEach(r=>data.termSettings[r.term]={deadline:r.deadline||'',end:r.termEnd||''})}
+ localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;if(apply)window.app?.hydrateFromServer?.(data,currentRole);
+ return data;
 }
+
+window.__BS_COMPLETE_SIGN_IN=user=>hydrateUser(user);
+window.__BS_SIGN_OUT=logout;
+window.__BS_AUTH_STATE=()=>({user:currentUser?{...currentUser}:null,role:currentRole});
 
 function cleanRow(row){const x=snake(row);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;return x}
 async function upsertTable(table,rows){if(!rows?.length)return;const {error}=await sb.from(table).upsert(rows.map(cleanRow));if(error)console.warn(table,error.message)}

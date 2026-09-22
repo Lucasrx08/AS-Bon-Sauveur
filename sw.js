@@ -1,18 +1,16 @@
-const APP_VERSION='31.2.0';
-const BUILD_ID='20260917-mobile-lock';
+const APP_VERSION='31.3.0';
+const BUILD_ID='20260922-auth-cache-mobile';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
-const NAV_CACHE='as-bon-sauveur-navigation';
 const META_KEY='./__bs_build_meta__';
-const NAV_KEY='./__bs_last_navigation__';
 const OFFLINE_URL='./offline.html';
 
 const PRECACHE=[
   OFFLINE_URL,
-  './manifest.webmanifest?v=31.2.0',
-  './assets/logo-as.png?v=31.2.0',
-  './v31-mobile.css?v=31.2.0',
-  './v31-mobile-lock.js?v=31.2.0'
+  './manifest.webmanifest?v=31.3.0',
+  './assets/logo-as.png?v=31.3.0',
+  './v31-mobile.css?v=31.3.0',
+  './v31-mobile-lock.js?v=31.3.0'
 ];
 
 self.addEventListener('install',event=>{
@@ -24,27 +22,14 @@ self.addEventListener('install',event=>{
       if(response?.ok)await cache.put(url,response.clone());
     }));
     await cache.put(META_KEY,new Response(JSON.stringify({version:APP_VERSION,build:BUILD_ID,installedAt:Date.now()}),{headers:{'Content-Type':'application/json'}}));
+    await self.skipWaiting();
   })());
 });
 
-async function installedAt(cacheName){
-  try{
-    const cache=await caches.open(cacheName);
-    const meta=await cache.match(META_KEY);
-    if(!meta)return 0;
-    const parsed=await meta.json();
-    return Number(parsed?.installedAt)||0;
-  }catch{return 0}
-}
-
 async function cleanupBuildCaches(){
   const keys=await caches.keys();
-  const previous=keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME);
-  const dated=[];
-  for(const key of previous)dated.push({key,installedAt:await installedAt(key)});
-  dated.sort((a,b)=>b.installedAt-a.installedAt);
-  const keepPrevious=dated[0]?.key||null;
-  await Promise.all(dated.filter(item=>item.key!==keepPrevious).map(item=>caches.delete(item.key)));
+  const obsolete=keys.filter(key=>key!==CACHE_NAME&&key.startsWith('as-bon-sauveur-'));
+  await Promise.all(obsolete.map(key=>caches.delete(key)));
 }
 
 self.addEventListener('activate',event=>{
@@ -72,13 +57,12 @@ async function networkWithTimeout(request,timeoutMs=4500){
 }
 
 async function navigationResponse(request){
-  const navCache=await caches.open(NAV_CACHE);
   try{
-    const response=await networkWithTimeout(request);
-    if(response?.ok)navCache.put(NAV_KEY,response.clone()).catch(()=>{});
-    return response;
+    const response=await networkWithTimeout(new Request(request,{cache:'no-store'}));
+    if(response?.ok)return response;
+    throw new Error(`Navigation HTTP ${response?.status||0}`);
   }catch{
-    return (await navCache.match(NAV_KEY))||(await caches.match(OFFLINE_URL))||Response.error();
+    return (await caches.match(OFFLINE_URL))||Response.error();
   }
 }
 
@@ -86,10 +70,8 @@ async function staticResponse(request){
   const current=await caches.open(CACHE_NAME);
   const currentHit=await current.match(request);
   if(currentHit)return currentHit;
-  const previousHit=await caches.match(request);
-  if(previousHit)return previousHit;
   try{
-    const response=await fetch(request);
+    const response=await fetch(request,{cache:'no-store'});
     if(response?.ok&&response.type==='basic')current.put(request,response.clone()).catch(()=>{});
     return response;
   }catch{return Response.error()}

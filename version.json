@@ -1,8 +1,8 @@
 {
-  "version": "31.2.0",
-  "build": "20260917-mobile-lock",
+  "version": "31.3.0",
+  "build": "20260922-auth-cache-mobile",
   "channel": "stable",
-  "releasedAt": "2026-09-17",
-  "message": "Verrouillage du viewport mobile",
+  "releasedAt": "2026-09-22",
+  "message": "Connexion unique, cache PWA assaini et affichage mobile stabilisé",
   "serviceWorker": "sw.js"
 }

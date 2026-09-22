@@ -1,8 +1,9 @@
 (() => {
 'use strict';
 const VERSION='28.1.1';
+const AUTH_METHOD='bs-auth-method-v31';
 
-function isPinSession(){return sessionStorage.getItem('bs-auth-method')==='pin'}
+function isPinSession(){return sessionStorage.getItem(AUTH_METHOD)==='pin'}
 
 function protectPinOperationalSession(){
  if(!isPinSession())return;

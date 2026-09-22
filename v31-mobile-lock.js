@@ -8,14 +8,12 @@ function resetRootX(){
   if(!isMobile())return;
   queued=false;
   const scroller=document.scrollingElement||document.documentElement;
-  const y=scroller?.scrollTop??window.scrollY??0;
   try{
     if(scroller&&scroller.scrollLeft!==0)scroller.scrollLeft=0;
     if(document.documentElement.scrollLeft!==0)document.documentElement.scrollLeft=0;
     if(document.body&&document.body.scrollLeft!==0)document.body.scrollLeft=0;
     const app=document.getElementById('app');
     if(app&&app.scrollLeft!==0)app.scrollLeft=0;
-    if(window.scrollX!==0)window.scrollTo(0,y);
   }catch{}
 }
 function scheduleReset(){
@@ -59,12 +57,11 @@ window.addEventListener('orientationchange',scheduleReset,{passive:true});
 window.addEventListener('scroll',onRootScroll,{passive:true});
 window.addEventListener('bs-app-rendered',()=>{patchNavigation();scheduleReset()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleReset()});
-document.addEventListener('focusin',()=>scheduleReset(),true);
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{patchNavigation();scheduleReset()},{once:true});
 else{patchNavigation();scheduleReset()}
 setTimeout(()=>{patchNavigation();scheduleReset()},250);
 setTimeout(scheduleReset,900);
 
-window.ASV31_MOBILE_LOCK={version:'31.2.0',rootHorizontalScrollLocked:true,internalTableScroll:true};
+window.ASV31_MOBILE_LOCK={version:'31.3.0',rootHorizontalScrollLocked:true,internalTableScroll:true,inputFocusStable:true};
 })();

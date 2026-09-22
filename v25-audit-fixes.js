@@ -84,27 +84,19 @@ async function deleteReport(id){
 function clearSessionTimers(){
  clearTimeout(sessionTimer);clearTimeout(warningTimer);sessionTimer=null;warningTimer=null;
 }
-function authStorageKey(){
- try{
-  const ref=new URL(window.APP_CONFIG?.supabaseUrl||'').hostname.split('.')[0];
-  return ref?`sb-${ref}-auth-token`:'';
- }catch{return''}
-}
 async function expireSession(){
  if(expiring||!protectedSession())return;
  expiring=true;clearSessionTimers();
  try{
-  localStorage.removeItem(STORE);
   localStorage.removeItem(ACTIVITY_KEY);
-  sessionStorage.removeItem(VERIFIED);
-  localStorage.setItem(ROLE_KEY,'public');
-  const client=sb();
-  if(client)await Promise.race([client.auth.signOut(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))]);
+  if(typeof window.__BS_SIGN_OUT==='function')await window.__BS_SIGN_OUT();
+  else{
+   const client=sb();if(client)await Promise.race([client.auth.signOut(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))]);
+   const data=app()?.readData?.()||{};data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);persist(data);
+   sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');app()?.hydrateFromServer?.(data,'public');
+  }
  }catch(error){console.warn('V25 session signout',error)}
- finally{
-  const key=authStorageKey();if(key)localStorage.removeItem(key);
-  location.reload();
- }
+ finally{expiring=false;toast('Session fermée après 30 minutes d’inactivité.',4800)}
 }
 function scheduleSession(){
  clearSessionTimers();

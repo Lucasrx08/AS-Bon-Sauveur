@@ -5,9 +5,31 @@ if(!(cfg.supabaseUrl&&cfg.supabaseAnonKey&&window.supabase))return;
 const sb=window.__BS_SUPABASE_CLIENT||window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
 const VERIFIED='bs-v20-verified-role';
 const ROLE_KEY='bs-demo-role-v4';
+const AUTH_METHOD='bs-auth-method-v31';
+const LEGACY_AUTH_METHOD='bs-auth-method';
 const roleLabels={public:'Espace public',educator_escalade:'Option Escalade',educator_football:'Section Football',educator_gymnastique:'Sport-études Gymnastique',teacher_as:'Association Sportive',admin:'Administrateur'};
 const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
+function setAuthMethod(method){
+ if(method){sessionStorage.setItem(AUTH_METHOD,method);sessionStorage.setItem(LEGACY_AUTH_METHOD,method);return}
+ sessionStorage.removeItem(AUTH_METHOD);sessionStorage.removeItem(LEGACY_AUTH_METHOD);
+}
+
+function applyPublicFallback(){
+ const data=window.app?.readData?.()||{};
+ data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];
+ data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
+ try{localStorage.setItem('bs-app-data-v4',JSON.stringify(data))}catch{}
+ sessionStorage.removeItem(VERIFIED);setAuthMethod('');localStorage.setItem(ROLE_KEY,'public');
+ window.app?.hydrateFromServer?.(data,'public');
+}
+async function logoutFromModal(w,button){
+ button.disabled=true;button.textContent='Déconnexion…';
+ try{
+  if(typeof window.__BS_SIGN_OUT==='function')await window.__BS_SIGN_OUT();
+  else{try{await sb.auth.signOut()}catch{}applyPublicFallback()}
+ }finally{w.remove()}
+}
 
 function modal(title,body){
  document.getElementById('v21-pin-modal')?.remove();
@@ -46,12 +68,14 @@ async function loginWithPin(form,w,btn){
   const r=await fetch(`${cfg.supabaseUrl}/functions/v1/pin-login`,{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.supabaseAnonKey},body:JSON.stringify({loginName,pin}),signal:controller.signal});
   let data={};try{data=await r.json()}catch{}
   if(!r.ok||data?.error)throw new Error(data?.error||'Connexion impossible.');
-  const {error}=await sb.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+  setAuthMethod('pin');
+  const {data:authData,error}=await sb.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
   if(error)throw error;
-  sessionStorage.setItem('bs-auth-method','pin');
   btn.textContent='Ouverture…';setStatus(w,'Connexion réussie. Ouverture de votre espace…','success');
-  setTimeout(()=>location.reload(),180);
+  if(typeof window.__BS_COMPLETE_SIGN_IN==='function')await window.__BS_COMPLETE_SIGN_IN(authData?.user||authData?.session?.user);
+  w.remove();
  }catch(err){
+  setAuthMethod('');
   const msg=err?.name==='AbortError'?'Le serveur met trop de temps à répondre. Réessayez.':(err?.message||'Connexion impossible.');
   setStatus(w,msg,'error');toast(msg);btn.disabled=false;btn.textContent='Se connecter';
  }finally{clearTimeout(timer)}
@@ -71,14 +95,23 @@ async function loginAdminEmail(form,w,btn){
  if(!email||!password)return setStatus(w,'Renseignez votre e-mail et votre mot de passe.','error');
  btn.disabled=true;btn.textContent='Connexion…';setStatus(w,'Connexion administrateur…','info');
  try{
+  setAuthMethod('email');
   const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;
   if(!data?.user)throw new Error('Connexion impossible.');
-  sessionStorage.setItem('bs-auth-method','email');
-  btn.textContent='Ouverture…';setStatus(w,'Connexion réussie.','success');setTimeout(()=>location.reload(),180);
- }catch(err){const msg=err?.message||'Connexion impossible.';setStatus(w,msg,'error');btn.disabled=false;btn.textContent='Se connecter'}
+  btn.textContent='Ouverture…';setStatus(w,'Connexion réussie.','success');
+  if(typeof window.__BS_COMPLETE_SIGN_IN==='function')await window.__BS_COMPLETE_SIGN_IN(data.user);
+  w.remove();
+ }catch(err){setAuthMethod('');const msg=err?.message||'Connexion impossible.';setStatus(w,msg,'error');btn.disabled=false;btn.textContent='Se connecter'}
 }
 
 async function profileModal(){
+ const cached=window.__BS_AUTH_STATE?.();
+ if(cached?.user){
+  const user=cached.user,role=cached.role||sessionStorage.getItem(VERIFIED)||'public';
+  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(user.name||user.email||'Utilisateur')}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
+  w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
+  return w;
+ }
  let session=null;
  try{session=(await sb.auth.getSession())?.data?.session||null}catch{}
  if(!session?.user)return pinLoginModal();
@@ -86,7 +119,7 @@ async function profileModal(){
  try{profile=(await sb.from('profiles').select('display_name,role,email').eq('id',session.user.id).single())?.data||null}catch{}
  const name=profile?.display_name||'Utilisateur',role=profile?.role||sessionStorage.getItem(VERIFIED)||'public';
  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
- w.querySelector('[data-pin-logout]').onclick=async()=>{try{await sb.auth.signOut()}catch{}sessionStorage.removeItem(VERIFIED);sessionStorage.removeItem('bs-auth-method');localStorage.setItem(ROLE_KEY,'public');location.reload()};
+ w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
  return w;
 }
 
@@ -95,4 +128,5 @@ function install(){
  window.app.profile=profileModal;
 }
 install();
+window.ASV21_PIN_AUTH={version:'31.3.0',singlePassLogin:true,reloadAfterLogin:false};
 })();

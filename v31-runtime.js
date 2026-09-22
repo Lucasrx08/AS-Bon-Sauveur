@@ -1,13 +1,14 @@
 (() => {
 'use strict';
 
-const VERSION='31.2.0';
+const VERSION='31.3.0';
 const SW_URL='./sw.js';
-const LAST_CHECK_KEY='bs-v31-sw-last-check';
-const READY_KEY='bs-v31-update-ready';
-const CHECK_COOLDOWN=6*60*60*1000;
+const LAST_CHECK_KEY=`bs-sw-last-check-${VERSION}`;
+const READY_KEY=`bs-update-ready-${VERSION}`;
+const CHECK_COOLDOWN=30*60*1000;
 const swContainer=navigator.serviceWorker;
 const nativeRegister=swContainer?.register?.bind(swContainer)||null;
+const hadController=!!swContainer?.controller;
 let registrationPromise=null;
 
 function showUpdateReady(){
@@ -91,8 +92,8 @@ registerPwa({forceCheck:false});
 window.addEventListener('load',()=>registerPwa({forceCheck:false}),{once:true});
 window.addEventListener('online',()=>registerPwa({forceCheck:false}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)registerPwa({forceCheck:false})});
-swContainer?.addEventListener('controllerchange',()=>{});
+swContainer?.addEventListener('controllerchange',()=>{if(hadController)showUpdateReady()});
 
 window.__BS_CHECK_UPDATE=()=>registerPwa({forceCheck:true});
-window.ASV31_RUNTIME={version:VERSION,singleServiceWorkerOwner:true,autoReload:false,updateOnNextOpen:true};
+window.ASV31_RUNTIME={version:VERSION,singleServiceWorkerOwner:true,autoReload:false,updateOnNextOpen:true,staleBuildFallback:false};
 })();
