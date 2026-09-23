@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-const version = '31.3.0';
+const versionInfo = JSON.parse(read('version.json'));
+const version = versionInfo.version;
 const index = read('index.html');
 const serviceWorker = read('sw.js');
 const bridge = read('v20-bridge.js');
@@ -26,10 +27,9 @@ for (const [, url, assetVersion] of localVersionedAssets) {
   assert.ok(existsSync(fileURLToPath(new URL(`../${relativePath}`, import.meta.url))), `Ressource absente : ${relativePath}`);
 }
 
-const versionInfo = JSON.parse(read('version.json'));
 assert.equal(versionInfo.version, version);
-assert.match(read('v31-release.js'), /label:'V31\.3',version:'31\.3\.0'/);
-assert.match(serviceWorker, /APP_VERSION='31\.3\.0'/);
+assert.match(read('v31-release.js'), new RegExp(`version:'${version.replaceAll('.', '\\.')}'`));
+assert.match(serviceWorker, new RegExp(`APP_VERSION='${version.replaceAll('.', '\\.')}'`));
 
 assert.doesNotMatch(serviceWorker, /NAV_CACHE|NAV_KEY|caches\.match\(request\)/);
 assert.match(serviceWorker, /key\.startsWith\('as-bon-sauveur-'\)/);
@@ -51,4 +51,4 @@ assert.match(mobileCss, /input:not\(\[type="checkbox"\]\):not\(\[type="radio"\]\
 assert.doesNotMatch(functionalFixes, /font-size:15px!important/);
 assert.doesNotMatch(mobileLock, /focusin|window\.scrollTo/);
 
-console.log('Smoke V31.3 : OK');
+console.log(`Régressions V31.3 sur ${version} : OK`);

@@ -40,6 +40,10 @@
 /* Fenêtres admin V20/V21 : mêmes contrôles */
 #v20-users-modal .v19-form,#v21-admin-modal .v19-form{gap:12px 14px}
 #v20-users-modal .v19-form input,#v20-users-modal .v19-form select,#v21-admin-modal .v19-form input,#v21-admin-modal .v19-form select{min-height:44px;height:44px}
+.v21-product-photo-field small,.v21-product-image-preview small,#v21-product-form label>small{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.35}
+.v21-product-image-preview{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:16px;background:color-mix(in srgb,var(--card) 88%,var(--bg))}
+.v21-product-image-preview img{width:96px;height:96px;object-fit:cover;border-radius:13px;background:#fff;border:1px solid var(--line);flex:0 0 auto}
+.v21-product-image-preview small{margin:0;overflow-wrap:anywhere}
 
 @media(min-width:700px) and (max-width:980px){
  #v19-modal .v19-modal.wide{width:calc(100vw - 28px);max-height:calc(100dvh - 24px)}

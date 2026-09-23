@@ -1,4 +1,14 @@
-# Association Sportive du Bon Sauveur — V31.3
+# Association Sportive du Bon Sauveur — V31.4
+
+## V31.4 — photos des produits
+
+- sélection directe d’une photo depuis Google Drive, l’app Fichiers ou la photothèque ;
+- optimisation automatique de l’image avant envoi ;
+- stockage public Supabase réservé aux visuels de boutique ;
+- dépôt et suppression limités aux enseignants AS et administrateurs authentifiés ;
+- aperçu de la photo dans le formulaire produit ;
+- conversion des anciens liens de partage Google Drive quand ils sont publics ;
+- logo AS affiché automatiquement si une ancienne image ne peut pas être chargée.
 
 ## V31.3 — connexion, cache PWA et mobile
 
@@ -166,7 +176,7 @@ Une fois connecté avec un compte `admin`, l’espace Administration affiche **U
 
 ## PWA
 
-Le service worker V31.3 purge toutes les anciennes versions de l’application. Les pages sont récupérées sur le réseau ; en cas d’absence de connexion, une page hors ligne dédiée est affichée. Les bibliothèques lourdes Excel et PDF restent chargées à la demande.
+Le service worker V31.4 purge toutes les anciennes versions de l’application. Les pages sont récupérées sur le réseau ; en cas d’absence de connexion, une page hors ligne dédiée est affichée. Les bibliothèques lourdes Excel et PDF restent chargées à la demande.
 
 ## Correction grammaticale
 
@@ -198,4 +208,4 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Mise en production
 
-La V31.3 est la version corrective prête à publier. Les migrations V22, V22.1 et V23 restent appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
+La V31.4 ajoute le stockage des photos publiques de la boutique avec la migration `supabase/migration_v31_4_product_images.sql`. Les migrations précédentes restent appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.

@@ -110,6 +110,15 @@ if(state.dark) document.body.classList.add('dark');
 function save(){localStorage.setItem(STORE,JSON.stringify(state.data))}
 function uid(p='x'){return p+Math.random().toString(36).slice(2,10)}
 function esc(v=''){return String(v??'').replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
+function productImage(v=''){
+ const value=String(v||'').trim();if(!value)return'assets/logo-as.png';
+ try{
+  const url=new URL(value,location.href);
+  if(!/(^|\.)drive\.google\.com$/i.test(url.hostname))return value;
+  const id=url.searchParams.get('id')||url.pathname.match(/\/d\/([^/]+)/)?.[1];
+  return id?`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1600`:value;
+ }catch{return value}
+}
 function norm(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[’']/g,' ').replace(/[^a-z0-9]+/g,' ').trim()}
 function fmtLong(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtShort(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00'))}
@@ -334,7 +343,7 @@ function appreciationReviewPage(){
 function shopPage(){
  const rows=(state.data.products||[]).filter(p=>p.active!==false);
  return `<div class="v19-container">${pageTitle('BOUTIQUE','Boutique AS','Articles officiels de l’Association Sportive.',isManager()?`<button class="v19-btn" onclick="app.go('orders')">Gérer les commandes</button>`:'')}
- <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(p.image||'assets/logo-as.png')}" alt="${esc(p.name||'Produit AS')}" loading="lazy" decoding="async"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
+ <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(productImage(p.image))}" alt="${esc(p.name||'Produit AS')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='assets/logo-as.png'"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
 }
 function documentsPage(){
  const rows=(state.data.documents||[]).filter(d=>state.role!=='public'||/^https?:\/\//i.test(String(d.url||'')));

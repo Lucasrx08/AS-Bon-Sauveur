@@ -5,6 +5,10 @@ const SPECIALTIES=['Association Sportive','Section Football','Option Escalade','
 const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
 const PAYMENTS=['Espèces','Virement','Chèque'];
 const sb=window.__BS_SUPABASE_CLIENT||null;
+const PRODUCT_IMAGE_BUCKET='public-assets';
+const PRODUCT_IMAGE_FALLBACK='assets/logo-as.png';
+const MAX_SOURCE_IMAGE_SIZE=15*1024*1024;
+const MAX_STORED_IMAGE_SIZE=5*1024*1024;
 
 const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const uid=p=>p+Math.random().toString(36).slice(2,10);
@@ -27,6 +31,75 @@ async function remoteUpsert(table,row){if(!sb)return null;const {error}=await sb
 async function remoteDelete(table,id){if(!sb)return null;const {error}=await sb.from(table).delete().eq('id',id);if(error)throw error;return true}
 function refresh(route){close();window.app?.go?.(route)}
 
+function normalizeProductImageUrl(value=''){
+ const raw=String(value||'').trim();if(!raw)return PRODUCT_IMAGE_FALLBACK;
+ try{
+  const url=new URL(raw,location.href);
+  if(!/(^|\.)drive\.google\.com$/i.test(url.hostname))return raw;
+  const id=url.searchParams.get('id')||url.pathname.match(/\/d\/([^/]+)/)?.[1];
+  return id?`https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1600`:raw;
+ }catch{return raw}
+}
+function storedProductImagePath(value=''){
+ const marker='/storage/v1/object/public/'+PRODUCT_IMAGE_BUCKET+'/';
+ try{const url=new URL(String(value||''),location.href),index=url.pathname.indexOf(marker);return index<0?'':decodeURIComponent(url.pathname.slice(index+marker.length))}catch{return''}
+}
+async function removeStoredProductImage(value=''){
+ const path=storedProductImagePath(value);if(!path||!sb?.storage)return false;
+ const {error}=await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]);if(error)throw error;return true;
+}
+function imageFromFile(file){
+ return new Promise((resolve,reject)=>{
+  const objectUrl=URL.createObjectURL(file),image=new Image();
+  image.onload=()=>{URL.revokeObjectURL(objectUrl);resolve(image)};
+  image.onerror=()=>{URL.revokeObjectURL(objectUrl);reject(new Error('Cette photo ne peut pas être lue. Utilisez un fichier JPG, PNG ou WebP.'))};
+  image.src=objectUrl;
+ });
+}
+const canvasBlob=(canvas,type,quality)=>new Promise(resolve=>canvas.toBlob(resolve,type,quality));
+async function optimizeProductImage(file){
+ if(!file?.size)throw new Error('Aucune photo sélectionnée.');
+ if(file.size>MAX_SOURCE_IMAGE_SIZE)throw new Error('La photo dépasse 15 Mo. Choisissez une image plus légère.');
+ if(file.type&&!file.type.startsWith('image/'))throw new Error('Le fichier sélectionné n’est pas une image.');
+ const image=await imageFromFile(file),maxSide=1600,scale=Math.min(1,maxSide/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height));
+ const width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale)),height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
+ const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+ const context=canvas.getContext('2d',{alpha:true});if(!context)throw new Error('Préparation de la photo impossible.');
+ context.drawImage(image,0,0,width,height);
+ let blob=await canvasBlob(canvas,'image/webp',0.84),extension='webp';
+ if(!blob||blob.type!=='image/webp'){
+  context.globalCompositeOperation='destination-over';context.fillStyle='#fff';context.fillRect(0,0,width,height);context.globalCompositeOperation='source-over';
+  blob=await canvasBlob(canvas,'image/jpeg',0.84);extension='jpg';
+ }
+ if(!blob)throw new Error('Conversion de la photo impossible.');
+ if(blob.size>MAX_STORED_IMAGE_SIZE)throw new Error('La photo reste trop lourde après optimisation. Choisissez une image plus petite.');
+ return{blob,extension};
+}
+async function uploadProductImage(file,productId){
+ if(!sb?.storage)throw new Error('Le stockage des photos est indisponible.');
+ const prepared=await optimizeProductImage(file),safeId=String(productId||'product').replace(/[^a-z0-9_-]/gi,'')||'product';
+ const token=crypto.randomUUID?.()||Math.random().toString(36).slice(2),path=`products/${safeId}-${Date.now()}-${token}.${prepared.extension}`;
+ const {error}=await sb.storage.from(PRODUCT_IMAGE_BUCKET).upload(path,prepared.blob,{contentType:prepared.blob.type,cacheControl:'31536000',upsert:false});
+ if(error)throw error;
+ const {data}=sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path);
+ if(!data?.publicUrl){await sb.storage.from(PRODUCT_IMAGE_BUCKET).remove([path]).catch(()=>{});throw new Error('Adresse publique de la photo introuvable.');}
+ return{url:data.publicUrl,path};
+}
+function bindProductImagePreview(w,current=''){
+ const fileInput=w.querySelector('[name="imageFile"]'),urlInput=w.querySelector('[name="image"]'),preview=w.querySelector('[data-product-image-preview] img'),status=w.querySelector('[data-image-status]');
+ if(!fileInput||!urlInput||!preview)return;
+ let objectUrl='';
+ const show=src=>{preview.onerror=()=>{preview.onerror=null;preview.src=PRODUCT_IMAGE_FALLBACK};preview.src=normalizeProductImageUrl(src)};
+ show(current||PRODUCT_IMAGE_FALLBACK);
+ fileInput.onchange=()=>{
+  if(objectUrl){URL.revokeObjectURL(objectUrl);objectUrl=''}
+  const file=fileInput.files?.[0];
+  if(!file){show(urlInput.value);if(status)status.textContent='Aucune nouvelle photo sélectionnée.';return}
+  objectUrl=URL.createObjectURL(file);preview.src=objectUrl;if(status)status.textContent=`${file.name} · ${(file.size/1024/1024).toFixed(1)} Mo`;
+ };
+ urlInput.oninput=()=>{if(!fileInput.files?.length)show(urlInput.value)};
+}
+
 function documentsManager(){
  if(!isAdmin())return toast('Accès administrateur requis.');
  const rows=(read().documents||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -48,12 +121,28 @@ function productsManager(){
 }
 function productForm(id=''){
  const p=(read().products||[]).find(x=>x.id===id);
- const w=modal(p?'Modifier le produit':'Ajouter un produit',`<form id="v21-product-form" class="v19-form"><label class="full"><span>Nom du produit</span><input required name="name" value="${esc(p?.name||'')}"></label><label><span>Prix (€)</span><input required min="0" step="0.01" type="number" name="price" value="${esc(p?.price??'')}"></label><label><span>Date limite de commande</span><input type="date" name="deadline" value="${esc(p?.deadline||'')}"></label><label class="full"><span>Description</span><textarea name="description" rows="3">${esc(p?.description||'')}</textarea></label><label><span>Couleur / modèle</span><input name="color" value="${esc(p?.color||'')}"></label><label><span>Image (URL ou chemin)</span><input name="image" value="${esc(p?.image||'assets/logo-as.png')}"></label><label class="full v19-switch"><input type="checkbox" name="active" ${p?.active===false?'':'checked'}><span>Produit visible dans la boutique</span></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back>Retour</button><button class="v19-btn" type="submit">Enregistrer</button></div></form>`,false);
- w.querySelector('[data-back]').onclick=productsManager;w.querySelector('#v21-product-form').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);const row={id:p?.id||uid('p'),name:String(fd.get('name')||'').trim(),description:String(fd.get('description')||'').trim(),price:Number(fd.get('price')||0),deadline:String(fd.get('deadline')||'')||null,active:fd.get('active')==='on',image:String(fd.get('image')||'').trim()||'assets/logo-as.png',color:String(fd.get('color')||'').trim()};const btn=e.currentTarget.querySelector('[type="submit"]');btn.disabled=true;try{await remoteUpsert('v20_products',{id:row.id,name:row.name,description:row.description,price:row.price,deadline:row.deadline,active:row.active,image:row.image,color:row.color||null});const data=read();data.products=data.products||[];const old=data.products.find(x=>x.id===row.id);old?Object.assign(old,row):data.products.push(row);persist(data);(window.__BS_SAVED?window.__BS_SAVED('Produit enregistré'):toast('Produit enregistré'));setTimeout(()=>refresh('shop'),120)}catch(err){toast('Erreur : '+(err?.message||err));btn.disabled=false}};
+ const currentImage=p?.image||PRODUCT_IMAGE_FALLBACK;
+ const w=modal(p?'Modifier le produit':'Ajouter un produit',`<form id="v21-product-form" class="v19-form"><label class="full"><span>Nom du produit</span><input required name="name" value="${esc(p?.name||'')}"></label><label><span>Prix (€)</span><input required min="0" step="0.01" type="number" name="price" value="${esc(p?.price??'')}"></label><label><span>Date limite de commande</span><input type="date" name="deadline" value="${esc(p?.deadline||'')}"></label><label class="full"><span>Description</span><textarea name="description" rows="3">${esc(p?.description||'')}</textarea></label><label><span>Couleur / modèle</span><input name="color" value="${esc(p?.color||'')}"></label><label class="full v21-product-photo-field"><span>Photo du produit</span><input type="file" name="imageFile" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"><small>Depuis Google Drive : choisissez directement le fichier. JPG, PNG, WebP ou HEIC · 15 Mo maximum.</small></label><div class="full v21-product-image-preview" data-product-image-preview><img alt="Aperçu de la photo du produit"><small data-image-status>Aucune nouvelle photo sélectionnée.</small></div><label class="full"><span>Ou lien d’image (facultatif)</span><input name="image" value="${esc(currentImage)}" placeholder="https://…"><small>Un lien Google Drive doit être accessible à toute personne disposant du lien.</small></label><label class="full v19-switch"><input type="checkbox" name="active" ${p?.active===false?'':'checked'}><span>Produit visible dans la boutique</span></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back>Retour</button><button class="v19-btn" type="submit">Enregistrer</button></div></form>`,false);
+ bindProductImagePreview(w,currentImage);
+ w.querySelector('[data-back]').onclick=productsManager;w.querySelector('#v21-product-form').onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget,fd=new FormData(form),productId=p?.id||uid('p'),file=fd.get('imageFile');
+  const btn=form.querySelector('[type="submit"]');btn.disabled=true;let uploaded=null,saved=false;
+  try{
+   let image=normalizeProductImageUrl(fd.get('image'));
+   if(file instanceof File&&file.size){btn.textContent='Envoi de la photo…';uploaded=await uploadProductImage(file,productId);image=uploaded.url}
+   const row={id:productId,name:String(fd.get('name')||'').trim(),description:String(fd.get('description')||'').trim(),price:Number(fd.get('price')||0),deadline:String(fd.get('deadline')||'')||null,active:fd.get('active')==='on',image,color:String(fd.get('color')||'').trim()};
+   if(!row.name)throw new Error('Le nom du produit est obligatoire.');
+   btn.textContent='Enregistrement…';await remoteUpsert('v20_products',{id:row.id,name:row.name,description:row.description,price:row.price,deadline:row.deadline,active:row.active,image:row.image,color:row.color||null});saved=true;
+   const data=read();data.products=data.products||[];const old=data.products.find(x=>x.id===row.id);old?Object.assign(old,row):data.products.push(row);persist(data);
+   if(uploaded&&storedProductImagePath(p?.image)!==uploaded.path)removeStoredProductImage(p?.image).catch(()=>{});
+   (window.__BS_SAVED?window.__BS_SAVED('Produit et photo enregistrés'):toast('Produit enregistré'));setTimeout(()=>refresh('shop'),120);
+  }catch(err){if(uploaded&&!saved)removeStoredProductImage(uploaded.url).catch(()=>{});toast('Erreur : '+(err?.message||err));btn.disabled=false;btn.textContent='Enregistrer'}
+ };
 }
 async function deleteProduct(id){
  const used=(read().orders||[]).some(o=>o.productId===id);if(used&&!confirm('Ce produit possède des commandes. Le supprimer quand même ?'))return;if(!used&&!confirm('Supprimer définitivement ce produit ?'))return;
- try{await remoteDelete('v20_products',id);const data=read();data.products=(data.products||[]).filter(x=>x.id!==id);persist(data);toast('Produit supprimé');productsManager()}catch(err){toast('Suppression impossible : '+(err?.message||err))}
+ const product=(read().products||[]).find(x=>x.id===id);
+ try{await remoteDelete('v20_products',id);removeStoredProductImage(product?.image).catch(()=>{});const data=read();data.products=(data.products||[]).filter(x=>x.id!==id);persist(data);toast('Produit supprimé');productsManager()}catch(err){toast('Suppression impossible : '+(err?.message||err))}
 }
 
 function ordersManager(){
