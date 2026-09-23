@@ -63,5 +63,5 @@ else{patchNavigation();scheduleReset()}
 setTimeout(()=>{patchNavigation();scheduleReset()},250);
 setTimeout(scheduleReset,900);
 
-window.ASV31_MOBILE_LOCK={version:'31.4.0',rootHorizontalScrollLocked:true,internalTableScroll:true,inputFocusStable:true};
+window.ASV31_MOBILE_LOCK={version:'31.5.0',rootHorizontalScrollLocked:true,internalTableScroll:true,inputFocusStable:true};
 })();

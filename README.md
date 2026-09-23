@@ -1,4 +1,12 @@
-# Association Sportive du Bon Sauveur — V31.4
+# Association Sportive du Bon Sauveur — V31.5
+
+## V31.5 — commandes adultes et sécurité Supabase
+
+- ajout des profils « Enseignant » et « Personnel » dans les commandes publiques ;
+- même sélection disponible lors de la création ou modification manuelle d’une commande ;
+- validation serveur mise à jour pour accepter ces deux profils ;
+- correction du `search_path` mutable signalé par l’audit de sécurité Supabase ;
+- maintien des classes scolaires seules dans les inscriptions aux activités.
 
 ## V31.4 — photos des produits
 
@@ -176,7 +184,7 @@ Une fois connecté avec un compte `admin`, l’espace Administration affiche **U
 
 ## PWA
 
-Le service worker V31.4 purge toutes les anciennes versions de l’application. Les pages sont récupérées sur le réseau ; en cas d’absence de connexion, une page hors ligne dédiée est affichée. Les bibliothèques lourdes Excel et PDF restent chargées à la demande.
+Le service worker V31.5 purge toutes les anciennes versions de l’application. Les pages sont récupérées sur le réseau ; en cas d’absence de connexion, une page hors ligne dédiée est affichée. Les bibliothèques lourdes Excel et PDF restent chargées à la demande.
 
 ## Correction grammaticale
 
@@ -208,4 +216,4 @@ L’envoi des appréciations vers LanguageTool est désactivé par défaut avec 
 
 ## Mise en production
 
-La V31.4 ajoute le stockage des photos publiques de la boutique avec la migration `supabase/migration_v31_4_product_images.sql`. Les migrations précédentes restent appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.
+La V31.5 ajoute les profils adultes aux commandes et sécurise le `search_path` avec `supabase/migration_v31_5_security.sql`. La V31.4 avait ajouté le stockage des photos publiques de la boutique. Les migrations précédentes restent appliquées sur le projet Supabase de production. Avant toute modification future des traitements de données, mettre à jour la notice RGPD et le registre simplifié.

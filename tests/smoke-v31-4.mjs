@@ -2,15 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-const version = '31.4.0';
+const versionInfo = JSON.parse(read('version.json'));
+const version = versionInfo.version;
 const index = read('index.html');
 const admin = read('v21-admin.js');
 const app = read('v19-app.js');
 const migration = read('supabase/migration_v31_4_product_images.sql');
-const versionInfo = JSON.parse(read('version.json'));
-
 assert.equal(versionInfo.version, version);
-assert.match(index, /bs-app-version" content="31\.4\.0/);
+assert.match(index, new RegExp(`bs-app-version" content="${version.replaceAll('.', '\\.')}`));
 for (const [, assetVersion] of index.matchAll(/(?:src|href)="[^"\s]+\?v=([^"\s]+)"/g)) {
   assert.equal(assetVersion, version);
 }
@@ -33,4 +32,4 @@ assert.match(migration, /product_images_staff_delete/);
 assert.match(migration, /public\.is_teacher_or_admin\(\)/);
 assert.doesNotMatch(migration, /service_role/);
 
-console.log('Smoke V31.4 photos produits : OK');
+console.log(`Régressions V31.4 sur ${version} : OK`);

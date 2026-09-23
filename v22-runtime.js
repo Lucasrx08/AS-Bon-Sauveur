@@ -11,6 +11,7 @@ const CLASSES=[
 'Première Pro ECP','Première Pro Curie','Première Pro Pasteur','Première ST2S',
 'Terminale ST2S','Terminale ASSP'
 ];
+const ORDER_RECIPIENTS=[...CLASSES,'Enseignant','Personnel'];
 const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
 const PAYMENTS=['Virement','Chèque'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -67,8 +68,8 @@ function secureOrder(productId){
   const w=modal('Commander — '+product.name,
     '<div class="v22-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
     '<form id="v22-order-form" class="v19-form">'+
-    '<label class="full"><span>Nom & prénom de l’élève</span><input name="studentName" required minlength="2" maxlength="120" autocomplete="name"></label>'+
-    '<label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>'+opts(CLASSES)+'</select></label>'+
+    '<label class="full"><span>Nom & prénom</span><input name="studentName" required minlength="2" maxlength="120" autocomplete="name"></label>'+
+    '<label class="full"><span>Classe / profil</span><select name="className" required><option value="">Choisir une classe ou un profil</option>'+opts(ORDER_RECIPIENTS)+'</select></label>'+
     '<label><span>Taille</span><select name="size">'+opts(SIZES,'M')+'</select></label>'+
     '<label><span>Quantité</span><input type="number" name="quantity" min="1" max="10" value="1"></label>'+
     '<label><span>Mode de paiement</span><select name="paymentMethod">'+opts(PAYMENTS,'Chèque')+'</select></label>'+
@@ -79,7 +80,7 @@ function secureOrder(productId){
   form.onsubmit=async e=>{
     e.preventDefault();const fd=new FormData(form);
     const payload={requestId:uuid(),productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
-    if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='v22-status error';return}
+    if(!ORDER_RECIPIENTS.includes(payload.className)){status.textContent='Choisissez une classe ou un profil.';status.className='v22-status error';return}
     button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='v22-status';
     try{
       const result=await postPublic('public-order',payload);
