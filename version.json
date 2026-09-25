@@ -1,8 +1,8 @@
 {
-  "version": "31.6.0",
-  "build": "20260925-table-sorting",
+  "version": "31.6.1",
+  "build": "20260925-table-sorting-hotfix",
   "channel": "stable",
   "releasedAt": "2026-09-25",
-  "message": "Tri des tableaux Licences, Commandes et Inscriptions ; colonnes Inscriptions réorganisées",
+  "message": "Correctif d’affichage des tris de tableaux et ordre des colonnes Inscriptions",
   "serviceWorker": "sw.js"
 }
