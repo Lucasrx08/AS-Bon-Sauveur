@@ -48,3 +48,31 @@ html,body{width:100%;max-width:100%;margin:0;overflow-x:hidden!important;overflo
  .v20-poles-section,.v21-instagram,.v21-admin-shortcuts{width:100%!important;max-width:100%!important;overflow-x:hidden}
  .v20-pole-card,.v21-instagram-item,.v19-admin-action{min-width:0;max-width:100%!important}
 }
+
+
+/* v31.6 — en-têtes de tableaux triables */
+.v19-sort-head{
+  appearance:none;
+  border:0;
+  background:transparent;
+  padding:0;
+  margin:0;
+  font:inherit;
+  font-weight:inherit;
+  color:inherit;
+  text-transform:inherit;
+  letter-spacing:inherit;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.v19-sort-head span{
+  font-size:.95em;
+  opacity:.48;
+  transition:opacity .15s ease,transform .15s ease;
+}
+.v19-sort-head:hover span,.v19-sort-head:focus-visible span,.v19-sort-head.active span{opacity:1}
+.v19-sort-head:focus-visible{outline:2px solid #0757C9;outline-offset:4px;border-radius:4px}
+.v19-table th:has(.v19-sort-head){user-select:none}
