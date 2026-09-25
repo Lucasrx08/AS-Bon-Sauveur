@@ -1,5 +1,5 @@
-const APP_VERSION='31.5.0';
-const BUILD_ID='20260923-order-recipients-security';
+const APP_VERSION='31.6.0';
+const BUILD_ID='20260925-table-sorting';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const META_KEY='./__bs_build_meta__';
@@ -7,10 +7,10 @@ const OFFLINE_URL='./offline.html';
 
 const PRECACHE=[
   OFFLINE_URL,
-  './manifest.webmanifest?v=31.5.0',
-  './assets/logo-as.png?v=31.5.0',
-  './v31-mobile.css?v=31.5.0',
-  './v31-mobile-lock.js?v=31.5.0'
+  './manifest.webmanifest?v=31.6.0',
+  './assets/logo-as.png?v=31.6.0',
+  './v31-mobile.css?v=31.6.0',
+  './v31-mobile-lock.js?v=31.6.0'
 ];
 
 self.addEventListener('install',event=>{
