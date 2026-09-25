@@ -1,8 +1,8 @@
 {
-  "version": "31.6.1",
-  "build": "20260925-table-sorting-hotfix",
+  "version": "31.6.2",
+  "build": "20260925-ios-update-fix",
   "channel": "stable",
   "releasedAt": "2026-09-25",
-  "message": "Correctif d’affichage des tris de tableaux et ordre des colonnes Inscriptions",
+  "message": "Correction de la mise à jour iPhone/PWA et synchronisation du numéro de version",
   "serviceWorker": "sw.js"
 }
