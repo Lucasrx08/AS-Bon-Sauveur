@@ -102,12 +102,38 @@ const state = {
  dark:localStorage.getItem('bs-dark')==='1',
  term:1,
  filters:{licenses:{},registrations:{specialty:'',eventId:''},appreciationReview:{specialty:'',term:1}},
+ sorts:{
+  licenses:{key:'fullName',dir:'asc'},
+  orders:{key:'studentName',dir:'asc'},
+  registrations:{key:'date',dir:'asc'}
+ },
  search:'',
  publicSpecialty:''
 };
 if(state.dark) document.body.classList.add('dark');
 
 function save(){localStorage.setItem(STORE,JSON.stringify(state.data))}
+const TABLE_COLLATOR=new Intl.Collator('fr',{sensitivity:'base',numeric:true,ignorePunctuation:true});
+function setTableSort(scope,key){
+ const current=state.sorts?.[scope]||{};
+ state.sorts=state.sorts||{};
+ state.sorts[scope]={key,dir:current.key===key&&current.dir==='asc'?'desc':'asc'};
+ render();
+}
+function sortTableRows(scope,rows,getters){
+ const sort=state.sorts?.[scope]||{},getter=getters?.[sort.key];
+ if(!getter)return rows;
+ const dir=sort.dir==='desc'?-1:1;
+ return rows.slice().sort((a,b)=>{
+  const av=getter(a),bv=getter(b);
+  if(typeof av==='number'&&typeof bv==='number')return (av-bv)*dir;
+  return TABLE_COLLATOR.compare(String(av??''),String(bv??''))*dir;
+ });
+}
+function sortHead(scope,key,label){
+ const sort=state.sorts?.[scope]||{},active=sort.key===key,arrow=active?(sort.dir==='asc'?'↑':'↓'):'↕';
+ return `<button type="button" class="v19-sort-head ${active?'active':''}" onclick="app.setTableSort('${scope}','${key}')" aria-label="Trier par ${esc(label)}">${esc(label)} <span aria-hidden="true">${arrow}</span></button>`;
+}
 function uid(p='x'){return p+Math.random().toString(36).slice(2,10)}
 function esc(v=''){return String(v??'').replace(/[&<>"]/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]))}
 function productImage(v=''){
