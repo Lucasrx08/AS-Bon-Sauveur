@@ -1,6 +1,6 @@
 /* V22.1 — information RGPD */
 @font-face{font-family:"AS Anton";src:url("assets/fonts/Anton-Regular.ttf") format("truetype");font-display:swap;font-style:normal;font-weight:400}
-.v221-privacy-footer{width:min(1240px,calc(100% - 40px));margin:-42px auto 96px;padding:18px 2px 0;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px}
+.v221-privacy-footer{position:relative;z-index:2;width:min(1240px,calc(100% - 40px));margin:0 auto 96px;padding:18px 2px 0;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px;color:var(--muted);font-size:12px}
 .v221-privacy-footer button{border:0;background:none;color:var(--blue);font-weight:850;padding:6px 0;cursor:pointer}
 .v221-privacy-modal .v19-modal-head h2{font-family:"AS Anton",Impact,"Arial Narrow",sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase}
 .v221-privacy-lead{padding:17px 18px;border:1px solid color-mix(in srgb,var(--blue) 18%,var(--line));border-radius:18px;background:color-mix(in srgb,var(--blue) 6%,var(--card));margin-bottom:16px}
@@ -12,4 +12,4 @@
 .v221-privacy-version{margin-top:16px;color:var(--muted);font-size:11px;text-align:right}
 .v221-inline-privacy{padding:11px 13px;border-radius:14px;background:color-mix(in srgb,var(--blue) 6%,var(--card));border:1px solid color-mix(in srgb,var(--blue) 17%,var(--line));color:var(--muted);font-size:12.5px;line-height:1.45}
 .v221-inline-privacy button{border:0;background:none;color:var(--blue);font-weight:850;padding:0;cursor:pointer}
-@media(max-width:760px){.v221-privacy-grid{grid-template-columns:1fr}.v221-privacy-footer{width:min(100% - 28px,1240px);margin-top:-30px}}
+@media(max-width:760px){.v221-privacy-grid{grid-template-columns:1fr}.v221-privacy-footer{width:min(100% - 28px,1240px);margin-top:0}}

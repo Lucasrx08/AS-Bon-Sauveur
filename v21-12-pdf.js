@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v31.7.1-20261005';
+const VERSION='v31.7.2-20261005';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={

@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='31.7.1';
+const VERSION='31.7.2';
 const cfg=window.APP_CONFIG||{};
 let busy=false;
 

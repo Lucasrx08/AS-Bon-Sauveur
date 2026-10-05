@@ -130,5 +130,5 @@ function install(){
  window.app.profile=profileModal;
 }
 install();
-window.ASV21_PIN_AUTH={version:'31.7.1',singlePassLogin:true,reloadAfterLogin:false};
+window.ASV21_PIN_AUTH={version:'31.7.2',singlePassLogin:true,reloadAfterLogin:false};
 })();

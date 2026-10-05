@@ -1,6 +1,6 @@
 {
-  "version": "31.7.1",
-  "build": "20261005-audit-fixes-r1",
+  "version": "31.7.2",
+  "build": "20261005-audit-fixes-r2",
   "channel": "stable",
   "releasedAt": "2026-10-05",
   "message": "Corrections des exports par pôle, de la boutique, du calendrier, du RGPD et du mode hors connexion",

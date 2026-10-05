@@ -7,6 +7,7 @@ const version = JSON.parse(read('version.json')).version;
 const index = read('index.html');
 const app = read('v19-app.js');
 const css = read('v19.css');
+const privacyCss = read('v22-1.css');
 const pdf = read('v21-12-pdf.js');
 const privacy = read('v22-1-privacy.js');
 const runtime = read('v22-runtime.js');
@@ -17,7 +18,7 @@ const orderEdge = read('supabase/functions/public-order/index.ts');
 const registrationEdge = read('supabase/functions/public-registration/index.ts');
 const serviceWorker = read('sw.js');
 
-assert.equal(version, '31.7.1');
+assert.equal(version, '31.7.2');
 assert.match(index, /integrity="sha384-JBR\+x8bl/);
 assert.ok(index.includes(`v31-7-security.js?v=${version}`));
 assert.match(bridge, /sha384-vtjasyid/);
@@ -25,6 +26,8 @@ assert.match(bridge, /sha384-Pqp51FUN/);
 assert.match(pdf, /sha384-en\/ztfPS/);
 
 assert.match(css, /\.v19-event-card\[hidden\]\{display:none!important\}/);
+assert.match(privacyCss, /\.v221-privacy-footer\{position:relative;z-index:2/);
+assert.doesNotMatch(privacyCss, /margin-top:-30px|margin:-42px/);
 assert.match(app, /timeZone:'Europe\/Paris'/);
 assert.match(app, /String\(p\.deadline\)>=todayKey\(\)/);
 assert.match(app, /app\.downloadDoc/);
