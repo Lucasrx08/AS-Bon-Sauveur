@@ -26,5 +26,5 @@ clean();
 document.addEventListener('DOMContentLoaded',clean,{once:true});
 window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(clean));
 
-window.ASV30_AUTH={version:'31.7.0',mode:'pin-with-progressive-admin-mfa',mfaRequiredWhenEnrolled:true};
+window.ASV30_AUTH={version:'31.7.1',mode:'pin-with-progressive-admin-mfa',mfaRequiredWhenEnrolled:true};
 })();

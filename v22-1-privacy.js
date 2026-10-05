@@ -39,7 +39,7 @@ function injectFooter(){
   const shell=document.querySelector('.v19-shell'); if(!shell)return;
   let f=shell.querySelector('.v221-privacy-footer');
   if(!f){f=document.createElement('footer');f.className='v221-privacy-footer';f.innerHTML='<button type="button" data-privacy>Données personnelles & RGPD</button><span></span>';shell.appendChild(f)}
-  const button=f.querySelector('[data-privacy]');if(button)button.onclick=event=>{event.stopPropagation();openPrivacy()};
+  const button=f.querySelector('[data-privacy]');if(button)button.setAttribute('onclick','event.stopPropagation();app.privacy()');
   const version=f.querySelector('span');if(version)version.textContent=window.__BS_RELEASE?.label||'V31.7';
 }
 function install(){
