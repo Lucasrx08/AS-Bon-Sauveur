@@ -3,7 +3,7 @@
 
 const AUTH_METHOD='bs-auth-method';
 sessionStorage.setItem(AUTH_METHOD,'pin');
-window.__BS_ADMIN_MFA_DISABLED=true;
+window.__BS_ADMIN_MFA_DISABLED=false;
 
 function cleanLegacyMfaUi(){
   document.getElementById('v26-security')?.remove();
@@ -25,7 +25,6 @@ function clean(){
 clean();
 document.addEventListener('DOMContentLoaded',clean,{once:true});
 window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(clean));
-window.addEventListener('bs-admin-mfa-required',()=>setTimeout(clean,0));
 
-window.ASV30_AUTH={version:'31.0.0',mode:'single-factor-team-access',mfaRequired:false};
+window.ASV30_AUTH={version:'31.7.0',mode:'pin-with-progressive-admin-mfa',mfaRequiredWhenEnrolled:true};
 })();

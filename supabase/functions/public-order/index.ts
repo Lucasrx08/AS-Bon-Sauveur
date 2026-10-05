@@ -34,7 +34,8 @@ Deno.serve(async request=>{
   if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de commandes ont été envoyées. Réessayez plus tard.'},429);
   const {data:product,error:productError}=await admin.from('v20_products').select('id,active,deadline').eq('id',productId).maybeSingle();
   if(productError)throw productError;
-  const today=new Date().toISOString().slice(0,10);
+  const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  const today=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
   if(!product||product.active!==true||(product.deadline&&String(product.deadline)<today))return json(request,{error:'Ce produit n’est plus disponible à la commande.'},409);
   const {data:created,error:createError}=await admin.from('v20_orders').insert({id:requestId,request_id:requestId,product_id:productId,student_name:studentName,class_name:className,size,quantity,payment_method:paymentMethod,color:color||null,paid:false,distributed:false}).select('reference,created_at').single();
   if(createError){

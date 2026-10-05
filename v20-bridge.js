@@ -86,11 +86,10 @@ async function hydrateUser(user){
   const {data:profile,error}=await sb.from('profiles').select('display_name,email,role').eq('id',user.id).single();
   if(error){toast('Profil utilisateur inaccessible');throw error}
   currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
-  const authMethod=sessionStorage.getItem(AUTH_METHOD)||'email';
-  if(currentRole==='admin'&&!window.__BS_ADMIN_MFA_DISABLED&&authMethod!=='pin'&&sb?.auth?.mfa){
+  if(currentRole==='admin'&&!window.__BS_ADMIN_MFA_DISABLED&&sb?.auth?.mfa){
    const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
    if(aalError){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-error',{detail:{message:aalError.message||'Vérification MFA impossible'}}));throw aalError}
-   if(aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));throw new Error('MFA_REQUIRED')}
+   if(aal?.nextLevel==='aal2'&&aal?.currentLevel!=='aal2'){clearPrivateCache();window.dispatchEvent(new CustomEvent('bs-admin-mfa-required',{detail:aal||{}}));throw new Error('MFA_REQUIRED')}
   }
   const data=await hydrateAll(false);
   if(epoch!==authEpoch)return{user:currentUser,role:currentRole,stale:true};
@@ -243,12 +242,12 @@ function installStorageSync(){
  // V28 : aucune synchronisation en masse depuis localStorage.
  // Cela évite qu'un appareil resté ouvert écrase les données plus récentes d'un autre utilisateur.
 }
-function loadScript(src,key){return new Promise((resolve,reject)=>{if(window[key])return resolve();const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
+function loadScript(src,key,integrity=''){return new Promise((resolve,reject)=>{if(window[key])return resolve();const existing=[...document.scripts].find(script=>script.src===src);if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return}const s=document.createElement('script');s.src=src;if(integrity){s.integrity=integrity;s.crossOrigin='anonymous';s.referrerPolicy='no-referrer'}s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
 function wrapLazyDependencies(){
  if(!window.app)return;
- const xlsx=()=>loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','XLSX');
- const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS');
- const pdf=()=>loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js','jspdf');
+ const xlsx=()=>loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','XLSX','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw');
+ const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS','sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz');
+ const pdf=()=>loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js','jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/x');
  for(const name of ['openLicenseImport']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await xlsx();return orig(...a)}}
  for(const name of ['downloadLicenseTemplate','exportExcel','exportRegistrationsExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
  for(const name of ['exportConvocation','exportCalendarPDF']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await pdf();return orig(...a)}}

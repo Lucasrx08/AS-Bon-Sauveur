@@ -16,6 +16,9 @@ const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL'
 const PAYMENTS=['Virement','Chèque'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');
+const time=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:''};
+const eventTimeLabel=event=>{const start=time(event?.startTime),end=time(event?.endTime);if((!start&&!end)||(start==='00:00'&&end==='00:00'))return'Horaire à confirmer';return start&&end?`${start} → ${end}`:start||end||'Horaire à confirmer'};
+const todayParis=()=>{const parts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return`${parts.year}-${parts.month}-${parts.day}`};
 const uuid=()=>globalThis.crypto?.randomUUID?.()||'00000000-0000-4000-8000-'+Math.random().toString(16).slice(2).padEnd(12,'0').slice(0,12);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 const api=(name)=>String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/'+name;
@@ -56,7 +59,8 @@ function productById(id){return (currentData().products||[]).find(p=>String(p.id
 function eventById(id){return (currentData().events||[]).find(e=>String(e.id)===String(id))}
 function linkedConvocation(event){
   if(!event)return null;
-  return (currentData().convocations||[]).find(c=>String(c.id)===String(event.convocationId)||(c.date===event.date&&c.specialty===event.specialty&&c.title===event.title))||null;
+  const specialties=window.app?.eventSpecialties?.(event)||[...(Array.isArray(event.specialties)?event.specialties:[]),event.specialty].filter(Boolean);
+  return (currentData().convocations||[]).find(c=>String(c.id)===String(event.convocationId||'')||(c.date===event.date&&specialties.includes(c.specialty)&&c.title===event.title))||null;
 }
 function fmtDate(value){
   if(!value)return '';
@@ -65,6 +69,7 @@ function fmtDate(value){
 
 function secureOrder(productId){
   const product=productById(productId);if(!product)return toast('Produit introuvable.');
+  if(product.active===false||(product.deadline&&String(product.deadline)<todayParis()))return toast('Les commandes pour cet article sont closes.');
   const w=modal('Commander — '+product.name,
     '<div class="v22-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
     '<form id="v22-order-form" class="v19-form">'+
@@ -93,9 +98,9 @@ function secureOrder(productId){
 function secureRegistration(eventId){
   const event=eventById(eventId);
   if(!event)return toast('Événement introuvable.');
-  if(linkedConvocation(event)||!event.registrationOpen||String(event.date||'')<new Date().toISOString().slice(0,10))return toast('Les inscriptions ne sont pas ouvertes pour cet événement.');
+  if(linkedConvocation(event)||!event.registrationOpen||String(event.date||'')<todayParis())return toast('Les inscriptions ne sont pas ouvertes pour cet événement.');
   const w=modal('Inscription',
-    '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(event.startTime||'Horaire à préciser')+(event.endTime?' → '+esc(event.endTime):'')+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
+    '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(eventTimeLabel(event))+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
     '<form id="v22-registration-form" class="v19-form">'+
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+

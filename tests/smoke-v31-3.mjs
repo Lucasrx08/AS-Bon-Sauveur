@@ -31,7 +31,9 @@ assert.equal(versionInfo.version, version);
 assert.match(read('v31-release.js'), new RegExp(`version:'${version.replaceAll('.', '\\.')}'`));
 assert.match(serviceWorker, new RegExp(`APP_VERSION='${version.replaceAll('.', '\\.')}'`));
 
-assert.doesNotMatch(serviceWorker, /NAV_CACHE|NAV_KEY|caches\.match\(request\)/);
+assert.match(serviceWorker, /APP_SHELL_URL='\.\/index\.html'/);
+assert.match(serviceWorker, /current\.match\(APP_SHELL_URL\)/);
+assert.match(serviceWorker, /current\.put\(APP_SHELL_URL,response\.clone\(\)\)/);
 assert.match(serviceWorker, /key\.startsWith\('as-bon-sauveur-'\)/);
 assert.match(serviceWorker, /cache:'no-store'/);
 

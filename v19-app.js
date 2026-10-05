@@ -149,7 +149,10 @@ function norm(s=''){return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g
 function fmtLong(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtShort(d){return !d?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'short',year:'numeric'}).format(new Date(d+'T12:00:00'))}
 function fmtDateTime(d){if(!d)return'—';const value=new Date(d);return Number.isNaN(value.getTime())?'—':new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(value)}
-function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function todayKey(){const parts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return`${parts.year}-${parts.month}-${parts.day}`}
+function normalizedEventTime(value){const match=String(value||'').match(/^(\d{1,2}):(\d{2})/);return match?`${match[1].padStart(2,'0')}:${match[2]}`:''}
+function eventTimeLabel(event,separator=' → '){const start=normalizedEventTime(event?.startTime),end=normalizedEventTime(event?.endTime);if((!start&&!end)||(start==='00:00'&&end==='00:00'))return'Horaire à confirmer';return start&&end?`${start}${separator}${end}`:start||end||'Horaire à confirmer'}
+function eventSpecialtiesOf(event){const raw=Array.isArray(event?.specialties)?event.specialties:[],fallback=String(event?.specialty||'Association Sportive');return[...new Set([...raw,fallback].filter(x=>SPECIALTIES.includes(x)))]}
 function money(n){return new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n||0))}
 function roleSpecialty(){return ROLE_SPECIALTY[state.role]||null}
 function calendarSpecialty(){return roleSpecialty()||(state.role==='public'?state.publicSpecialty||null:null)}
@@ -206,10 +209,11 @@ function pageTitle(kicker,title,sub='',actions=''){
 }
 function eventsVisible(){
  const sp=calendarSpecialty();
- return (state.data.events||[]).filter(e=>!sp||e.specialty===sp).slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
+ return (state.data.events||[]).filter(e=>!sp||eventSpecialtiesOf(e).includes(sp)).slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
 }
 function eventConvocation(e){
- return !e?null:(state.data.convocations||[]).find(x=>x.id===e.convocationId||(x.date===e.date&&x.specialty===e.specialty&&x.title===e.title))||null;
+ const specialties=eventSpecialtiesOf(e);
+ return !e?null:(state.data.convocations||[]).find(x=>String(x.id)===String(e.convocationId||'')||(x.date===e.date&&specialties.includes(x.specialty)&&x.title===e.title))||null;
 }
 function eventRegistrationAvailable(e){
  return !!e&&!eventConvocation(e)&&!!e.registrationOpen&&String(e.date||'')>=todayKey();
@@ -219,14 +223,14 @@ function eventCard(e){
  const d=new Date(e.date+'T12:00:00');
  return `<article class="v19-card v19-event-card">
   <div class="v19-date"><strong>${d.getDate()}</strong><span>${d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').toUpperCase()}</span></div>
-  <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(e.startTime||'—')}${e.endTime?' → '+esc(e.endTime):''} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
+  <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(eventTimeLabel(e))} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
   <div class="v19-card-actions">${c?`<button class="v19-chip" onclick="app.openConv('${c.id}')">Voir convocation</button>`:eventRegistrationAvailable(e)?`<button class="v19-chip v2115-registration-chip" onclick="app.openEventRegistration('${e.id}')">Inscription</button>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
  </article>`;
 }
 function specialtyNote(){
  const sp=roleSpecialty(); if(!sp) return '';
  const n=state.data.specialtyNotes?.[sp];
- const valid=n?.active&&String(n.message||'').trim()&&(!n.expiresAt||n.expiresAt>=new Date().toISOString().slice(0,10));
+ const valid=n?.active&&String(n.message||'').trim()&&(!n.expiresAt||n.expiresAt>=todayKey());
  if(!valid) return '';
  return `<section class="v19-postit"><div class="pin"></div><div><span>À RETENIR</span><p>${esc(n.message)}</p>${n.expiresAt?`<small>Jusqu’au ${fmtShort(n.expiresAt)}</small>`:''}</div></section>`;
 }
@@ -367,14 +371,14 @@ function appreciationReviewPage(){
  </div>`;
 }
 function shopPage(){
- const rows=(state.data.products||[]).filter(p=>p.active!==false);
+ const rows=(state.data.products||[]).filter(p=>p.active!==false&&(!p.deadline||String(p.deadline)>=todayKey()));
  return `<div class="v19-container">${pageTitle('BOUTIQUE','Boutique AS','Articles officiels de l’Association Sportive.',isManager()?`<button class="v19-btn" onclick="app.go('orders')">Gérer les commandes</button>`:'')}
- <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(productImage(p.image))}" alt="${esc(p.name||'Produit AS')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='assets/logo-as.png'"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')}</div></div>`;
+ <div class="v19-products">${rows.map(p=>`<article class="v19-card v19-product"><img src="${esc(productImage(p.image))}" alt="${esc(p.name||'Produit AS')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='assets/logo-as.png'"><div><h3>${esc(p.name)}</h3><p>${esc(p.description||'')}</p><strong>${money(p.price)}</strong><div class="v19-meta">Commande avant le ${fmtShort(p.deadline)}</div><button class="v19-btn yellow" onclick="app.order('${p.id}')">Commander</button></div></article>`).join('')||'<div class="v19-empty">Aucun article disponible à la commande pour le moment.</div>'}</div></div>`;
 }
 function documentsPage(){
  const rows=(state.data.documents||[]).filter(d=>state.role!=='public'||/^https?:\/\//i.test(String(d.url||'')));
  return `<div class="v19-container">${pageTitle('DOCUMENTS','Documents','Ressources utiles.')}
- <div class="v19-grid">${rows.map(d=>`<article class="v19-card v27-document-card"><div class="v19-row"><div class="v27-document-copy">${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions v27-document-actions">${/^https?:\/\//i.test(String(d.url||''))?`<button class="v19-btn secondary small" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn small" onclick="app.openDoc('${d.id}')">Télécharger</button>`:(isManager()?`<span class="v19-meta">Fichier non associé — à compléter dans l’administration.</span>`:'')}</div></article>`).join('')||'<div class="v19-empty">Aucun document publié pour le moment.</div>'}</div></div>`;
+ <div class="v19-grid">${rows.map(d=>`<article class="v19-card v27-document-card"><div class="v19-row"><div class="v27-document-copy">${icon('doc')}<h3>${esc(d.title)}</h3><p>${esc(d.description||'')}</p><div class="v19-meta">${fmtShort(d.date)}</div></div>${specBadge(d.specialty)}</div><div class="v19-card-actions v27-document-actions">${/^https?:\/\//i.test(String(d.url||''))?`<button class="v19-btn secondary small" onclick="app.openDoc('${d.id}')">Consulter</button><button class="v19-btn small" onclick="app.downloadDoc('${d.id}')">Télécharger</button>`:(isManager()?`<span class="v19-meta">Fichier non associé — à compléter dans l’administration.</span>`:'')}</div></article>`).join('')||'<div class="v19-empty">Aucun document publié pour le moment.</div>'}</div></div>`;
 }
 function morePage(){
  if(!isManager()) return denied();
@@ -519,7 +523,7 @@ function deleteReport(id){if(!isManager()||!confirm('Supprimer ce bilan ?'))retu
 
 function productName(id){return (state.data.products||[]).find(p=>p.id===id)?.name||'Produit'}
 function order(productId){
- const p=(state.data.products||[]).find(x=>x.id===productId);if(!p)return;
+ const p=(state.data.products||[]).find(x=>x.id===productId);if(!p||p.active===false||(p.deadline&&String(p.deadline)<todayKey()))return toast('Les commandes pour cet article sont closes.');
  const m=modal(`Commander — ${p.name}`,`<form id="v19-order-form" class="v19-form">
   <label class="full"><span>Nom & prénom de l’élève</span><input name="studentName" required></label>
   <label class="full"><span>Classe</span><select name="className">${options(CLASSES,CLASSES[0])}</select></label>
@@ -574,7 +578,7 @@ function tidyName(value){return String(value||'').trim().replace(/\s+/g,' ')}
 async function openEventRegistration(eventId){
  const event=registrationEvent(eventId),convocation=eventConvocation(event);if(!event)return alert('Événement introuvable.');if(convocation||!event.registrationOpen||event.date<todayKey())return alert('Les inscriptions libres ne sont pas disponibles pour cet événement.');
  if(isManager()&&typeof window.__BS_PERSIST_EVENT==='function'){try{await window.__BS_PERSIST_EVENT(event)}catch(error){console.warn('Synchronisation événement',error);return alert('Cet événement n’est pas encore enregistré dans la base centrale. Réessayez dans un instant.')}}
- const m=modal('Inscription',`<div class="v2115-registration-intro"><div class="v19-kicker">${esc(event.specialty)}</div><h3>${esc(event.title)}</h3><p>${esc(fmtLong(event.date))} · ${esc(event.startTime||'Horaire à préciser')}${event.endTime?' → '+esc(event.endTime):''} · ${esc(event.place||'Lieu à préciser')}</p></div><form id="v2115-registration-form" class="v19-form">
+ const m=modal('Inscription',`<div class="v2115-registration-intro"><div class="v19-kicker">${esc(event.specialty)}</div><h3>${esc(event.title)}</h3><p>${esc(fmtLong(event.date))} · ${esc(eventTimeLabel(event))} · ${esc(event.place||'Lieu à préciser')}</p></div><form id="v2115-registration-form" class="v19-form">
   <label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>
   <label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>
   <label class="full"><span>Classe</span><select name="className" required><option value="">Choisir une classe</option>${options(CLASSES,'',null)}</select></label>
@@ -714,6 +718,12 @@ async function downloadLicenseTemplate(){
  const buf=await wb.xlsx.writeBuffer();downloadBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'Modele_Import_Licencies_AS.xlsx');
 }
 function openDoc(id){const d=(state.data.documents||[]).find(x=>x.id===id);if(!d)return;if(/^https?:\/\//.test(d.url||''))window.open(d.url,'_blank','noopener');else toast('Document de démonstration : aucun fichier distant associé.')}
+function downloadDoc(id){
+ const d=(state.data.documents||[]).find(x=>x.id===id),raw=String(d?.url||'');if(!/^https?:\/\//i.test(raw))return toast('Aucun fichier téléchargeable associé.');
+ let url=raw;
+ try{const parsed=new URL(raw,location.href);if(/(^|\.)drive\.google\.com$/i.test(parsed.hostname)){const fileId=parsed.searchParams.get('id')||parsed.pathname.match(/\/d\/([^/]+)/)?.[1];if(fileId)url=`https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`}}catch{}
+ const link=document.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.download='';document.body.appendChild(link);link.click();link.remove();
+}
 
 function downloadBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
 async function exportExcel(kind){
@@ -754,8 +764,8 @@ window.app={
  setTerm,editApp,saveAppDraft,validateApp,copyApp,copyReviewApp,
  openEventRegistration,refreshEventRegistrations,deleteEventRegistration,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
  manageSpecialtyNotes,saveSpecialtyNote,manageTerms,
- openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,exportExcel,exportRegistrationsExcel,
- readData:()=>state.data, role:()=>state.role, roleSpecialty, studentName,hydrateFromServer
+ openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,downloadDoc,exportExcel,exportRegistrationsExcel,
+ readData:()=>state.data, role:()=>state.role, roleSpecialty,calendarSpecialty,eventSpecialties:eventSpecialtiesOf,eventTimeLabel,studentName,hydrateFromServer
 };
 window.ASV2115={version:'v21.15.2-20260910',features:['event-registrations','single-registration-delete','appreciation-review','direct-event-sync']};
 render();

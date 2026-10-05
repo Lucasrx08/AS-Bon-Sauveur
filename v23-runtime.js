@@ -16,7 +16,7 @@ const PAYMENTS=['Espèces','Virement','Chèque'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');
 const time=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:String(v||'')};
-const todayParis=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const todayParis=()=>{const parts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));return`${parts.year}-${parts.month}-${parts.day}`};
 const uuid=()=>globalThis.crypto?.randomUUID?.()||'00000000-0000-4000-8000-'+Math.random().toString(16).slice(2).padEnd(12,'0').slice(0,12);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
 const api=(name)=>String(cfg.supabaseUrl||'').replace(/\/$/,'')+'/functions/v1/'+name;
@@ -57,7 +57,8 @@ function productById(id){return (currentData().products||[]).find(p=>String(p.id
 function eventById(id){return (currentData().events||[]).find(e=>String(e.id)===String(id))}
 function linkedConvocation(event){
   if(!event)return null;
-  return (currentData().convocations||[]).find(c=>String(c.id)===String(event.convocationId)||(c.date===event.date&&c.specialty===event.specialty&&c.title===event.title))||null;
+  const specialties=window.app?.eventSpecialties?.(event)||[...(Array.isArray(event.specialties)?event.specialties:[]),event.specialty].filter(Boolean);
+  return (currentData().convocations||[]).find(c=>String(c.id)===String(event.convocationId||'')||(c.date===event.date&&specialties.includes(c.specialty)&&c.title===event.title))||null;
 }
 function fmtDate(value){
   if(!value)return '';
@@ -66,6 +67,7 @@ function fmtDate(value){
 
 function secureOrder(productId){
   const product=productById(productId);if(!product)return toast('Produit introuvable.');
+  if(product.active===false||(product.deadline&&String(product.deadline)<todayParis()))return toast('Les commandes pour cet article sont closes.');
   const stableRequestId=uuid();
   const w=modal('Commander — '+product.name,
     '<div class="v23-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+

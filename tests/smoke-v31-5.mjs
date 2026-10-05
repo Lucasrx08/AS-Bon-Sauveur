@@ -2,16 +2,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
-const version = '31.5.0';
+const versionInfo = JSON.parse(read('version.json'));
+const version = versionInfo.version;
 const index = read('index.html');
 const runtime = read('v22-runtime.js');
 const admin = read('v21-admin.js');
 const edge = read('supabase/functions/public-order/index.ts');
 const migration = read('supabase/migration_v31_5_security.sql');
-const versionInfo = JSON.parse(read('version.json'));
-
 assert.equal(versionInfo.version, version);
-assert.match(index, /bs-app-version" content="31\.5\.0/);
+assert.match(index, new RegExp(`bs-app-version" content="${version.replaceAll('.', '\\.')}`));
 for (const [, assetVersion] of index.matchAll(/(?:src|href)="[^"\s]+\?v=([^"\s]+)"/g)) {
   assert.equal(assetVersion, version);
 }

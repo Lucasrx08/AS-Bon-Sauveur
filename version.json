@@ -1,8 +1,8 @@
 {
-  "version": "31.6.2",
-  "build": "20260925-ios-update-fix",
+  "version": "31.7.0",
+  "build": "20261005-audit-fixes",
   "channel": "stable",
-  "releasedAt": "2026-09-25",
-  "message": "Correction de la mise à jour iPhone/PWA et synchronisation du numéro de version",
+  "releasedAt": "2026-10-05",
+  "message": "Corrections des exports par pôle, de la boutique, du calendrier, du RGPD et du mode hors connexion",
   "serviceWorker": "sw.js"
 }

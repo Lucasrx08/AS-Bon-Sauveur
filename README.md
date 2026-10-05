@@ -1,4 +1,16 @@
-# Association Sportive du Bon Sauveur — V31.5
+# Association Sportive du Bon Sauveur — V31.7
+
+## V31.7 — correctifs de l’audit final
+
+- exports Programme et TV correctement filtrés selon le calendrier AS, Football, Gymnastique ou Escalade affiché ;
+- boutique fermée automatiquement après la date limite, selon le fuseau Europe/Paris ;
+- recherche calendrier, bouton RGPD et téléchargement des documents réparés ;
+- événements sans horaire lisible affichés comme « Horaire à confirmer » ;
+- convocations multi-spécialités prises en compte par le formulaire public et la fonction serveur ;
+- coque PWA et dépendances épinglées disponibles hors connexion ;
+- intégrité SRI des bibliothèques CDN et MFA TOTP administrateur activable sans rupture d’accès.
+
+Voir `RELEASE_V31.7.md` pour le détail et les actions de déploiement.
 
 ## V31.5 — commandes adultes et sécurité Supabase
 

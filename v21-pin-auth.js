@@ -108,7 +108,8 @@ async function profileModal(){
  const cached=window.__BS_AUTH_STATE?.();
  if(cached?.user){
   const user=cached.user,role=cached.role||sessionStorage.getItem(VERIFIED)||'public';
-  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(user.name||user.email||'Utilisateur')}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
+  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(user.name||user.email||'Utilisateur')}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div>${role==='admin'?'<button type="button" class="v19-btn secondary" data-admin-mfa>Configurer la double authentification</button>':''}<button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
+  const mfa=w.querySelector('[data-admin-mfa]');if(mfa)mfa.onclick=()=>window.__BS_OPEN_MFA_SETUP?.();
   w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
   return w;
  }
@@ -118,7 +119,8 @@ async function profileModal(){
  let profile=null;
  try{profile=(await sb.from('profiles').select('display_name,role,email').eq('id',session.user.id).single())?.data||null}catch{}
  const name=profile?.display_name||'Utilisateur',role=profile?.role||sessionStorage.getItem(VERIFIED)||'public';
- const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
+  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div>${role==='admin'?'<button type="button" class="v19-btn secondary" data-admin-mfa>Configurer la double authentification</button>':''}<button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
+  const mfa=w.querySelector('[data-admin-mfa]');if(mfa)mfa.onclick=()=>window.__BS_OPEN_MFA_SETUP?.();
  w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
  return w;
 }
@@ -128,5 +130,5 @@ function install(){
  window.app.profile=profileModal;
 }
 install();
-window.ASV21_PIN_AUTH={version:'31.5.0',singlePassLogin:true,reloadAfterLogin:false};
+window.ASV21_PIN_AUTH={version:'31.7.0',singlePassLogin:true,reloadAfterLogin:false};
 })();

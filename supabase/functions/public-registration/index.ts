@@ -20,10 +20,12 @@ Deno.serve(async request=>{
   const ipHash=await hashKey(serviceKey,'registration-ip:'+clientIp(request)),identityHash=await hashKey(serviceKey,'registration-person:'+eventId+'|'+normalizeLogin(lastName)+'|'+normalizeLogin(firstName)+'|'+className);
   const [ipLimit,identityLimit]=await Promise.all([consume(admin,'public-registration-ip',ipHash,30,3600,3600),consume(admin,'public-registration-person',identityHash,5,3600,3600)]);
   if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de tentatives ont été envoyées. Réessayez plus tard.'},429);
-  const {data:event,error:eventError}=await admin.from('v20_events').select('id,title,specialty,date,public_visible,registration_open,convocation_id').eq('id',eventId).maybeSingle();if(eventError)throw eventError;
-  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const {data:event,error:eventError}=await admin.from('v20_events').select('id,title,specialty,specialties,date,public_visible,registration_open,convocation_id').eq('id',eventId).maybeSingle();if(eventError)throw eventError;
+  const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  const today=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
   if(!event||event.public_visible!==true||event.registration_open!==true||String(event.date)<today||event.convocation_id)return json(request,{error:'Les inscriptions ne sont plus ouvertes pour cet événement.'},409);
-  const {data:linked,error:linkedError}=await admin.from('v20_convocations').select('id').eq('date',event.date).eq('specialty',event.specialty).eq('title',event.title).eq('public_visible',true).eq('status','published').limit(1);if(linkedError)throw linkedError;if(Array.isArray(linked)&&linked.length)return json(request,{error:'Les inscriptions libres sont fermées pour cet événement.'},409);
+  const eventSpecialties=[...new Set([...(Array.isArray(event.specialties)?event.specialties:[]),event.specialty].map(value=>clean(value,80)).filter(Boolean))];
+  const {data:linked,error:linkedError}=await admin.from('v20_convocations').select('id').eq('date',event.date).in('specialty',eventSpecialties).eq('title',event.title).eq('public_visible',true).eq('status','published').limit(1);if(linkedError)throw linkedError;if(Array.isArray(linked)&&linked.length)return json(request,{error:'Les inscriptions libres sont fermées pour cet événement.'},409);
   const {data:retentionDue,error:retentionError}=await admin.rpc('v22_event_retention_due',{p_event_date:event.date});if(retentionError)throw retentionError;
   const {data:created,error:createError}=await admin.from('v20_event_registrations').insert({id:requestId,request_id:requestId,event_id:eventId,last_name:lastName,first_name:firstName,class_name:className,retention_due_at:retentionDue}).select('created_at').single();
   if(createError){if(createError.code==='23505')return json(request,{error:'Cet élève est déjà inscrit à cet événement.'},409);throw createError}
