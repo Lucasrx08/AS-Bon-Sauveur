@@ -18,9 +18,9 @@ const orderEdge = read('supabase/functions/public-order/index.ts');
 const registrationEdge = read('supabase/functions/public-registration/index.ts');
 const serviceWorker = read('sw.js');
 
-assert.equal(version, '31.7.2');
+assert.match(version, /^31\.7\./);
 assert.match(index, /integrity="sha384-JBR\+x8bl/);
-assert.ok(index.includes(`v31-7-security.js?v=${version}`));
+assert.doesNotMatch(index, /v31-7-security\.js/);
 assert.match(bridge, /sha384-vtjasyid/);
 assert.match(bridge, /sha384-Pqp51FUN/);
 assert.match(pdf, /sha384-en\/ztfPS/);
@@ -45,9 +45,11 @@ assert.match(registrationEdge, /\.in\('specialty',eventSpecialties\)/);
 assert.match(serviceWorker, /APP_SHELL_URL='\.\/index\.html'/);
 assert.match(serviceWorker, /CDN_ASSETS/);
 assert.match(serviceWorker, /current\.match\(APP_SHELL_URL\)/);
-assert.match(auth, /mfaRequiredWhenEnrolled:true/);
+assert.match(auth, /__BS_ADMIN_MFA_DISABLED=true/);
+assert.match(auth, /mfaRequired:false/);
+assert.doesNotMatch(serviceWorker, /v31-7-security\.js/);
 assert.match(bridge, /aal\?\.nextLevel==='aal2'&&aal\?\.currentLevel!=='aal2'/);
-assert.match(security, /__BS_OPEN_MFA_SETUP=enroll/);
+assert.match(security, /if\(window\.__BS_ADMIN_MFA_DISABLED\)return/);
 
 const football = {id:'football',date:'2099-01-01',specialty:'Section Football',specialties:['Section Football']};
 const shared = {id:'shared',date:'2099-01-02',specialty:'Association Sportive',specialties:['Association Sportive','Section Football']};

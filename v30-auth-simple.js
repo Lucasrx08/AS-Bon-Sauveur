@@ -3,10 +3,13 @@
 
 const AUTH_METHOD='bs-auth-method';
 sessionStorage.setItem(AUTH_METHOD,'pin');
-window.__BS_ADMIN_MFA_DISABLED=false;
+// Restore the V31.6 single-factor login contract. Existing Supabase MFA
+// factors are left untouched; requiring them needs a separate, explicit rollout.
+window.__BS_ADMIN_MFA_DISABLED=true;
 
 function cleanLegacyMfaUi(){
   document.getElementById('v26-security')?.remove();
+  document.getElementById('v317-security')?.remove();
   document.querySelectorAll('[data-v26-secure],.v26-badge').forEach(el=>el.remove());
 }
 
@@ -26,5 +29,5 @@ clean();
 document.addEventListener('DOMContentLoaded',clean,{once:true});
 window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(clean));
 
-window.ASV30_AUTH={version:'31.7.2',mode:'pin-with-progressive-admin-mfa',mfaRequiredWhenEnrolled:true};
+window.ASV30_AUTH={version:'31.7.3',mode:'single-factor-team-access',mfaRequired:false};
 })();

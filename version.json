@@ -1,8 +1,8 @@
 {
-  "version": "31.7.2",
-  "build": "20261005-audit-fixes-r2",
+  "version": "31.7.3",
+  "build": "20261005-admin-access-fix",
   "channel": "stable",
   "releasedAt": "2026-10-05",
-  "message": "Corrections des exports par pôle, de la boutique, du calendrier, du RGPD et du mode hors connexion",
+  "message": "Accès administrateur rétabli sans demande automatique de double authentification ; correctifs de l’audit conservés",
   "serviceWorker": "sw.js"
 }

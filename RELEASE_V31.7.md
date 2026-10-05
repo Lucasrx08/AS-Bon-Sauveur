@@ -14,7 +14,7 @@
 
 - détection des convocations sur toutes les spécialités d’un événement, dans l’interface et dans `public-registration` ;
 - intégrité SRI ajoutée aux bibliothèques externes Supabase, jsPDF, SheetJS et ExcelJS ;
-- double authentification TOTP proposée au compte administrateur sans verrouiller les comptes existants ; une fois activée, elle est exigée à chaque nouvelle session administrateur ;
+- V31.7.0–31.7.2 ont réactivé la demande de double authentification pour les comptes ayant un ancien facteur vérifié ; cette régression d’accès est corrigée en V31.7.3 ;
 - politique de provenance du référent renforcée dans la page.
 
 ## PWA et qualité
@@ -23,6 +23,15 @@
 - navigation hors connexion servie depuis la coque V31.7 avant la page de secours ;
 - ancien test V31.5 rendu indépendant du numéro de version ;
 - nouveau test V31.7 couvrant les corrections fonctionnelles et de sécurité.
+
+## V31.7.3 — correction de la connexion administrateur
+
+- retour au contrat de connexion V31.6 : e-mail et mot de passe pour l’administration, nom et PIN existant pour l’équipe sportive ;
+- aucune demande automatique de code TOTP et retrait du bouton d’activation ajouté par V31.7 ; le module MFA n’est plus chargé ni précaché ;
+- distinction explicite entre PIN d’équipe et accès administrateur dans la fenêtre de connexion ;
+- aucun facteur Supabase supprimé ou réinitialisé, aucune modification des comptes, des PIN, des rôles ni des politiques RLS ;
+- précache et ressources versionnés en V31.7.3 pour remplacer la version concernée ;
+- tests isolés de connexion sans MFA, de refus d’un profil inaccessible et de garde MFA lors d’une activation explicite future ; aucune connexion de production utilisée pour ces tests.
 
 ## Actions de production associées
 

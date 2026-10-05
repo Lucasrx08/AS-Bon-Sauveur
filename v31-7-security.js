@@ -1,7 +1,8 @@
 (() => {
 'use strict';
+if(window.__BS_ADMIN_MFA_DISABLED)return;
 
-const VERSION='31.7.2';
+const VERSION='31.7.3';
 const cfg=window.APP_CONFIG||{};
 let busy=false;
 

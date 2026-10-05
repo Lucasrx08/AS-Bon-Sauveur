@@ -47,7 +47,7 @@ function setStatus(w,msg,type='info'){
 }
 
 function pinLoginModal(){
- const w=modal('Connexion',`<div class="v21-users-intro"><strong>Accès équipe sportive</strong><p>Saisissez simplement votre nom puis votre code PIN à 6 chiffres.</p></div><form id="v21-pin-login" class="v19-form"><label class="full"><span>Nom / Prénom</span><input required name="loginName" autocomplete="username" autocapitalize="words" placeholder="Ex. Lucas Rigaux"></label><label class="full"><span>Code PIN</span><input required name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" placeholder="••••••"></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-admin-email>Accès administrateur</button><button type="button" class="v19-btn" data-pin-submit>Se connecter</button></div></form><div class="v21-user-status" data-pin-status hidden></div>`);
+ const w=modal('Connexion',`<div class="v21-users-intro"><strong>Accès équipe sportive</strong><p>Enseignants et éducateurs : utilisez votre nom et le PIN à 6 chiffres fourni par l’administrateur. Pour l’administration, cliquez sur « Accès administrateur » : connexion par e-mail et mot de passe, sans PIN à créer.</p></div><form id="v21-pin-login" class="v19-form"><label class="full"><span>Nom / Prénom</span><input required name="loginName" autocomplete="username" autocapitalize="words" placeholder="Ex. Lucas Rigaux"></label><label class="full"><span>Code PIN</span><input required name="pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="current-password" placeholder="••••••"></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-admin-email>Accès administrateur</button><button type="button" class="v19-btn" data-pin-submit>Se connecter</button></div></form><div class="v21-user-status" data-pin-status hidden></div>`);
  const form=w.querySelector('#v21-pin-login'),btn=w.querySelector('[data-pin-submit]');
  const submit=()=>loginWithPin(form,w,btn);
  btn.onclick=submit;
@@ -82,7 +82,7 @@ async function loginWithPin(form,w,btn){
 }
 
 function adminEmailModal(){
- const w=modal('Accès administrateur',`<div class="v21-users-intro"><strong>Compte administrateur de secours</strong><p>Cet accès par e-mail est conservé uniquement pour l’administration.</p></div><form id="v21-admin-email-login" class="v19-form"><label class="full"><span>Adresse e-mail</span><input required type="email" name="email" autocomplete="username"></label><label class="full"><span>Mot de passe</span><input required type="password" name="password" autocomplete="current-password"></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back-pin>Retour au PIN</button><button type="button" class="v19-btn" data-email-submit>Se connecter</button></div></form><div class="v21-user-status" data-pin-status hidden></div>`);
+ const w=modal('Accès administrateur',`<div class="v21-users-intro"><strong>Administration</strong><p>Connectez-vous avec votre adresse e-mail et votre mot de passe habituels. Aucun PIN à créer pour cet accès.</p></div><form id="v21-admin-email-login" class="v19-form"><label class="full"><span>Adresse e-mail</span><input required type="email" name="email" autocomplete="username"></label><label class="full"><span>Mot de passe</span><input required type="password" name="password" autocomplete="current-password"></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back-pin>Retour au PIN</button><button type="button" class="v19-btn" data-email-submit>Se connecter</button></div></form><div class="v21-user-status" data-pin-status hidden></div>`);
  const form=w.querySelector('#v21-admin-email-login'),btn=w.querySelector('[data-email-submit]');
  const submit=()=>loginAdminEmail(form,w,btn);
  btn.onclick=submit;form.addEventListener('submit',e=>{e.preventDefault();submit()});form.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit()}});
@@ -108,8 +108,7 @@ async function profileModal(){
  const cached=window.__BS_AUTH_STATE?.();
  if(cached?.user){
   const user=cached.user,role=cached.role||sessionStorage.getItem(VERIFIED)||'public';
-  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(user.name||user.email||'Utilisateur')}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div>${role==='admin'?'<button type="button" class="v19-btn secondary" data-admin-mfa>Configurer la double authentification</button>':''}<button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
-  const mfa=w.querySelector('[data-admin-mfa]');if(mfa)mfa.onclick=()=>window.__BS_OPEN_MFA_SETUP?.();
+  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(user.name||user.email||'Utilisateur')}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
   w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
   return w;
  }
@@ -119,8 +118,7 @@ async function profileModal(){
  let profile=null;
  try{profile=(await sb.from('profiles').select('display_name,role,email').eq('id',session.user.id).single())?.data||null}catch{}
  const name=profile?.display_name||'Utilisateur',role=profile?.role||sessionStorage.getItem(VERIFIED)||'public';
-  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div>${role==='admin'?'<button type="button" class="v19-btn secondary" data-admin-mfa>Configurer la double authentification</button>':''}<button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
-  const mfa=w.querySelector('[data-admin-mfa]');if(mfa)mfa.onclick=()=>window.__BS_OPEN_MFA_SETUP?.();
+  const w=modal('Mon espace',`<div class="v19-stack"><div class="v19-card"><strong>${esc(name)}</strong><div class="v19-meta">${esc(roleLabels[role]||role)}</div></div><button type="button" class="v19-btn" data-pin-logout>Se déconnecter</button></div>`);
  w.querySelector('[data-pin-logout]').onclick=e=>logoutFromModal(w,e.currentTarget);
  return w;
 }
@@ -130,5 +128,5 @@ function install(){
  window.app.profile=profileModal;
 }
 install();
-window.ASV21_PIN_AUTH={version:'31.7.2',singlePassLogin:true,reloadAfterLogin:false};
+window.ASV21_PIN_AUTH={version:'31.7.3',singlePassLogin:true,reloadAfterLogin:false};
 })();

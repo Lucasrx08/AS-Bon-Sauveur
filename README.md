@@ -8,7 +8,8 @@
 - événements sans horaire lisible affichés comme « Horaire à confirmer » ;
 - convocations multi-spécialités prises en compte par le formulaire public et la fonction serveur ;
 - coque PWA et dépendances épinglées disponibles hors connexion ;
-- intégrité SRI des bibliothèques CDN et MFA TOTP administrateur activable sans rupture d’accès.
+- intégrité SRI des bibliothèques CDN ;
+- V31.7.3 : accès administrateur par e-mail et mot de passe rétabli sans demande automatique de second code ; PIN inchangé pour l’équipe sportive.
 
 Voir `RELEASE_V31.7.md` pour le détail et les actions de déploiement.
 
