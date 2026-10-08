@@ -9,7 +9,7 @@ const VERSION='v21.8.1-20260909';
 
 async function ensureDeps(){
  try{await document.fonts?.ready;await Promise.all([document.fonts?.load('48px Anton'),document.fonts?.load('36px Montserrat')])}catch{}
- if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.1');s.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';s.crossOrigin='anonymous';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+ if(!window.jspdf){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.2');s.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';s.crossOrigin='anonymous';s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
 }
 function loadImage(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 let logoPromise=null;function logo(){return logoPromise||(logoPromise=loadImage('assets/logo-as.png?v=20.1'))}

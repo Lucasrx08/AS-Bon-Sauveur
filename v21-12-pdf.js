@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v31.8.1-20261008';
+const VERSION='v31.8.2-20261008';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -9,7 +9,9 @@ const ASSETS={
  tv:'assets/programme-tv-v24-hd.png',
  convocation:'assets/convocation-v21-14-hd.png',
  anton:'assets/fonts/Anton-Regular.ttf',
- broshk:'assets/fonts/BroshK.ttf'
+ broshk:'assets/fonts/BroshK.ttf',
+ sansRegular:'assets/fonts/DejaVuSans-Latin-Regular.ttf',
+ sansBold:'assets/fonts/DejaVuSans-Latin-Bold.ttf'
 };
 const C={
  blue:[45,79,170],dark:[46,46,46],yellow:[255,214,26],paper:[251,250,247],
@@ -76,22 +78,25 @@ async function ensurePdf(){
  if(pdfLoader)return pdfLoader;
  pdfLoader=new Promise((resolve,reject)=>{
   document.querySelector('script[data-v2112-jspdf]')?.remove();
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.1');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.2');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
   const fail=()=>{clearTimeout(timer);script.remove();reject(new Error('Le module PDF ne peut pas être chargé. Vérifiez votre connexion puis réessayez.'))};
   const timer=setTimeout(fail,20000);script.onload=()=>{clearTimeout(timer);if(window.jspdf?.jsPDF)resolve(window.jspdf);else fail()};script.onerror=fail;document.head.appendChild(script);
  }).catch(error=>{pdfLoader=null;throw error});
  return pdfLoader;
 }
-async function installFonts(doc){
+async function installFonts(doc,{eventSans=false}={}){
  const result={anton:false,broshk:false};
- const add=async(path,fileName,family,key)=>{
-  try{const data=await asset(path,'font/ttf');doc.addFileToVFS(fileName,data.split(',')[1]);doc.addFont(fileName,family,'normal','Identity-H');result[key]=true}catch(error){console.warn(`Police ${family} indisponible`,error)}
+ const add=async(path,fileName,family,key,style='normal')=>{
+  try{const data=await asset(path,'font/ttf');doc.addFileToVFS(fileName,data.split(',')[1]);doc.addFont(fileName,family,style,'Identity-H');result[key]=true}catch(error){console.warn(`Police ${family} indisponible`,error)}
  };
- await Promise.all([add(ASSETS.anton,'Anton-Regular.ttf','Anton','anton'),add(ASSETS.broshk,'BroshK.ttf','BroshK','broshk')]);
+ const pending=[add(ASSETS.anton,'Anton-Regular.ttf','Anton','anton'),add(ASSETS.broshk,'BroshK.ttf','BroshK','broshk')];
+ if(eventSans)pending.push(add(ASSETS.sansRegular,'DejaVuSans-Latin-Regular.ttf','AS Sans','sansRegular'),add(ASSETS.sansBold,'DejaVuSans-Latin-Bold.ttf','AS Sans','sansBold','bold'));
+ await Promise.all(pending);
  doc.__asFonts=result;return result;
 }
 function font(doc,kind='body',style='normal'){
  const available=doc.__asFonts||{};
+ if(kind==='eventSans'&&available[style==='bold'?'sansBold':'sansRegular']){doc.setFont('AS Sans',style==='bold'?'bold':'normal');return}
  if(kind==='broshk'&&available.broshk){doc.setFont('BroshK','normal');return}
  if((kind==='anton'||kind==='broshk')&&available.anton){doc.setFont('Anton','normal');return}
  doc.setFont('helvetica',style==='bold'?'bold':'normal');
@@ -151,21 +156,34 @@ function drawEventDate(doc,event,x,y,w,h,theme,{tv=false}={}){
  fill(doc,C.yellow);doc.roundedRect(x+5,monthTop-1.8,w-10,.85,.4,.4,'F');
  font(doc,'anton');doc.setFontSize(month.size);color(doc,theme.accent);doc.text(month.value,x+w/2,monthBaseline,{align:'center'});
 }
-function drawEventTitle(doc,text,x,top,w,h,{maxFont=30,minFont=12,maxLines=2}={}){
- const raw=displayText(text||'Rendez-vous').toUpperCase();let size=maxFont,lines=[];
- const ascender=/[À-ÆÈ-ÖØ-Þ]/.test(raw)?1.11:.88,descender=raw.includes('Ç')?.22:0;
- const lineFactor=Math.max(1.04,ascender+descender+.06);
- font(doc,'anton');
+function eventTitleLayout(doc,text,w,h,{maxFont=22,minFont=12,maxLines=2}={}){
+ const raw=displayText(text||'Rendez-vous').trim();let size=maxFont,lines=[];
+ const ascender=/[À-ÆÈ-ÖØ-Þà-æè-öø-ÿ]/.test(raw)?.94:.74,descender=/[gjpqyÇç]/.test(raw)?.22:0,lineFactor=1.18;
+ font(doc,'eventSans','bold');
  for(;size>=minFont;size-=.5){
   doc.setFontSize(size);lines=doc.splitTextToSize(raw,w);
-  // Anton capitals with French accents are taller than the unaccented cap height.
   if(lines.length<=maxLines&&mm(size)*(ascender+descender+lineFactor*(lines.length-1))<=h)break;
  }
- if(size<minFont){const fitted=fitLines(doc,raw,w,{start:minFont,min:minFont,maxLines,kind:'anton'});lines=fitted.lines;size=minFont}
- font(doc,'anton');doc.setFontSize(size);color(doc,C.dark);
- const cap=mm(size)*ascender,gap=mm(size)*lineFactor,blockH=cap+mm(size)*descender+(lines.length-1)*gap;
- const baseline=top+Math.max(0,(h-blockH)/2)+cap;
- lines.forEach((line,i)=>doc.text(line,x,baseline+i*gap));
+ if(size<minFont){const fitted=fitLines(doc,raw,w,{start:minFont,min:minFont,maxLines,kind:'eventSans',style:'bold'});lines=fitted.lines;size=minFont}
+ const cap=mm(size)*ascender,gap=mm(size)*lineFactor;
+ return{lines,size,cap,gap,height:cap+mm(size)*descender+(lines.length-1)*gap};
+}
+// Both programme formats share the same hierarchy and aligned information columns.
+function drawEventDetails(doc,event,x,top,w,h,{tv=false,compact=false}={}){
+ const metaH=tv?(compact?9.5:13.5):(compact?11.5:13),gap=tv?(compact?1.5:2.2):2.4;
+ const title=eventTitleLayout(doc,event.title,w,h-metaH-gap,{maxFont:tv?(compact?24:28):(compact?18.5:22),minFont:12});
+ const titleTop=top+Math.max(0,(h-title.height-gap-metaH)/2);
+ font(doc,'eventSans','bold');doc.setFontSize(title.size);color(doc,C.ink);
+ title.lines.forEach((line,i)=>doc.text(line,x,titleTop+title.cap+i*title.gap));
+ const lineY=titleTop+title.height+gap;
+ doc.setDrawColor(...C.line);doc.setLineWidth(.3);doc.line(x,lineY,x+w,lineY);
+ const columnGap=tv?8:5,hourW=(w-columnGap)*.38,placeX=x+hourW+columnGap;
+ const labelSize=tv?(compact?8:8.5):7.4,valueSize=tv?(compact?12:14.5):(compact?11:12.5);
+ const labelY=lineY+(tv?(compact?3.1:3.7):3.5),valueY=lineY+(tv?(compact?8:9.3):9);
+ [{x,w:hourW,label:'HORAIRES',text:eventTimeLabel(event)},{x:placeX,w:w-hourW-columnGap,label:'LIEU',text:event.place||'À préciser'}].forEach(c=>{
+  font(doc,'eventSans','bold');doc.setFontSize(labelSize);color(doc,C.muted);doc.text(c.label,c.x,labelY);
+  value(doc,displayText(c.text),c.x,valueY,c.w,{size:valueSize,min:tv?10:9,kind:'eventSans',style:'normal'});
+ });
 }
 function drawProgramEvent(doc,event,slot){
  const {y,h}=slot,x=11.5,w=187,theme=spec(event.specialty),compact=h<=44;
@@ -177,14 +195,8 @@ function drawProgramEvent(doc,event,slot){
  const specialtyWidth=pill(doc,theme.short,tx,tagY,{bg:theme.pale,fg:theme.accent,maxW:Math.min(53,tagRight-tx-30),height:tagH,fontSize:8.6});
  const categoryX=tx+specialtyWidth+2;
  if(tagRight-categoryX>=22)pill(doc,event.ageCategory||'Toutes catégories',categoryX,tagY,{bg:C.soft,fg:C.ink,maxW:tagRight-categoryX,height:tagH,fontSize:8.6});
- const metaH=compact?12.5:16,lineY=y+h-metaH;
- drawEventTitle(doc,event.title,tx,tagY+tagH+1,tw,lineY-tagY-tagH-2,{maxFont:compact?30:h<=62?40:54,minFont:12,maxLines:2});
- doc.setDrawColor(...C.line);doc.setLineWidth(.35);doc.line(tx,lineY,tx+tw,lineY);
- const hourW=55,placeX=tx+hourW+5;
- [{x:tx,w:hourW,l:'HORAIRES',v:eventTimeLabel(event)},{x:placeX,w:tw-hourW-5,l:'LIEU',v:event.place||'À préciser'}].forEach(c=>{
-  label(doc,c.l,c.x,lineY+4.1,theme.accent,8.3);
-  value(doc,displayText(c.v),c.x,y+h-3.3,c.w,{size:compact?12.2:14,min:9});
- });
+ const top=tagY+tagH+2;
+ drawEventDetails(doc,event,tx,top,tw,y+h-3-top,{compact});
 }
 function programSlots(count){
  if(count===1)return[{y:77,h:118}];
@@ -197,7 +209,7 @@ async function buildProgramPdf(selectedEvents){
  const dep=await ensurePdf(),{jsPDF}=dep||{};if(!jsPDF)throw new Error('Module PDF indisponible.');
  const events=(selectedEvents||[]).slice(0,MAX_PROGRAM_EVENTS);if(!events.length)throw new Error('Sélectionnez au moins un événement.');
  const [background]=await Promise.all([asset(ASSETS.programme,'image/png')]);
- const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true,putOnlyUsedFonts:true});await installFonts(doc);doc.addImage(background,'PNG',0,0,210,297,undefined,'FAST');
+ const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true,putOnlyUsedFonts:true});await installFonts(doc,{eventSans:true});doc.addImage(background,'PNG',0,0,210,297,undefined,'FAST');
  programSlots(events.length).forEach((slot,i)=>drawProgramEvent(doc,events[i],slot));
  doc.setProperties({title:`Programme AS - ${periodLabel(events)}`,subject:'Calendrier de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
 }
@@ -209,24 +221,19 @@ function tvSlots(count){
 function drawTvEvent(doc,event,slot){
  const {y,h}=slot,x=13,w=294,theme=spec(event.specialty),compact=h<40;
  card(doc,x,y,w,h,{bg:C.white,border:C.line,r:4.2,line:0.5});fill(doc,theme.accent);doc.roundedRect(x,y,3.5,h,1.7,1.7,'F');
- const dateX=x+6,dateW=35,bodyX=dateX+dateW+5,bodyW=x+w-bodyX-5,tagY=y+3,tagH=7.2;
+ const dateX=x+6,dateW=35,bodyX=dateX+dateW+5,bodyW=x+w-bodyX-5,tagY=y+3,tagH=compact?6:7.2;
  drawEventDate(doc,event,dateX,y+3,dateW,h-6,theme,{tv:true});
  const badgeWidth=drawParticipation(doc,participationBadge(event),bodyX+bodyW,tagY,{height:tagH,fontSize:10.5,maxW:47});
  const tagRight=bodyX+bodyW-(badgeWidth?badgeWidth+3:0);
  let tagX=bodyX;tagX+=pill(doc,theme.short,tagX,tagY,{bg:theme.pale,fg:theme.accent,maxW:80,height:tagH,fontSize:9.5})+2.5;
  if(event.ageCategory&&tagRight-tagX>=22)pill(doc,event.ageCategory,tagX,tagY,{bg:C.soft,fg:C.ink,maxW:Math.min(65,tagRight-tagX),height:tagH,fontSize:9.5});
- const lineY=y+h-(compact?8:11),metaY=y+h-(compact?3.4:4.5);
- drawEventTitle(doc,event.title,bodyX,tagY+tagH+1,bodyW,lineY-tagY-tagH-2,{maxFont:compact?45:h<60?54:68,minFont:14,maxLines:2});
- doc.setDrawColor(...C.line);doc.setLineWidth(.3);doc.line(bodyX,lineY,bodyX+bodyW,lineY);
- label(doc,'HORAIRES',bodyX,metaY,theme.accent,9.5);
- const hourX=bodyX+21;value(doc,eventTimeLabel(event),hourX,metaY,64,{size:compact?12.5:15,min:10});
- const placeX=bodyX+91;label(doc,'LIEU',placeX,metaY,theme.accent,9.5);
- value(doc,displayText(event.place||'Lieu à préciser'),placeX+12,metaY,bodyW-103,{size:compact?12.5:15,min:10});
+ const top=tagY+tagH+(compact?1:1.6);
+ drawEventDetails(doc,event,bodyX,top,bodyW,y+h-2.7-top,{tv:true,compact});
 }
 async function buildTvPdf(selectedEvents){
  const dep=await ensurePdf(),{jsPDF}=dep||{};if(!jsPDF)throw new Error('Module PDF indisponible.');
  const events=(selectedEvents||[]).slice(0,MAX_TV_EVENTS);if(!events.length)throw new Error('Sélectionnez au moins un événement.');
- const background=await asset(ASSETS.tv,'image/png'),doc=new jsPDF({orientation:'landscape',unit:'mm',format:[320,180],compress:true,putOnlyUsedFonts:true});await installFonts(doc);doc.addImage(background,'PNG',0,0,320,180,undefined,'FAST');
+ const background=await asset(ASSETS.tv,'image/png'),doc=new jsPDF({orientation:'landscape',unit:'mm',format:[320,180],compress:true,putOnlyUsedFonts:true});await installFonts(doc,{eventSans:true});doc.addImage(background,'PNG',0,0,320,180,undefined,'FAST');
  tvSlots(events.length).forEach((slot,index)=>drawTvEvent(doc,events[index],slot));
  doc.setProperties({title:`Programme TV AS - ${periodLabel(events)}`,subject:'Programme TV 16:9 de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
 }
