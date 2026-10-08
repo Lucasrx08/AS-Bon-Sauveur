@@ -1,5 +1,5 @@
-const APP_VERSION='31.8.0';
-const BUILD_ID='20261008-calendar-quotas';
+const APP_VERSION='31.8.1';
+const BUILD_ID='20261008-linked-convocations-pdf';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const META_KEY='./__bs_build_meta__';
@@ -13,28 +13,28 @@ const CDN_ASSETS=[
 const PRECACHE=[
   APP_SHELL_URL,
   OFFLINE_URL,
-  './manifest.webmanifest?v=31.8.0',
-  './assets/logo-as.png?v=31.8.0','./assets/logo-as.png',
+  './manifest.webmanifest?v=31.8.1',
+  './assets/logo-as.png?v=31.8.1','./assets/logo-as.png',
   './assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png','./assets/logo-ecoledirecte.svg',
   './assets/shop-sweat-sapphire.webp','./assets/shop-tshirt-skyblue.webp',
   './assets/programme-v21-14-hd.png','./assets/programme-tv-v24-hd.png','./assets/convocation-v21-14-hd.png',
   './assets/fonts/Anton-Regular.ttf','./assets/fonts/BroshK.ttf',
-  './assets/vendor/jspdf.umd.min.js?v=31.8.0',
-  './v19.css?v=31.8.0','./v20.css?v=31.8.0','./v21.css?v=31.8.0','./v21-8-design.css?v=31.8.0',
-  './v21-9-polish.css?v=31.8.0','./v21-10-ui.css?v=31.8.0','./v21-12-pdf.css?v=31.8.0',
-  './v21-15.css?v=31.8.0','./v22.css?v=31.8.0','./v22-1.css?v=31.8.0','./v27.css?v=31.8.0',
-  './v30-specialty-colors.css?v=31.8.0','./v31-mobile.css?v=31.8.0',
-  './v31-release.js?v=31.8.0','./v31-runtime.js?v=31.8.0','./config.js?v=31.8.0',
-  './v29-bootstrap.js?v=31.8.0','./v22-preflight.js?v=31.8.0','./v20-stability.js?v=31.8.0',
-  './v20-preflight.js?v=31.8.0','./v19-app.js?v=31.8.0','./v24-time.js?v=31.8.0',
-  './v20-exports.js?v=31.8.0','./v30-auth-simple.js?v=31.8.0','./v20-bridge.js?v=31.8.0',
-  './v20-admin.js?v=31.8.0','./v20-postboot.js?v=31.8.0','./v21-admin.js?v=31.8.0',
-  './v21-role-guard.js?v=31.8.0','./v21-instagram-button.js?v=31.8.0','./v21-pin-auth.js?v=31.8.0',
-  './v21-8-finance.js?v=31.8.0','./v21-9-admin-icons.js?v=31.8.0','./v21-9-finance.js?v=31.8.0',
-  './v21-10.js?v=31.8.0','./v21-11-reports.js?v=31.8.0','./v21-12-pdf.js?v=31.8.0',
-  './v22-runtime.js?v=31.8.0','./v22-1-privacy.js?v=31.8.0','./v25-1-functional.js?v=31.8.0','./v25-audit-fixes.js?v=31.8.0',
-  './v27.js?v=31.8.0','./v28.js?v=31.8.0','./v29.js?v=31.8.0','./v30-multispecialty.js?v=31.8.0',
-  './v31-mobile-lock.js?v=31.8.0','./v31-6-table-sort.js?v=31.8.0',
+  './assets/vendor/jspdf.umd.min.js?v=31.8.1',
+  './v19.css?v=31.8.1','./v20.css?v=31.8.1','./v21.css?v=31.8.1','./v21-8-design.css?v=31.8.1',
+  './v21-9-polish.css?v=31.8.1','./v21-10-ui.css?v=31.8.1','./v21-12-pdf.css?v=31.8.1',
+  './v21-15.css?v=31.8.1','./v22.css?v=31.8.1','./v22-1.css?v=31.8.1','./v27.css?v=31.8.1',
+  './v30-specialty-colors.css?v=31.8.1','./v31-mobile.css?v=31.8.1',
+  './v31-release.js?v=31.8.1','./v31-runtime.js?v=31.8.1','./config.js?v=31.8.1',
+  './v29-bootstrap.js?v=31.8.1','./v22-preflight.js?v=31.8.1','./v20-stability.js?v=31.8.1',
+  './v20-preflight.js?v=31.8.1','./v19-app.js?v=31.8.1','./v24-time.js?v=31.8.1',
+  './v20-exports.js?v=31.8.1','./v30-auth-simple.js?v=31.8.1','./v20-bridge.js?v=31.8.1',
+  './v20-admin.js?v=31.8.1','./v20-postboot.js?v=31.8.1','./v21-admin.js?v=31.8.1',
+  './v21-role-guard.js?v=31.8.1','./v21-instagram-button.js?v=31.8.1','./v21-pin-auth.js?v=31.8.1',
+  './v21-8-finance.js?v=31.8.1','./v21-9-admin-icons.js?v=31.8.1','./v21-9-finance.js?v=31.8.1',
+  './v21-10.js?v=31.8.1','./v21-11-reports.js?v=31.8.1','./v21-12-pdf.js?v=31.8.1',
+  './v22-runtime.js?v=31.8.1','./v22-1-privacy.js?v=31.8.1','./v25-1-functional.js?v=31.8.1','./v25-audit-fixes.js?v=31.8.1',
+  './v27.js?v=31.8.1','./v28.js?v=31.8.1','./v29.js?v=31.8.1','./v30-multispecialty.js?v=31.8.1',
+  './v31-mobile-lock.js?v=31.8.1','./v31-6-table-sort.js?v=31.8.1',
   ...CDN_ASSETS
 ];
 

@@ -212,8 +212,11 @@ function eventsVisible(){
  return (state.data.events||[]).filter(e=>!sp||eventSpecialtiesOf(e).includes(sp)).slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
 }
 function eventConvocation(e,publishedOnly=false){
+ if(!e)return null;
  const specialties=eventSpecialtiesOf(e);
- return !e?null:(state.data.convocations||[]).find(x=>(!publishedOnly||(x.status||'published')==='published'&&x.publicVisible!==false)&&(String(x.id)===String(e.convocationId||'')||(x.date===e.date&&specialties.includes(x.specialty)&&x.title===e.title)))||null;
+ const visible=x=>!publishedOnly||(x.status||'published')==='published'&&x.publicVisible!==false;
+ if(e.convocationId)return (state.data.convocations||[]).find(x=>String(x.id)===String(e.convocationId)&&visible(x))||null;
+ return (state.data.convocations||[]).find(x=>visible(x)&&x.date===e.date&&specialties.includes(x.specialty)&&x.title===e.title&&!(state.data.events||[]).some(other=>String(other.id)!==String(e.id)&&String(other.convocationId||'')===String(x.id)))||null;
 }
 function eventRegistrationState(e){
  const convocation=eventConvocation(e,true);
@@ -229,7 +232,15 @@ function eventRegistrationAvailable(e){
 function openEventConvocation(id){
  const e=(state.data.events||[]).find(x=>String(x.id)===String(id)),c=eventConvocation(e,true);
  if(c)return openConv(c.id);
+ if(isManager())return prepareConvocation(id);
  toast('Convocation pas encore publiée.',4500);
+}
+function prepareConvocation(eventId){
+ if(!isManager())return;
+ const event=(state.data.events||[]).find(e=>String(e.id)===String(eventId));
+ if(!event||eventRegistrationState(event).mode!=='convocation')return toast('Événement de convocation introuvable.');
+ const existing=eventConvocation(event);
+ return editConv(existing?.id,event.id);
 }
 function eventCard(e){
  const participation=eventRegistrationState(e);
@@ -271,19 +282,24 @@ function calendarPage(){
 }
 function convCard(c){
  const names=(c.studentIds||[]).map(studentName).filter(Boolean);
+ const draft=(c.status||'published')!=='published';
  return `<article class="v19-card v19-conv-card">
-  <div class="v19-row"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}</div><h3>${esc(c.title||'Convocation')}</h3><div class="v19-meta">${fmtLong(c.date)} · ${esc(c.place||'—')}</div></div>${specBadge(c.specialty)}</div>
+  <div class="v19-row"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}${isManager()?` · ${draft?'BROUILLON':'PUBLIÉE'}`:''}</div><h3>${esc(c.title||'Convocation')}</h3><div class="v19-meta">${fmtLong(c.date)} · ${esc(c.place||'—')}</div></div>${specBadge(c.specialty)}</div>
   <div class="v19-conv-names"><strong>Élèves convoqués :</strong> ${esc(names.join(' · ')||(state.role==='public'?'Liste transmise via ÉcoleDirecte':'Aucun élève sélectionné'))}</div>
-  <div class="v19-card-actions"><button class="v19-btn small" onclick="app.openConv('${c.id}')">Consulter</button><button class="v19-btn small yellow" onclick="app.exportConvocation('${c.id}')">Exporter</button>${isManager()?`<button class="v19-link" onclick="app.editConv('${c.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteConv('${c.id}')">Supprimer</button>`:''}</div>
+  <div class="v19-card-actions"><button class="v19-btn small" onclick="app.openConv('${c.id}')">${draft?'Aperçu':'Consulter'}</button><button class="v19-btn small yellow" onclick="app.exportConvocation('${c.id}')">Exporter</button>${isManager()?`<button class="v19-link" onclick="app.editConv('${c.id}')">${draft?'Compléter / Publier':'Modifier'}</button><button class="v19-link danger" onclick="app.deleteConv('${c.id}')">Supprimer</button>`:''}</div>
  </article>`;
+}
+function pendingConvocationCard(e){
+ return `<article class="v19-card v3181-pending-convocation" data-convocation-event="${esc(e.id)}"><div class="v19-row"><div><div class="v19-kicker">CONVOCATION À PRÉPARER</div><h3>${esc(e.title)}</h3><div class="v19-meta">${fmtLong(e.date)} · ${esc(eventTimeLabel(e))} · ${esc(e.place||'À préciser')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div></div>${eventSpecialtiesOf(e).map(specBadge).join('')}</div><div class="v19-card-actions"><button class="v19-btn small" onclick="app.prepareConvocation('${e.id}')">Préparer la convocation</button></div></article>`;
 }
 function convocationsPage(){
  let list=(state.data.convocations||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
  if(!isManager())list=list.filter(c=>(c.status||'published')==='published'&&c.publicVisible!==false);
  if(state.role==='public')list=list.filter(c=>String(c.date||'')>=todayKey());
  if(isEducator()) list=list.filter(c=>c.specialty===roleSpecialty());
+ const pending=isManager()?eventsVisible().filter(e=>String(e.date||'')>=todayKey()&&eventRegistrationState(e).mode==='convocation'&&!eventConvocation(e)):[];
  const actions=isManager()?`<button class="v19-btn" onclick="app.editConv()">+ Convocation</button><button class="v19-btn secondary" onclick="app.exportExcel('convocations')">Exporter Excel</button>`:'';
- return `<div class="v19-container">${pageTitle('CONVOCATIONS','Convocations','Horaires, informations et élèves convoqués.',actions)}<div class="v19-stack">${list.map(convCard).join('')||'<div class="v19-empty">Aucune convocation.</div>'}</div></div>`;
+ return `<div class="v19-container">${pageTitle('CONVOCATIONS','Convocations','Horaires, informations et élèves convoqués.',actions)}${pending.length?`<section class="v3181-pending-section"><h2>Événements à préparer</h2><p>Reprenez un événement du calendrier pour compléter sa convocation.</p><div class="v19-stack">${pending.map(pendingConvocationCard).join('')}</div></section>`:''}<div class="v19-stack">${list.map(convCard).join('')||(!pending.length?'<div class="v19-empty">Aucune convocation.</div>':'')}</div></div>`;
 }
 function licensesPage(){
  if(!isManager()) return denied();
@@ -482,28 +498,65 @@ function openConv(id){
   <div class="v19-students"><h3>Élèves convoqués</h3><div>${names.length?names.map(n=>`<span>${esc(n)}</span>`).join(''):`<span>${esc(state.role==='public'?'Liste transmise via ÉcoleDirecte':'Aucun élève sélectionné.')}</span>`}</div></div>
   <div class="v19-modal-actions"><button class="v19-btn yellow" onclick="app.exportConvocation('${c.id}')">Exporter la convocation</button></div>`,true);
 }
-function editConv(id){
- if(!isManager())return;const c=id?(state.data.convocations||[]).find(x=>x.id===id):null;
+function editConv(id,eventId=''){
+ if(!isManager())return;
+ let c=id?(state.data.convocations||[]).find(x=>String(x.id)===String(id)):null;
+ if(id&&!c)return toast('Convocation introuvable.');
+ let event=eventId?(state.data.events||[]).find(e=>String(e.id)===String(eventId)):null;
+ if(eventId&&!event)return toast('Événement introuvable.');
+ if(event&&!c)c=eventConvocation(event);
+ if(c&&!event)event=(state.data.events||[]).find(e=>String(e.convocationId||'')===String(c.id))||(state.data.events||[]).find(e=>e.registrationMode==='convocation'&&eventConvocation(e)?.id===c.id);
+ const specialties=event?eventSpecialtiesOf(event):SPECIALTIES;
+ const primary=event?.__bsPrimarySpecialty||event?.specialty;
+ const initial=c||{title:event?.title,ageCategory:event?.ageCategory,specialty:specialties.includes(primary)?primary:specialties[0],date:event?.date,place:event?.place,departure:event?.startTime,returnTime:event?.endTime};
+ const calendarEvents=eventsVisible().filter(e=>e.registrationMode==='convocation'||e.convocationId||e.id===event?.id);
+ const convId=c?.id||uid('c'),published=!!c&&(c.status||'published')==='published';
  const licensed=(state.data.licenses||[]).slice().sort((a,b)=>(a.fullName||'').localeCompare(b.fullName||'','fr'));
  const checked=new Set(c?.studentIds||[]);
- const m=modal(id?'Modifier une convocation':'Ajouter une convocation',`<form id="v19-conv-form" class="v19-form">
-  <label><span>Activité</span><select name="activity">${options(ACTIVITIES,c?.activity||'Football')}</select></label>
-  <label class="full"><span>Titre</span><input name="title" required value="${esc(c?.title||'')}"></label>
-  <label><span>Catégorie</span><select name="ageCategory">${options(AGE_CATEGORIES,c?.ageCategory||'Benjamin')}</select></label>
-  <label><span>Spécialité</span><select name="specialty">${options(SPECIALTIES,c?.specialty||'Association Sportive')}</select></label>
-  <label><span>Date</span><input type="date" name="date" required value="${esc(c?.date||new Date().toISOString().slice(0,10))}"></label>
-  <label><span>Lieu</span><input name="place" value="${esc(c?.place||'')}"></label>
-  <label><span>Heure de départ</span><input type="time" name="departure" value="${esc(c?.departure||'')}"></label>
-  <label><span>Heure de retour</span><input type="time" name="returnTime" value="${esc(c?.returnTime||'')}"></label>
-  <label class="full"><span>Point de rendez-vous</span><input name="meetingPoint" value="${esc(c?.meetingPoint||'')}"></label>
-  <label class="full"><span>Professeur référent</span><select name="teacher" required><option value="">Choisir un professeur</option>${options(TEACHERS,c?.teacher||'',null)}</select></label>
-  <label class="full"><span>Informations importantes</span><textarea name="extraInfo" rows="4" placeholder="Repas, tenue, consignes, changement d’horaire…">${esc(c?.extraInfo||'')}</textarea></label>
+ const m=modal(c?'Modifier une convocation':event?'Préparer la convocation':'Ajouter une convocation',`<form id="v19-conv-form" class="v19-form">
+  <label class="full v3181-calendar-source"><span>Événement du calendrier</span><select name="calendarEvent" ${c&&event?'disabled':''}><option value="">Convocation indépendante (sans événement)</option>${calendarEvents.map(e=>`<option value="${esc(e.id)}" ${String(e.id)===String(event?.id)?'selected':''}>${esc(fmtShort(e.date)+' · '+e.title+' · '+(e.ageCategory||'Toutes catégories'))}</option>`).join('')}</select><small>${event?'Les informations du calendrier sont reprises ci-dessous. Vos modifications seront reportées dans le calendrier à la publication.':'Choisissez un événement marqué « Convocation » pour reprendre ses informations.'}</small></label>
+  <label><span>Activité</span><select name="activity">${options(ACTIVITIES,initial.activity||ACTIVITIES.find(a=>norm(event?.title||'').includes(norm(a)))||'Football')}</select></label>
+  <label class="full"><span>Titre</span><input name="title" required value="${esc(initial.title||'')}"></label>
+  <label><span>Catégorie</span><select name="ageCategory">${options(AGE_CATEGORIES,initial.ageCategory||'Benjamin')}</select></label>
+  <label><span>Spécialité</span><select name="specialty">${options(specialties,initial.specialty||'Association Sportive')}</select></label>
+  <label><span>Date</span><input type="date" name="date" required value="${esc(initial.date||todayKey())}"></label>
+  <label><span>Lieu</span><input name="place" value="${esc(initial.place||'')}"></label>
+  <label><span>Heure de départ</span><input type="time" name="departure" value="${esc(shortTimeValue(initial.departure))}"></label>
+  <label><span>Heure de retour</span><input type="time" name="returnTime" value="${esc(shortTimeValue(initial.returnTime))}"></label>
+  <label class="full"><span>Point de rendez-vous</span><input name="meetingPoint" value="${esc(initial.meetingPoint||'')}"></label>
+  <label class="full"><span>Professeur référent (pour publier)</span><select name="teacher" required><option value="">Choisir un professeur</option>${options(TEACHERS,initial.teacher||'',null)}</select></label>
+  <label class="full"><span>Informations importantes</span><textarea name="extraInfo" rows="4" placeholder="Repas, tenue, consignes, changement d’horaire…">${esc(initial.extraInfo||'')}</textarea></label>
   <div class="full"><span class="v19-label">Élèves convoqués</span><div class="v19-student-picker">${licensed.map(l=>`<label><input type="checkbox" name="studentIds" value="${esc(l.studentId)}" ${checked.has(l.studentId)?'checked':''}><span><strong>${esc(l.fullName)}</strong><small>${esc(l.className)} · ${esc(l.category)} · ${esc(l.sectionOption)}</small></span></label>`).join('')}</div></div>
-  <div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer</button></div>
+  <div class="full v2115-form-status" data-convocation-status aria-live="polite"></div>
+  <div class="full v19-modal-actions">${published?'':'<button class="v19-btn secondary" type="submit" name="publication" value="draft" formnovalidate>Enregistrer le brouillon</button>'}<button class="v19-btn" type="submit" name="publication" value="published">${published?'Mettre à jour':'Publier la convocation'}</button></div>
  </form>`,true);
- const form=m.querySelector('#v19-conv-form'),button=form.querySelector('button[type="submit"]');
- form.onsubmit=async ev=>{ev.preventDefault();const fd=new FormData(form),o={id:c?.id||uid('c'),activity:fd.get('activity'),title:String(fd.get('title')||'').trim(),ageCategory:fd.get('ageCategory'),specialty:fd.get('specialty'),date:fd.get('date'),place:String(fd.get('place')||'').trim(),departure:fd.get('departure'),returnTime:fd.get('returnTime'),meetingPoint:String(fd.get('meetingPoint')||'').trim(),teacher:fd.get('teacher'),extraInfo:String(fd.get('extraInfo')||'').trim(),studentIds:fd.getAll('studentIds')};if(!o.teacher)return alert('Choisissez le professeur référent.');const match=(state.data.events||[]).find(e=>e.date===o.date&&e.specialty===o.specialty&&e.title===o.title);button.disabled=true;button.textContent='Enregistrement…';try{if(typeof window.__BS_PERSIST_CONVOCATION!=='function')throw new Error('SERVICE_UNAVAILABLE');const saved=await window.__BS_PERSIST_CONVOCATION(o,match?.id||'');const finalConv={...o,...saved,studentIds:o.studentIds};c?Object.assign(c,finalConv):state.data.convocations.push(finalConv);(state.data.events||[]).forEach(e=>{if(String(e.convocationId||'')===String(o.id))e.convocationId=null});if(match){match.convocationId=o.id;match.registrationOpen=false}save();closeModal();render();(window.__BS_SAVED?window.__BS_SAVED('Convocation enregistrée'):toast('Convocation enregistrée dans la base centrale.'))}catch(error){console.error('Enregistrement convocation',error);button.disabled=false;button.textContent='Enregistrer';toast('Convocation non enregistrée : vérifiez votre connexion puis réessayez.',4800)}};
+ const form=m.querySelector('#v19-conv-form'),status=form.querySelector('[data-convocation-status]'),buttons=[...form.querySelectorAll('button[type="submit"]')];let saving=false;
+ form.elements.calendarEvent.onchange=()=>editConv(undefined,form.elements.calendarEvent.value);
+ form.onsubmit=async ev=>{
+  ev.preventDefault();if(saving)return;
+  const fd=new FormData(form),publication=ev.submitter?.value==='draft'?'draft':'published';
+  const o={id:convId,activity:fd.get('activity'),title:String(fd.get('title')||'').trim(),ageCategory:fd.get('ageCategory'),specialty:fd.get('specialty'),date:fd.get('date'),place:String(fd.get('place')||'').trim(),departure:fd.get('departure'),returnTime:fd.get('returnTime'),meetingPoint:String(fd.get('meetingPoint')||'').trim(),teacher:fd.get('teacher'),extraInfo:String(fd.get('extraInfo')||'').trim(),studentIds:fd.getAll('studentIds'),status:publication,publicVisible:publication==='published'};
+  status.textContent='';status.className='full v2115-form-status';
+  if(!o.title||!o.date||publication==='published'&&!o.teacher){status.textContent='Renseignez le titre, la date et, pour publier, le professeur référent.';status.classList.add('error');return}
+  saving=true;buttons.forEach(b=>b.disabled=true);status.textContent='Enregistrement…';
+  try{
+   if(typeof window.__BS_PERSIST_CONVOCATION!=='function')throw new Error('SERVICE_UNAVAILABLE');
+   const result=await window.__BS_PERSIST_CONVOCATION(o,event?.id||'');
+   const saved=result?.convocation||result;if(!saved?.id)throw new Error('CONVOCATION_SAVE_UNCONFIRMED');
+   const finalConv={...o,...saved},current=(state.data.convocations||[]).find(x=>String(x.id)===String(o.id));
+   current?Object.assign(current,finalConv):state.data.convocations.push(finalConv);
+   (result.detachedEventIds||[]).forEach(detached=>{const e=(state.data.events||[]).find(x=>String(x.id)===String(detached));if(e)e.convocationId=null});
+   if(event){const e=(state.data.events||[]).find(x=>String(x.id)===String(event.id));if(e)Object.assign(e,result.event||{convocationId:o.id,registrationOpen:false,registrationMode:'convocation'})}
+   save();if(m.isConnected)closeModal();render({preserveScroll:true});
+   const message=publication==='draft'?'Brouillon enregistré · à publier pour les élèves':'Convocation publiée · disponible dans le calendrier et les convocations';
+   (window.__BS_SAVED||toast)(message);
+  }catch(error){
+   console.error('Enregistrement convocation',error);saving=false;buttons.forEach(b=>b.disabled=false);
+   status.textContent=String(error?.message||'').includes('CONVOCATION_EVENT_ALREADY_LINKED')?'Une convocation a déjà été préparée pour cet événement. Actualisez la liste pour la compléter.':'Convocation non enregistrée : vérifiez votre connexion puis réessayez.';status.classList.add('error');
+  }
+ };
 }
+function shortTimeValue(value){return String(value||'').slice(0,5)}
 function deleteConv(id){if(!isManager()||!confirm('Supprimer cette convocation ?'))return;state.data.convocations=state.data.convocations.filter(c=>c.id!==id);(state.data.events||[]).forEach(e=>{if(e.convocationId===id)e.convocationId=null});save();render()}
 
 function editLicense(id){
@@ -780,7 +833,7 @@ async function exportRegistrationsExcel(){
 
 window.app={
  go,openPublicSpecialty,theme,profile,setRole,closeModal,search,
- editEvent,deleteEvent,openConv,openEventConvocation,editConv,deleteConv,
+ editEvent,deleteEvent,openConv,openEventConvocation,eventConvocation,prepareConvocation,editConv,deleteConv,
  editLicense,toggleLicensePayment,licenseFilter,clearLicenseFilters,
  editReport,deleteReport,order,toggleOrder,
  setTerm,editApp,saveAppDraft,validateApp,copyApp,copyReviewApp,

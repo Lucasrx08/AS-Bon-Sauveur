@@ -59,6 +59,7 @@ function productById(id){return (currentData().products||[]).find(p=>String(p.id
 function eventById(id){return (currentData().events||[]).find(e=>String(e.id)===String(id))}
 function linkedConvocation(event){
   if(!event)return null;
+  if(typeof window.app?.eventConvocation==='function')return window.app.eventConvocation(event);
   const specialties=window.app?.eventSpecialties?.(event)||[...(Array.isArray(event.specialties)?event.specialties:[]),event.specialty].filter(Boolean);
   return (currentData().convocations||[]).find(c=>String(c.id)===String(event.convocationId||'')||(c.date===event.date&&specialties.includes(c.specialty)&&c.title===event.title))||null;
 }

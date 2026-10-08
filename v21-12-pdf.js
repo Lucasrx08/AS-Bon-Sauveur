@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v31.8.0-20261007';
+const VERSION='v31.8.1-20261008';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -50,7 +50,7 @@ function shortDate(value){return parseDate(value).toLocaleDateString('fr-FR',{da
 function shortTime(value){const match=String(value||'').match(/^(\d{1,2}):(\d{2})/);return match?`${match[1].padStart(2,'0')}:${match[2]}`:String(value||'')}
 function eventSpecialties(event){const fromApp=window.app?.eventSpecialties?.(event);if(Array.isArray(fromApp)&&fromApp.length)return fromApp;const raw=Array.isArray(event?.specialties)?event.specialties:[];return[...new Set([...raw,event?.specialty].filter(Boolean))]}
 function eventTimeLabel(event,separator=' - '){const fromApp=window.app?.eventTimeLabel?.(event,separator);if(fromApp)return fromApp;const start=shortTime(event?.startTime),end=shortTime(event?.endTime);if((!start&&!end)||(start==='00:00'&&end==='00:00'))return'Horaire à confirmer';return start&&end?`${start}${separator}${end}`:start||end||'Horaire à confirmer'}
-function hasLinkedConvocation(event){if(event?.registrationMode==='convocation'||event?.convocationId)return true;const specialties=eventSpecialties(event);return(read().convocations||[]).some(c=>(c.status||'published')==='published'&&c.publicVisible!==false&&(c.date===event?.date&&c.title===event?.title&&specialties.includes(c.specialty)))}
+function hasLinkedConvocation(event){if(typeof window.app?.eventRegistrationState==='function')return window.app.eventRegistrationState(event).mode==='convocation';if(event?.registrationMode==='convocation'||event?.convocationId)return true;const specialties=eventSpecialties(event);return(read().convocations||[]).some(c=>(c.status||'published')==='published'&&c.publicVisible!==false&&(c.date===event?.date&&c.title===event?.title&&specialties.includes(c.specialty)))}
 function orderedEvents(){
  const activeSpecialty=window.app?.calendarSpecialty?.()||window.app?.roleSpecialty?.();
  return (read().events||[]).filter(e=>String(e.date||'')>=today()).filter(e=>!activeSpecialty||eventSpecialties(e).includes(activeSpecialty)).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
@@ -76,7 +76,7 @@ async function ensurePdf(){
  if(pdfLoader)return pdfLoader;
  pdfLoader=new Promise((resolve,reject)=>{
   document.querySelector('script[data-v2112-jspdf]')?.remove();
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.0');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.1');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
   const fail=()=>{clearTimeout(timer);script.remove();reject(new Error('Le module PDF ne peut pas être chargé. Vérifiez votre connexion puis réessayez.'))};
   const timer=setTimeout(fail,20000);script.onload=()=>{clearTimeout(timer);if(window.jspdf?.jsPDF)resolve(window.jspdf);else fail()};script.onerror=fail;document.head.appendChild(script);
  }).catch(error=>{pdfLoader=null;throw error});
@@ -126,18 +126,65 @@ function infoBox(doc,labelText,valueText,x,y,w,h,accent,{valueSize=11,minValueSi
  card(doc,x,y,w,h,{bg:C.soft,border:C.line,r:3,line:0.35});label(doc,labelText,x+4,y+5.5,accent,labelSize);
  const out=fitLines(doc,valueText||'—',w-8,{start:valueSize,min:minValueSize,maxLines,kind:'body',style:'bold'});color(doc,C.ink);font(doc,'body','bold');doc.setFontSize(out.size);const gap=mm(out.size)*1.05;out.lines.forEach((line,i)=>doc.text(line,x+4,y+11.8+i*gap));
 }
+function participationBadge(event){
+ if(hasLinkedConvocation(event))return{text:'CONVOCATION',bg:[7,87,201],fg:C.white};
+ if(event?.registrationMode==='open'||event?.registrationOpen)return{text:'INSCRIPTION LIBRE',bg:C.yellow,fg:C.ink};
+ return null;
+}
+function drawParticipation(doc,badge,right,y,{height=8,fontSize=10,maxW=42}={}){
+ if(!badge)return 0;
+ font(doc,'anton');doc.setFontSize(fontSize);
+ const width=Math.min(maxW,Math.max(29,doc.getTextWidth(badge.text)+8));
+ pill(doc,badge.text,right-width,y,{bg:badge.bg,fg:badge.fg,maxW:width,height,fontSize});
+ return width;
+}
+function drawEventDate(doc,event,x,y,w,h,theme,{tv=false}={}){
+ card(doc,x,y,w,h,{bg:theme.pale,border:theme.pale,r:3.4,line:0});
+ const dp=dateParts(event.date),weekday=fitOne(doc,dp.weekday,w-4,{start:tv?8.8:9,min:7.2,kind:'anton'});
+ font(doc,'anton');doc.setFontSize(weekday.size);color(doc,theme.accent);doc.text(weekday.value,x+w/2,y+5.5,{align:'center'});
+ const month=fitOne(doc,tv?`${dp.month} ${dp.year}`:dp.month,w-3,{start:tv?15.5:17,min:11.5,kind:'anton'});
+ const monthBaseline=y+h-4,monthTop=monthBaseline-mm(month.size)*(/[À-ÖØ-Þ]/.test(month.value)?1.11:.88);
+ const dayBandTop=y+8,dayBandBottom=monthTop-3;
+ const daySize=Math.min(tv?68:86,Math.max(24,(dayBandBottom-dayBandTop)/(.88*.352778)));
+ font(doc,'anton');doc.setFontSize(daySize);color(doc,theme.accent);
+ doc.text(dp.day,x+w/2,dayBandTop+((dayBandBottom-dayBandTop)+mm(daySize)*.88)/2,{align:'center'});
+ fill(doc,C.yellow);doc.roundedRect(x+5,monthTop-1.8,w-10,.85,.4,.4,'F');
+ font(doc,'anton');doc.setFontSize(month.size);color(doc,theme.accent);doc.text(month.value,x+w/2,monthBaseline,{align:'center'});
+}
+function drawEventTitle(doc,text,x,top,w,h,{maxFont=30,minFont=12,maxLines=2}={}){
+ const raw=displayText(text||'Rendez-vous').toUpperCase();let size=maxFont,lines=[];
+ const ascender=/[À-ÆÈ-ÖØ-Þ]/.test(raw)?1.11:.88,descender=raw.includes('Ç')?.22:0;
+ const lineFactor=Math.max(1.04,ascender+descender+.06);
+ font(doc,'anton');
+ for(;size>=minFont;size-=.5){
+  doc.setFontSize(size);lines=doc.splitTextToSize(raw,w);
+  // Anton capitals with French accents are taller than the unaccented cap height.
+  if(lines.length<=maxLines&&mm(size)*(ascender+descender+lineFactor*(lines.length-1))<=h)break;
+ }
+ if(size<minFont){const fitted=fitLines(doc,raw,w,{start:minFont,min:minFont,maxLines,kind:'anton'});lines=fitted.lines;size=minFont}
+ font(doc,'anton');doc.setFontSize(size);color(doc,C.dark);
+ const cap=mm(size)*ascender,gap=mm(size)*lineFactor,blockH=cap+mm(size)*descender+(lines.length-1)*gap;
+ const baseline=top+Math.max(0,(h-blockH)/2)+cap;
+ lines.forEach((line,i)=>doc.text(line,x,baseline+i*gap));
+}
 function drawProgramEvent(doc,event,slot){
- const {y,h}=slot,x=11.5,w=187,theme=spec(event.specialty),compact=h<=44;card(doc,x,y,w,h,{bg:C.white,border:C.line,r:4.2,line:0.55});fill(doc,theme.accent);doc.roundedRect(x,y,3.2,h,1.5,1.5,'F');
- const dx=x+5.5,dy=y+4,dw=30.5,dh=h-8;card(doc,dx,dy,dw,dh,{bg:theme.pale,border:theme.pale,r:3.5,line:0});
- const dp=dateParts(event.date);font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?8.2:9);doc.text(dp.weekday,dx+dw/2,y+8,{align:'center'});doc.setFontSize(compact?30:35);doc.text(dp.day,dx+dw/2,y+(compact?23:Math.min(31,h*.58)),{align:'center'});fill(doc,C.yellow);doc.rect(dx+6,y+h-13,18.5,1.6,'F');font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?9.8:10.8);doc.text(`${dp.monthShort}${compact?'':' '+dp.year}`,dx+dw/2,y+h-5,{align:'center'});
- const tx=x+40.5,tw=w-46.5,hasConv=hasLinkedConvocation(event);
- const tagY=y+4,pw=pill(doc,theme.short,tx,tagY,{bg:theme.pale,fg:theme.accent,maxW:hasConv?64:75,height:8,fontSize:8.2}),categoryX=tx+pw+2.5,categoryRight=hasConv?x+w-37.5:x+w-5;
- if(event.ageCategory&&categoryRight-categoryX>=22)pill(doc,event.ageCategory,categoryX,tagY,{bg:[255,247,204],fg:[111,91,0],maxW:categoryRight-categoryX,height:8,fontSize:8.2});
- const lineY=y+h-(compact?13:16),title=compact?(()=>{const one=fitOne(doc,displayText(event.title||'Rendez-vous').toUpperCase(),tw,{start:21,min:13,kind:'broshk'});return{lines:[one.value],size:one.size}})():fitLines(doc,displayText(event.title||'Rendez-vous').toUpperCase(),tw,{start:22,min:14,maxLines:2,kind:'broshk'});font(doc,'broshk');doc.setFontSize(title.size);color(doc,C.dark);const titleGap=mm(title.size)*.94;title.lines.forEach((line,i)=>doc.text(line,tx,y+(compact?19:20)+i*titleGap));
+ const {y,h}=slot,x=11.5,w=187,theme=spec(event.specialty),compact=h<=44;
+ card(doc,x,y,w,h,{bg:C.white,border:C.line,r:4.2,line:0.55});fill(doc,theme.accent);doc.roundedRect(x,y,3.2,h,1.5,1.5,'F');
+ drawEventDate(doc,event,x+5.5,y+3.5,29.5,h-7,theme);
+ const tx=x+39,tw=w-44,tagY=y+3.5,tagH=7.5;
+ const badgeWidth=drawParticipation(doc,participationBadge(event),x+w-4,tagY,{height:tagH,fontSize:9.7,maxW:40});
+ const tagRight=x+w-4-(badgeWidth?badgeWidth+2.5:0);
+ const specialtyWidth=pill(doc,theme.short,tx,tagY,{bg:theme.pale,fg:theme.accent,maxW:Math.min(53,tagRight-tx-30),height:tagH,fontSize:8.6});
+ const categoryX=tx+specialtyWidth+2;
+ if(tagRight-categoryX>=22)pill(doc,event.ageCategory||'Toutes catégories',categoryX,tagY,{bg:C.soft,fg:C.ink,maxW:tagRight-categoryX,height:tagH,fontSize:8.6});
+ const metaH=compact?12.5:16,lineY=y+h-metaH;
+ drawEventTitle(doc,event.title,tx,tagY+tagH+1,tw,lineY-tagY-tagH-2,{maxFont:compact?30:h<=62?40:54,minFont:12,maxLines:2});
  doc.setDrawColor(...C.line);doc.setLineWidth(.35);doc.line(tx,lineY,tx+tw,lineY);
- const cols=[{x:tx,w:43,l:'CATÉGORIE',v:event.ageCategory||'Toutes catégories'},{x:tx+47,w:39,l:'HORAIRES',v:eventTimeLabel(event)},{x:tx+90,w:tw-90,l:'LIEU',v:event.place||'À préciser'}];
- cols.forEach(c=>{label(doc,c.l,c.x,lineY+4.6,theme.accent,8.2);value(doc,c.v,c.x,lineY+10.7,c.w,{size:11.2,min:7.8})});
- if(hasConv){fill(doc,C.yellow);doc.roundedRect(x+w-34.5,tagY,29.5,8,4,4,'F');font(doc,'anton');doc.setFontSize(7.8);color(doc,[78,65,0]);doc.text('CONVOCATION',x+w-19.75,tagY+5.45,{align:'center'})}
+ const hourW=55,placeX=tx+hourW+5;
+ [{x:tx,w:hourW,l:'HORAIRES',v:eventTimeLabel(event)},{x:placeX,w:tw-hourW-5,l:'LIEU',v:event.place||'À préciser'}].forEach(c=>{
+  label(doc,c.l,c.x,lineY+4.1,theme.accent,8.3);
+  value(doc,displayText(c.v),c.x,y+h-3.3,c.w,{size:compact?12.2:14,min:9});
+ });
 }
 function programSlots(count){
  if(count===1)return[{y:77,h:118}];
@@ -160,20 +207,21 @@ function tvSlots(count){
  return[{y:54,h:34},{y:93,h:34},{y:132,h:34}];
 }
 function drawTvEvent(doc,event,slot){
- const {y,h}=slot,x=13,w=294,theme=spec(event.specialty),compact=h<40,roomy=h>60;
+ const {y,h}=slot,x=13,w=294,theme=spec(event.specialty),compact=h<40;
  card(doc,x,y,w,h,{bg:C.white,border:C.line,r:4.2,line:0.5});fill(doc,theme.accent);doc.roundedRect(x,y,3.5,h,1.7,1.7,'F');
- const dateX=x+6,dateY=y+(compact?3:5),dateW=38,dateH=h-(compact?6:10);card(doc,dateX,dateY,dateW,dateH,{bg:theme.pale,border:theme.pale,r:3.4,line:0});
- const dp=dateParts(event.date);font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?6.8:8.2);doc.text(dp.weekday,dateX+dateW/2,dateY+(compact?5.3:6.7),{align:'center'});doc.setFontSize(compact?23:roomy?38:31);doc.text(dp.day,dateX+dateW/2,dateY+(compact?20.2:roomy?31:27),{align:'center'});fill(doc,C.yellow);doc.rect(dateX+7,dateY+dateH-(compact?7.2:9),24,1.5,'F');font(doc,'anton');color(doc,theme.accent);doc.setFontSize(compact?7.4:9);doc.text(`${dp.monthShort} ${dp.year}`,dateX+dateW/2,dateY+dateH-(compact?2.2:3),{align:'center'});
- const bodyX=dateX+dateW+7,bodyW=x+w-bodyX-6,tagY=y+(compact?3:5),tagH=compact?6.7:8;
- let tagX=bodyX;tagX+=pill(doc,theme.short,tagX,tagY,{bg:theme.pale,fg:theme.accent,maxW:78,height:tagH,fontSize:compact?6.6:7.8})+2.2;
- if(event.ageCategory)tagX+=pill(doc,event.ageCategory,tagX,tagY,{bg:[255,247,204],fg:[111,91,0],maxW:62,height:tagH,fontSize:compact?6.6:7.8})+2.2;
- const hasConv=hasLinkedConvocation(event);
- if(hasConv)pill(doc,'CONVOCATION',tagX,tagY,{bg:C.yellow,fg:[78,65,0],maxW:38,height:tagH,fontSize:compact?6.5:7.6});
- const titleY=y+(compact?20.2:roomy?32:27),title=roomy?fitLines(doc,displayText(event.title||'Rendez-vous').toUpperCase(),bodyW,{start:34,min:19,maxLines:2,kind:'broshk'}):(()=>{const one=fitOne(doc,displayText(event.title||'Rendez-vous').toUpperCase(),bodyW,{start:compact?23:29,min:compact?14:18,kind:'broshk'});return{lines:[one.value],size:one.size}})();
- font(doc,'broshk');doc.setFontSize(title.size);color(doc,C.dark);const titleGap=mm(title.size)*.95;title.lines.forEach((line,index)=>doc.text(line,bodyX,titleY+index*titleGap));
- const metaY=y+h-(compact?3.8:5.2),hours=eventTimeLabel(event),place=displayText(event.place||'Lieu à préciser');
- font(doc,'anton');doc.setFontSize(compact?7.2:8.6);color(doc,theme.accent);doc.text('HORAIRES',bodyX,metaY);const hourX=bodyX+(compact?17:21);value(doc,hours,hourX,metaY,compact?40:49,{size:compact?9.2:11,min:7.2});
- const placeX=hourX+(compact?45:55);font(doc,'anton');doc.setFontSize(compact?7.2:8.6);color(doc,theme.accent);doc.text('LIEU',placeX,metaY);value(doc,place,placeX+(compact?10:13),metaY,bodyX+bodyW-placeX-(compact?10:13),{size:compact?9.2:11,min:7.2});
+ const dateX=x+6,dateW=35,bodyX=dateX+dateW+5,bodyW=x+w-bodyX-5,tagY=y+3,tagH=7.2;
+ drawEventDate(doc,event,dateX,y+3,dateW,h-6,theme,{tv:true});
+ const badgeWidth=drawParticipation(doc,participationBadge(event),bodyX+bodyW,tagY,{height:tagH,fontSize:10.5,maxW:47});
+ const tagRight=bodyX+bodyW-(badgeWidth?badgeWidth+3:0);
+ let tagX=bodyX;tagX+=pill(doc,theme.short,tagX,tagY,{bg:theme.pale,fg:theme.accent,maxW:80,height:tagH,fontSize:9.5})+2.5;
+ if(event.ageCategory&&tagRight-tagX>=22)pill(doc,event.ageCategory,tagX,tagY,{bg:C.soft,fg:C.ink,maxW:Math.min(65,tagRight-tagX),height:tagH,fontSize:9.5});
+ const lineY=y+h-(compact?8:11),metaY=y+h-(compact?3.4:4.5);
+ drawEventTitle(doc,event.title,bodyX,tagY+tagH+1,bodyW,lineY-tagY-tagH-2,{maxFont:compact?45:h<60?54:68,minFont:14,maxLines:2});
+ doc.setDrawColor(...C.line);doc.setLineWidth(.3);doc.line(bodyX,lineY,bodyX+bodyW,lineY);
+ label(doc,'HORAIRES',bodyX,metaY,theme.accent,9.5);
+ const hourX=bodyX+21;value(doc,eventTimeLabel(event),hourX,metaY,64,{size:compact?12.5:15,min:10});
+ const placeX=bodyX+91;label(doc,'LIEU',placeX,metaY,theme.accent,9.5);
+ value(doc,displayText(event.place||'Lieu à préciser'),placeX+12,metaY,bodyW-103,{size:compact?12.5:15,min:10});
 }
 async function buildTvPdf(selectedEvents){
  const dep=await ensurePdf(),{jsPDF}=dep||{};if(!jsPDF)throw new Error('Module PDF indisponible.');

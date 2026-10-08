@@ -63,7 +63,7 @@ const context = {
   setTimeout,
   clearTimeout,
   document:{querySelectorAll:()=>[],addEventListener:()=>{}},
-  window:{app:{
+  window:{addEventListener(){},app:{
     readData:()=>({events:[football,shared,climbing],convocations:[]}),
     calendarSpecialty:()=> 'Section Football',
     roleSpecialty:()=> null,

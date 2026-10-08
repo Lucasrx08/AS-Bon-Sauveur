@@ -1,8 +1,8 @@
 {
-  "version": "31.8.0",
-  "build": "20261008-calendar-quotas",
+  "version": "31.8.1",
+  "build": "20261008-linked-convocations-pdf",
   "channel": "stable",
   "releasedAt": "2026-10-08",
-  "message": "Calendrier : participation, convocations et quotas ; PDF réparés ; licences et gestion des commandes sans retour en haut",
+  "message": "Convocations reprises depuis le calendrier, brouillons et publication liée ; exports PDF et TV recomposés",
   "serviceWorker": "sw.js"
 }

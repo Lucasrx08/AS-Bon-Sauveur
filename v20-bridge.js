@@ -156,18 +156,15 @@ window.__BS_PERSIST_REPORT=persistReport;
 
 async function persistConvocation(convocation,eventId=''){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
- const studentIds=(convocation.studentIds||[]).map(String),base={...convocation};delete base.studentIds;
- const payload=cleanRow({...base,status:base.status||'published',publicVisible:true,updatedAt:new Date().toISOString()});
- const {data,error}=await sb.from('v20_convocations').upsert(payload).select('*').single();if(error)throw error;
- const {error:deleteLinksError}=await sb.from('v20_convocation_students').delete().eq('convocation_id',String(convocation.id));if(deleteLinksError)throw deleteLinksError;
- if(studentIds.length){
-  const {error:linksError}=await sb.from('v20_convocation_students').insert(studentIds.map(studentId=>({convocation_id:String(convocation.id),student_id:studentId})));if(linksError)throw linksError;
- }
- const {error:unlinkError}=await sb.from('v20_events').update({convocation_id:null}).eq('convocation_id',String(convocation.id));if(unlinkError)throw unlinkError;
- if(eventId){
-  const {error:eventError}=await sb.from('v20_events').update({convocation_id:String(convocation.id),registration_open:false,registration_mode:'convocation'}).eq('id',String(eventId));if(eventError)throw eventError;
- }
- return {...camel(data),studentIds};
+ const studentIds=[...new Set((convocation.studentIds||[]).map(String))],base={...convocation};delete base.studentIds;
+ const {data,error}=await sb.rpc('v3181_save_convocation',{
+  p_convocation:cleanRow({...base,status:base.status||'published'}),
+  p_student_ids:studentIds,p_event_id:eventId?String(eventId):null
+ });
+ if(error)throw error;
+ if(!data?.convocation?.id||String(data.convocation.id)!==String(convocation.id))throw new Error('CONVOCATION_SAVE_UNCONFIRMED');
+ if(eventId&&String(data.event?.id||'')!==String(eventId))throw new Error('CONVOCATION_EVENT_UNCONFIRMED');
+ return {convocation:camel(data.convocation),event:data.event?camel(data.event):null,detachedEventIds:data.detached_event_ids||[]};
 }
 window.__BS_PERSIST_CONVOCATION=persistConvocation;
 
@@ -247,7 +244,7 @@ function wrapLazyDependencies(){
  if(!window.app)return;
  const xlsx=()=>loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','XLSX','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw');
  const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS','sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz');
- const pdf=()=>loadScript('assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.0'),'jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/');
+ const pdf=()=>loadScript('assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.1'),'jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/');
  for(const name of ['openLicenseImport']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await xlsx();return orig(...a)}}
  for(const name of ['downloadLicenseTemplate','exportExcel','exportRegistrationsExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
  for(const name of ['exportConvocation','exportCalendarPDF']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await pdf();return orig(...a)}}

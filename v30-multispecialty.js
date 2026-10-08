@@ -61,6 +61,7 @@ function applyCalendarContext(specialty=''){
 function restorePrimarySpecialties(){applyCalendarContext('')}
 
 function linkedConvocation(event){
+  if(typeof window.app?.eventConvocation==='function')return window.app.eventConvocation(event);
   const data=window.app?.readData?.()||{};
   const specialties=eventSpecialties(event);
   return (data.convocations||[]).find(c=>

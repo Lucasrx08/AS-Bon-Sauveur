@@ -10,3 +10,10 @@
 .v318-registration small{font-size:12px;color:var(--muted,#65748b)}
 .v318-registration button:disabled{opacity:.6;cursor:not-allowed}
 [data-capacity-field][hidden]{display:none!important}
+.v3181-pending-section{margin:0 0 24px}
+.v3181-pending-section>h2{margin:0 0 6px;font-size:24px}
+.v3181-pending-section>p{margin:0 0 14px;color:var(--muted);line-height:1.45}
+.v3181-calendar-source small{display:block;margin-top:7px;color:var(--muted);line-height:1.45}
+.v3181-pending-convocation .v19-row{flex-wrap:wrap;gap:10px}
+.v3181-pending-convocation .v19-row>div:first-child{flex:1 1 260px;min-width:0}
+.v3181-pending-convocation h3{overflow-wrap:anywhere}
