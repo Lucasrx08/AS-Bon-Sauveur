@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
+import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
+const require=createRequire(import.meta.url);
+const jspdf=require('../assets/vendor/jspdf.umd.min.js');
+const root=new URL('../',import.meta.url),code=readFileSync(new URL('v21-12-pdf.js',root),'utf8');
+const events=Array.from({length:5},(_,i)=>({id:'fixture'+i,date:`2099-01-${String(14+i).padStart(2,'0')}`,title:['Renforcement et relaxation','Compétition de football','Découverte de l’escalade','Entraînement gymnastique','Cross de l’établissement'][i],specialty:['Association Sportive','Section Football','Option Escalade','Sport-études Gymnastique','Association Sportive'][i],place:'Salle de sport du Bon Sauveur',ageCategory:'Toutes catégories',startTime:i?'13:00:00':'00:00:00',endTime:i?'16:30:00':'00:00:00',registrationMode:i===1?'convocation':'open',registrationOpen:i!==1}));
+const students=Array.from({length:15},(_,i)=>({id:'s'+i,fullName:`ÉLÈVE FICTIF ${i+1}`,className:'6e AVIGNON'}));
+const data={events,students,licenses:[],convocations:[]};
+let failAsset=true,scriptAttempts=0;
+const window={app:{readData:()=>data,role:()=> 'admin'},addEventListener(){},removeEventListener(){}};
+const document={querySelectorAll:()=>[],querySelector:()=>null,addEventListener(){},createElement:()=>({dataset:{},remove(){}}),head:{appendChild(script){scriptAttempts++;queueMicrotask(()=>{if(scriptAttempts===1)script.onerror();else{window.jspdf=jspdf;script.onload()}})}}};
+const context=vm.createContext({window,document,console,Map,Set,Date,Intl,Uint8Array,setTimeout,clearTimeout,btoa:s=>Buffer.from(s,'binary').toString('base64'),fetch:async path=>{if(failAsset&&path.includes('programme-v21')){failAsset=false;return{ok:false}}const bytes=readFileSync(new URL(path,root));return{ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}}});
+vm.runInContext(code,context);const api=window.ASV2112_PDF;
+await assert.rejects(api.buildProgramPdf(events),/module PDF ne peut/);
+await assert.rejects(api.buildProgramPdf(events),/Ressource introuvable/);
+const programme=await api.buildProgramPdf(events),tv=await api.buildTvPdf(events.slice(0,3)),conv=await api.buildConvocationPdf({id:'conv-test',title:'Rencontre de test',activity:'Football',date:'2099-01-14',specialty:'Section Football',ageCategory:'Minime garçon',place:'Saint-Lô',departure:'12:30',returnTime:'16:30',meetingPoint:'Cour du collège',teacher:'ENSEIGNANT FICTIF',extraInfo:'Prévoir la tenue de sport et une gourde.',studentIds:students.map(s=>s.id)});
+assert.equal(scriptAttempts,2,'Un échec de chargement peut être retenté.');
+for(const doc of [programme,tv,conv]){assert.equal(doc.__asFonts.anton,true);assert.equal(doc.__asFonts.broshk,true)}
+assert.equal(programme.getNumberOfPages(),1);assert.equal(tv.getNumberOfPages(),1);assert.equal(conv.getNumberOfPages(),2);
+assert.equal(tv.internal.pageSize.getWidth(),320);assert.equal(tv.internal.pageSize.getHeight(),180);
+const hash=createHash('sha384').update(readFileSync(new URL('assets/vendor/jspdf.umd.min.js',root))).digest('base64');assert.ok(code.includes('sha384-'+hash),'L’empreinte SRI correspond au fichier distribué.');
+const output=new URL('tmp/pdfs/v318/',root);mkdirSync(output,{recursive:true});
+for(const [name,doc] of [['programme',programme],['tv',tv],['convocation',conv]])writeFileSync(new URL(name+'.pdf',output),Buffer.from(doc.output('arraybuffer')));
+console.log('V31.8 PDF : calendrier A4, TV 16:9, convocation sur deux pages, polices TTF et reprise après erreur OK.');

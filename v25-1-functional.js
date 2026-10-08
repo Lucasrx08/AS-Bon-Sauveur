@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v25.1-20260915';
+const VERSION='v31.8.0-20261007';
 const STORE='bs-app-data-v4';
 const VERIFIED='bs-v20-verified-role';
 
@@ -72,10 +72,12 @@ function editLicense(id){
   try{await persistLicenseRows(student,license,!current,previousStudent?{...previousStudent}:null);data.students=data.students||[];data.licenses=data.licenses||[];const s=data.students.find(x=>String(x.id)===String(studentId));s?Object.assign(s,student):data.students.push(student);const l=data.licenses.find(x=>String(x.id)===String(license.id));l?Object.assign(l,license):data.licenses.push(license);persist(data);closeLicenseModal();app()?.go?.('licenses');(window.__BS_SAVED?window.__BS_SAVED('Licence enregistrée'):toast('Licence enregistrée dans la base centrale.'))}catch(error){console.error('V25.1 licence',error);button.disabled=false;button.textContent='Enregistrer';status.textContent='Enregistrement impossible : '+(error?.message||'erreur serveur');status.className='full v2115-form-status error'}
  };
 }
+const licenseUpdates=new Set();
 async function updateLicenseField(id,column,localKey,next){
  if(!manager())return toast('Accès gestion requis.');const data=app()?.readData?.(),license=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!license)return;
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');
- try{const payload={};payload[column]=next;const {error}=await client.from('v20_licenses').update(payload).eq('id',String(id));if(error)throw error;license[localKey]=next;persist(data);app()?.go?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licence mise à jour')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
+ const key=String(id)+':'+column;if(licenseUpdates.has(key))return;licenseUpdates.add(key);
+ try{const payload={[column]:next};const {data:confirmed,error}=await client.from('v20_licenses').update(payload).eq('id',String(id)).select('id,'+column).single();if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const currentData=app()?.readData?.()||data,current=(currentData.licenses||[]).find(l=>String(l.id)===String(id));if(current)current[localKey]=confirmed[column];persist(currentData);app()?.refreshView?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licence mise à jour')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{licenseUpdates.delete(key)}
 }
 function toggleLicensePayment(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'payment_status','paymentStatus',l.paymentStatus==='Payé'?'En attente':'Payé')}
 function toggleLicenseCharter(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'charter_signed','charterSigned',l.charterSigned==='Oui'?'Non':'Oui')}

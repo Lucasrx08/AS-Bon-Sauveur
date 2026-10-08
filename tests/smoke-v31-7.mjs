@@ -18,7 +18,7 @@ const orderEdge = read('supabase/functions/public-order/index.ts');
 const registrationEdge = read('supabase/functions/public-registration/index.ts');
 const serviceWorker = read('sw.js');
 
-assert.match(version, /^31\.7\./);
+assert.match(version, /^31\.(7|8)\./);
 assert.match(index, /integrity="sha384-JBR\+x8bl/);
 assert.doesNotMatch(index, /v31-7-security\.js/);
 assert.match(bridge, /sha384-vtjasyid/);

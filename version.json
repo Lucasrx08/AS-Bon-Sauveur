@@ -1,8 +1,8 @@
 {
-  "version": "31.7.3",
-  "build": "20261005-admin-access-fix",
+  "version": "31.8.0",
+  "build": "20261008-calendar-quotas",
   "channel": "stable",
-  "releasedAt": "2026-10-05",
-  "message": "Accès administrateur rétabli sans demande automatique de double authentification ; correctifs de l’audit conservés",
+  "releasedAt": "2026-10-08",
+  "message": "Calendrier : participation, convocations et quotas ; PDF réparés ; licences et gestion des commandes sans retour en haut",
   "serviceWorker": "sw.js"
 }

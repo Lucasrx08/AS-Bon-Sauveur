@@ -46,7 +46,7 @@ async function postPublic(name,payload,timeout=12000){
   try{
     const response=await fetch(api(name),{method:'POST',headers:headers(),body:JSON.stringify(payload),signal:controller.signal,cache:'no-store',credentials:'omit'});
     let body={};try{body=await response.json()}catch{}
-    if(!response.ok)throw new Error(body?.error||'La demande n’a pas pu être enregistrée.');
+    if(!response.ok){const error=new Error(body?.error||'La demande n’a pas pu être enregistrée.');error.code=body.code;error.status=response.status;throw error}
     return body;
   }catch(error){
     if(error?.name==='AbortError')throw new Error('Le serveur met trop de temps à répondre. Réessayez.');
@@ -95,12 +95,26 @@ function secureOrder(productId){
   };
 }
 
-function secureRegistration(eventId){
+async function refreshEventAvailability(eventId){
+  const client=window.__BS_SUPABASE_CLIENT;if(!client)throw new Error('Connexion indisponible. Réessayez.');
+  const {data,error}=await client.from('v20_events').select('id,date,public_visible,registration_open,registration_mode,registration_capacity,registration_count,convocation_id').eq('id',String(eventId)).maybeSingle();
+  if(error)throw new Error('Impossible de vérifier les places disponibles. Réessayez.');
+  if(!data||data.public_visible!==true)throw new Error('Cet événement n’est plus disponible.');
+  const event=eventById(eventId);if(event)Object.assign(event,{date:data.date,publicVisible:data.public_visible,registrationOpen:data.registration_open,registrationMode:data.registration_mode,registrationCapacity:data.registration_capacity,registrationCount:data.registration_count,convocationId:data.convocation_id});
+  window.app?.refreshView?.();return event;
+}
+const registrationOpening=new Set();
+async function secureRegistration(eventId){
+  if(registrationOpening.has(String(eventId)))return;registrationOpening.add(String(eventId));
+  try{await refreshEventAvailability(eventId)}catch(error){toast(error.message);return}finally{registrationOpening.delete(String(eventId))}
   const event=eventById(eventId);
   if(!event)return toast('Événement introuvable.');
   if(linkedConvocation(event)||!event.registrationOpen||String(event.date||'')<todayParis())return toast('Les inscriptions ne sont pas ouvertes pour cet événement.');
+  const availability=window.app?.eventRegistrationState?.(event);
+  if(availability?.full)return toast('Cet événement est complet.');
   const w=modal('Inscription',
     '<div class="v2115-registration-intro"><div class="v19-kicker">'+esc(event.specialty||'AS')+'</div><h3>'+esc(event.title||'Événement')+'</h3><p>'+esc(fmtDate(event.date))+' · '+esc(eventTimeLabel(event))+' · '+esc(event.place||'Lieu à préciser')+'</p></div>'+
+    (availability?.remaining!=null?'<p>'+availability.remaining+' place(s) restante(s) sur '+availability.capacity+'.</p>':'')+
     '<form id="v22-registration-form" class="v19-form">'+
     '<label><span>Nom</span><input name="lastName" required minlength="2" maxlength="80" autocomplete="family-name"></label>'+
     '<label><span>Prénom</span><input name="firstName" required minlength="2" maxlength="80" autocomplete="given-name"></label>'+
@@ -109,16 +123,21 @@ function secureRegistration(eventId){
     '<div class="full v22-status" aria-live="polite"></div>'+
     '<div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider mon inscription</button></div></form>');
   const form=w.querySelector('#v22-registration-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
+  let requestId=uuid(),lastPayload=null;
   form.onsubmit=async e=>{
-    e.preventDefault();const fd=new FormData(form);
-    const payload={requestId:uuid(),eventId:String(eventId),lastName:tidy(fd.get('lastName')).toLocaleUpperCase('fr-FR'),firstName:tidy(fd.get('firstName')),className:String(fd.get('className')||'')};
+    e.preventDefault();if(button.disabled)return;const fd=new FormData(form);
+    const fields={eventId:String(eventId),lastName:tidy(fd.get('lastName')).toLocaleUpperCase('fr-FR'),firstName:tidy(fd.get('firstName')),className:String(fd.get('className')||'')};
+    const identity=JSON.stringify(fields);if(lastPayload&&lastPayload!==identity)requestId=uuid();lastPayload=identity;
+    const payload={requestId,...fields};
     if(!CLASSES.includes(payload.className)){status.textContent='Choisissez une classe.';status.className='full v22-status error';return}
     button.disabled=true;button.textContent='Inscription en cours…';status.textContent='';status.className='full v22-status';
     try{
       await postPublic('public-registration',payload);
+      refreshEventAvailability(eventId).catch(()=>{});
+      if(!w.isConnected)return;
       w.querySelector('.v19-modal-body').innerHTML='<div class="v2115-registration-success"><span>✓</span><h3>'+esc(payload.firstName)+' '+esc(payload.lastName)+'</h3><p>L’inscription à <strong>'+esc(event.title)+'</strong> est bien enregistrée.</p><button class="v19-btn" data-ok>Fermer</button></div>';
       w.querySelector('[data-ok]').onclick=()=>w.remove();
-    }catch(error){status.textContent=error.message;status.className='full v22-status error';button.disabled=false;button.textContent='Valider mon inscription'}
+    }catch(error){status.textContent=error.message;status.className='full v22-status error';const closed=['EVENT_FULL','EVENT_CLOSED'].includes(error.code);button.disabled=closed;button.textContent=error.code==='EVENT_FULL'?'Complet':closed?'Inscriptions fermées':'Valider mon inscription';if(closed)refreshEventAvailability(eventId).catch(()=>{})}
   };
 }
 

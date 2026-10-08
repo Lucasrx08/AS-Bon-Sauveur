@@ -127,7 +127,8 @@ async function editEventMulti(id){
     <label><span>Heure de départ</span><input type="time" name="startTime" value="${esc(event?.startTime||'12:30')}"></label>
     <label><span>Heure de retour</span><input type="time" name="endTime" value="${esc(event?.endTime||'14:30')}"></label>
     <label class="full"><span>Lieu</span><input name="place" value="${esc(event?.place||'')}"></label>
-    <label class="full v2115-registration-choice"><input type="checkbox" name="registrationOpen" ${event?.registrationOpen&&!linked?'checked':''} ${linked?'disabled':''}><span><strong>Ouvrir l’inscription libre</strong><small>${linked?'Une convocation est déjà liée à cet événement.':'Affiche le bouton Inscription tant qu’aucune convocation n’est disponible.'}</small></span></label>
+    <label class="full"><span>Participation</span><select name="registrationMode">${options(['none','open','convocation'],linked?'convocation':event?.registrationMode||(event?.registrationOpen?'open':'none')).replace('>none<','>Information uniquement<').replace('>open<','>Inscription libre<').replace('>convocation<','>Convocation<')}</select><small>${linked?'Une convocation est liée à cet événement.':'La convocation sera accessible depuis le calendrier dès sa publication par l’enseignant.'}</small></label>
+    <label class="full" data-capacity-field><span>Nombre maximum d’élèves</span><input type="number" name="registrationCapacity" min="1" max="10000" step="1" placeholder="Sans limite" value="${esc(event?.registrationCapacity??'')}"><small>Laissez vide pour une inscription sans limite. ${Number(event?.registrationCount)||0} élève(s) déjà inscrit(s).</small></label>
     <div class="full v2115-form-status" data-event-status aria-live="polite"></div>
     <div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer</button></div>
   </form>`);
@@ -135,12 +136,19 @@ async function editEventMulti(id){
   const form=m.querySelector('#v30-event-form');
   const status=m.querySelector('[data-event-status]');
   const button=form.querySelector('button[type="submit"]');
+  const modeSelect=form.elements.registrationMode,capacityField=form.querySelector('[data-capacity-field]');
+  const syncParticipation=()=>{capacityField.hidden=modeSelect.value!=='open';form.elements.registrationCapacity.disabled=modeSelect.value!=='open'};
+  if(linked){modeSelect.value='convocation';modeSelect.disabled=true}
+  modeSelect.onchange=syncParticipation;syncParticipation();
   form.onsubmit=async ev=>{
     ev.preventDefault();
     const fd=new FormData(form);
     const specialties=[...new Set(fd.getAll('specialties').filter(x=>SPECIALTIES.includes(x)))];
     if(!specialties.length){status.textContent='Sélectionnez au moins une spécialité.';status.className='full v2115-form-status error';return}
     const primary=specialties.includes(currentPrimary)?currentPrimary:specialties[0];
+    const registrationMode=linked?'convocation':String(fd.get('registrationMode')||'none');
+    const rawCapacity=String(fd.get('registrationCapacity')||'').trim(),registrationCapacity=rawCapacity?Number(rawCapacity):null;
+    if(registrationCapacity!==null&&(!Number.isInteger(registrationCapacity)||registrationCapacity<1||registrationCapacity>10000||registrationCapacity<(Number(event?.registrationCount)||0))){status.textContent='La limite doit être un nombre entier au moins égal au nombre d’élèves déjà inscrits.';status.className='full v2115-form-status error';return}
     const obj={
       id:event?.id||uid('e'),
       title:String(fd.get('title')||'').trim(),
@@ -152,14 +160,18 @@ async function editEventMulti(id){
       endTime:fd.get('endTime'),
       place:String(fd.get('place')||'').trim(),
       convocationId:event?.convocationId||null,
-      registrationOpen:!linked&&fd.get('registrationOpen')==='on'
+      registrationMode,
+      registrationOpen:registrationMode==='open',
+      registrationCapacity:registrationMode==='open'?registrationCapacity:event?.registrationCapacity??null
     };
     button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='full v2115-form-status';
     try{
       if(typeof window.__BS_PERSIST_EVENT!=='function')throw new Error('SERVICE_UNAVAILABLE');
-      await window.__BS_PERSIST_EVENT(obj);
-      if(event){Object.assign(event,obj);event.__bsPrimarySpecialty=primary;normalizeEvent(event)}
-      else{normalizeEvent(obj);data.events=(data.events||[]);data.events.push(obj)}
+      const saved=await window.__BS_PERSIST_EVENT(obj);
+      const currentData=app.readData?.()||data,current=(currentData.events||[]).find(x=>String(x.id)===String(obj.id));
+      const confirmed={...obj,...(saved&&typeof saved==='object'?saved:{})};
+      if(current){Object.assign(current,confirmed);current.__bsPrimarySpecialty=primary;normalizeEvent(current)}
+      else{normalizeEvent(confirmed);currentData.events=(currentData.events||[]);currentData.events.push(confirmed)}
       m.remove();
       applyCalendarContext(roleSpecialty(role));
       app.go?.('calendar');
@@ -168,7 +180,7 @@ async function editEventMulti(id){
     }catch(error){
       console.warn('V30 événement multi-spécialités',error);
       button.disabled=false;button.textContent='Enregistrer';
-      status.textContent='L’événement n’a pas pu être enregistré dans la base centrale. Réessayez.';
+      status.textContent=String(error?.message||'').includes('CAPACITY_BELOW_REGISTERED')?'La limite est inférieure au nombre d’élèves inscrits. Actualisez l’événement avant de réessayer.':'L’événement n’a pas pu être enregistré dans la base centrale. Réessayez.';
       status.className='full v2115-form-status error';
     }
   };

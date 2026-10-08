@@ -3,6 +3,7 @@
 const collator=new Intl.Collator('fr',{sensitivity:'base',numeric:true,ignorePunctuation:true});
 const normalize=s=>String(s??'').replace(/\s+/g,' ').trim();
 const pageTitle=()=>normalize(document.querySelector('.v19-page-head h1')?.textContent);
+const savedSorts=new Map();
 function isTargetPage(){
   return ['Licences','Gestion des commandes','Inscriptions libres'].includes(pageTitle());
 }
@@ -41,9 +42,10 @@ function valueFor(cell,label){
   }
   return raw;
 }
-function sortTable(table,col,label,button){
+function sortTable(table,col,label,button,direction){
   const tbody=table.tBodies?.[0]; if(!tbody)return;
-  const current=button.dataset.dir==='asc'?'desc':'asc';
+  const current=direction||(button.dataset.dir==='asc'?'desc':'asc');
+  savedSorts.set(pageTitle(),{label,direction:current});
   table.querySelectorAll('.v31-sort-button').forEach(b=>{if(b!==button){b.dataset.dir='';const s=b.querySelector('span');if(s)s.textContent='↕';}});
   button.dataset.dir=current;
   const icon=button.querySelector('span');if(icon)icon.textContent=current==='asc'?'↑':'↓';
@@ -73,6 +75,7 @@ function enhance(){
     b.innerHTML=`${label.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')} <span aria-hidden="true">↕</span>`;
     b.addEventListener('click',()=>sortTable(table,col,label,b));
     th.appendChild(b);
+    const saved=savedSorts.get(pageTitle());if(saved?.label===label)sortTable(table,col,label,b,saved.direction);
   });
 }
 let queued=false;

@@ -1,0 +1,13 @@
+{
+  "name": "as-bon-sauveur",
+  "private": true,
+  "scripts": {
+    "test": "node tests/smoke-v31-3.mjs && node tests/smoke-v31-4.mjs && node tests/smoke-v31-5.mjs && node tests/smoke-v31-7.mjs && node tests/smoke-v31-7-auth.mjs && node tests/regression-v31-8.mjs",
+    "test:quota": "node tests/quota-v31-8.mjs",
+    "test:pdf": "node tests/pdf-v31-8.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2",
+    "@electric-sql/pglite": "0.5.8"
+  }
+}

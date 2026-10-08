@@ -135,13 +135,13 @@ window.__BS_COMPLETE_SIGN_IN=user=>hydrateUser(user);
 window.__BS_SIGN_OUT=logout;
 window.__BS_AUTH_STATE=()=>({user:currentUser?{...currentUser}:null,role:currentRole});
 
-function cleanRow(row){const x=snake(row);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;return x}
+function cleanRow(row){const x=snake(row);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;delete x.registration_count;return x}
 async function upsertTable(table,rows){if(!rows?.length)return;const {error}=await sb.from(table).upsert(rows.map(cleanRow));if(error)console.warn(table,error.message)}
 async function persistEvent(event){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
- const {error}=await sb.from('v20_events').upsert(cleanRow({...event,publicVisible:true}));
+ const {data,error}=await sb.from('v20_events').upsert(cleanRow({...event,publicVisible:true})).select('*').single();
  if(error)throw error;
- return true;
+ return camel(data);
 }
 window.__BS_PERSIST_EVENT=persistEvent;
 
@@ -165,7 +165,7 @@ async function persistConvocation(convocation,eventId=''){
  }
  const {error:unlinkError}=await sb.from('v20_events').update({convocation_id:null}).eq('convocation_id',String(convocation.id));if(unlinkError)throw unlinkError;
  if(eventId){
-  const {error:eventError}=await sb.from('v20_events').update({convocation_id:String(convocation.id),registration_open:false}).eq('id',String(eventId));if(eventError)throw eventError;
+  const {error:eventError}=await sb.from('v20_events').update({convocation_id:String(convocation.id),registration_open:false,registration_mode:'convocation'}).eq('id',String(eventId));if(eventError)throw eventError;
  }
  return {...camel(data),studentIds};
 }
@@ -197,8 +197,8 @@ window.__BS_PERSIST_TERMS=persistTerms;
 
 let lastServerRefresh=0;
 async function refreshFromServer(){
- if(!currentUser||hydrating)return false;
- await hydrateAll();lastServerRefresh=Date.now();return true;
+ if(hydrating)return false;
+ if(currentUser)await hydrateAll();else await hydratePublic();lastServerRefresh=Date.now();return true;
 }
 window.__BS_REFRESH_DATA=refreshFromServer;
 window.addEventListener('focus',()=>{if(currentUser&&Date.now()-lastServerRefresh>15000)refreshFromServer().catch(()=>{})});
@@ -247,7 +247,7 @@ function wrapLazyDependencies(){
  if(!window.app)return;
  const xlsx=()=>loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','XLSX','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw');
  const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS','sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz');
- const pdf=()=>loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js','jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/x');
+ const pdf=()=>loadScript('assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.0'),'jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/');
  for(const name of ['openLicenseImport']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await xlsx();return orig(...a)}}
  for(const name of ['downloadLicenseTemplate','exportExcel','exportRegistrationsExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
  for(const name of ['exportConvocation','exportCalendarPDF']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await pdf();return orig(...a)}}

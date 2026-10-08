@@ -20,18 +20,27 @@ Deno.serve(async request=>{
   const ipHash=await hashKey(serviceKey,'registration-ip:'+clientIp(request)),identityHash=await hashKey(serviceKey,'registration-person:'+eventId+'|'+normalizeLogin(lastName)+'|'+normalizeLogin(firstName)+'|'+className);
   const [ipLimit,identityLimit]=await Promise.all([consume(admin,'public-registration-ip',ipHash,30,3600,3600),consume(admin,'public-registration-person',identityHash,5,3600,3600)]);
   if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de tentatives ont été envoyées. Réessayez plus tard.'},429);
-  const {data:event,error:eventError}=await admin.from('v20_events').select('id,title,specialty,specialties,date,public_visible,registration_open,convocation_id').eq('id',eventId).maybeSingle();if(eventError)throw eventError;
+  const {data:event,error:eventError}=await admin.from('v20_events').select('id,title,specialty,specialties,date,public_visible,registration_open,registration_mode,registration_capacity,registration_count,convocation_id').eq('id',eventId).maybeSingle();if(eventError)throw eventError;
   const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
   const today=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-  if(!event||event.public_visible!==true||event.registration_open!==true||String(event.date)<today||event.convocation_id)return json(request,{error:'Les inscriptions ne sont plus ouvertes pour cet événement.'},409);
+  if(!event||event.public_visible!==true||event.registration_open!==true||event.registration_mode!=='open'||String(event.date)<today||event.convocation_id)return json(request,{code:'EVENT_CLOSED',error:'Les inscriptions ne sont plus ouvertes pour cet événement.'},409);
   const eventSpecialties=[...new Set([...(Array.isArray(event.specialties)?event.specialties:[]),event.specialty].map(value=>clean(value,80)).filter(Boolean))];
-  const {data:linked,error:linkedError}=await admin.from('v20_convocations').select('id').eq('date',event.date).in('specialty',eventSpecialties).eq('title',event.title).eq('public_visible',true).eq('status','published').limit(1);if(linkedError)throw linkedError;if(Array.isArray(linked)&&linked.length)return json(request,{error:'Les inscriptions libres sont fermées pour cet événement.'},409);
+  const {data:linked,error:linkedError}=await admin.from('v20_convocations').select('id').eq('date',event.date).in('specialty',eventSpecialties).eq('title',event.title).eq('public_visible',true).eq('status','published').limit(1);if(linkedError)throw linkedError;if(Array.isArray(linked)&&linked.length)return json(request,{code:'EVENT_CLOSED',error:'Les inscriptions libres sont fermées pour cet événement.'},409);
   const {data:retentionDue,error:retentionError}=await admin.rpc('v22_event_retention_due',{p_event_date:event.date});if(retentionError)throw retentionError;
   const {data:created,error:createError}=await admin.from('v20_event_registrations').insert({id:requestId,request_id:requestId,event_id:eventId,last_name:lastName,first_name:firstName,class_name:className,retention_due_at:retentionDue}).select('created_at').single();
-  if(createError){if(createError.code==='23505')return json(request,{error:'Cet élève est déjà inscrit à cet événement.'},409);throw createError}
+  if(createError){
+   if(createError.message?.includes('EVENT_FULL'))return json(request,{code:'EVENT_FULL',error:'Cet événement est complet. Il n’y a plus de place disponible.'},409);
+   if(createError.message?.includes('EVENT_CLOSED'))return json(request,{code:'EVENT_CLOSED',error:'Les inscriptions ne sont plus ouvertes pour cet événement.'},409);
+   if(createError.code==='23505'){
+    const {data:retry,error:retryError}=await admin.from('v20_event_registrations').select('created_at').eq('request_id',requestId).maybeSingle();
+    if(retryError)throw retryError;if(retry)return json(request,{status:'registered',createdAt:retry.created_at},200);
+    return json(request,{code:'ALREADY_REGISTERED',error:'Cet élève est déjà inscrit à cet événement.'},409);
+   }
+   throw createError;
+  }
   return json(request,{status:'registered',createdAt:created.created_at},201);
  }catch(error){
   const code=error instanceof Error?error.message:'';if(code==='PAYLOAD_TOO_LARGE')return json(request,{error:'Requête trop volumineuse.'},413);if(code==='INVALID_JSON')return json(request,{error:'Requête invalide.'},400);
-  console.error('public-registration-v23',error instanceof Error?error.name:'error');return json(request,{error:'L’inscription n’a pas pu être enregistrée. Réessayez.'},500);
+  console.error('public-registration-v318',error instanceof Error?error.name:'error');return json(request,{error:'L’inscription n’a pas pu être enregistrée. Réessayez.'},500);
  }
 });

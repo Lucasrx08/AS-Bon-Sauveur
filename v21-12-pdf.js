@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v31.7.3-20261005';
+const VERSION='v31.8.0-20261007';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -50,7 +50,7 @@ function shortDate(value){return parseDate(value).toLocaleDateString('fr-FR',{da
 function shortTime(value){const match=String(value||'').match(/^(\d{1,2}):(\d{2})/);return match?`${match[1].padStart(2,'0')}:${match[2]}`:String(value||'')}
 function eventSpecialties(event){const fromApp=window.app?.eventSpecialties?.(event);if(Array.isArray(fromApp)&&fromApp.length)return fromApp;const raw=Array.isArray(event?.specialties)?event.specialties:[];return[...new Set([...raw,event?.specialty].filter(Boolean))]}
 function eventTimeLabel(event,separator=' - '){const fromApp=window.app?.eventTimeLabel?.(event,separator);if(fromApp)return fromApp;const start=shortTime(event?.startTime),end=shortTime(event?.endTime);if((!start&&!end)||(start==='00:00'&&end==='00:00'))return'Horaire à confirmer';return start&&end?`${start}${separator}${end}`:start||end||'Horaire à confirmer'}
-function hasLinkedConvocation(event){const specialties=eventSpecialties(event);return(read().convocations||[]).some(c=>String(c.id)===String(event?.convocationId||'')||(c.date===event?.date&&c.title===event?.title&&specialties.includes(c.specialty)))}
+function hasLinkedConvocation(event){if(event?.registrationMode==='convocation'||event?.convocationId)return true;const specialties=eventSpecialties(event);return(read().convocations||[]).some(c=>(c.status||'published')==='published'&&c.publicVisible!==false&&(c.date===event?.date&&c.title===event?.title&&specialties.includes(c.specialty)))}
 function orderedEvents(){
  const activeSpecialty=window.app?.calendarSpecialty?.()||window.app?.roleSpecialty?.();
  return (read().events||[]).filter(e=>String(e.date||'')>=today()).filter(e=>!activeSpecialty||eventSpecialties(e).includes(activeSpecialty)).slice().sort((a,b)=>`${a.date||''}${a.startTime||''}`.localeCompare(`${b.date||''}${b.startTime||''}`));
@@ -69,16 +69,17 @@ function arrayBufferToBase64(buffer){
 async function asset(path,mime){
  if(assetCache.has(path))return assetCache.get(path);
  const promise=(async()=>{const response=await fetch(path,{cache:'force-cache'});if(!response.ok)throw new Error(`Ressource introuvable : ${path}`);return `data:${mime};base64,${arrayBufferToBase64(await response.arrayBuffer())}`})();
- assetCache.set(path,promise);return promise;
+ assetCache.set(path,promise);try{return await promise}catch(error){assetCache.delete(path);throw error}
 }
 async function ensurePdf(){
  if(window.jspdf?.jsPDF)return window.jspdf;
  if(pdfLoader)return pdfLoader;
  pdfLoader=new Promise((resolve,reject)=>{
-  const existing=document.querySelector('script[data-v2112-jspdf]');
-  if(existing){existing.addEventListener('load',()=>resolve(window.jspdf),{once:true});existing.addEventListener('error',reject,{once:true});return}
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/x';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';script.onload=()=>resolve(window.jspdf);script.onerror=()=>reject(new Error('Le module PDF ne peut pas être chargé.'));document.head.appendChild(script);
- });
+  document.querySelector('script[data-v2112-jspdf]')?.remove();
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.0');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
+  const fail=()=>{clearTimeout(timer);script.remove();reject(new Error('Le module PDF ne peut pas être chargé. Vérifiez votre connexion puis réessayez.'))};
+  const timer=setTimeout(fail,20000);script.onload=()=>{clearTimeout(timer);if(window.jspdf?.jsPDF)resolve(window.jspdf);else fail()};script.onerror=fail;document.head.appendChild(script);
+ }).catch(error=>{pdfLoader=null;throw error});
  return pdfLoader;
 }
 async function installFonts(doc){
@@ -264,6 +265,7 @@ async function exportConvocation(id){
 }
 
 const pdfApi={version:VERSION,buildProgramPdf,buildTvPdf,buildConvocationPdf,openCalendarPicker,openTvPicker,installTvButton,orderedEvents,eventTimeLabel};
+window.addEventListener('bs-app-rendered',()=>installTvButton());
 function mountPdfModule(){
  if(!window.app)return false;
  window.app.exportCalendarPDF=exportCalendar;

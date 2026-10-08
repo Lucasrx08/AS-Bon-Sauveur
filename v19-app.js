@@ -211,20 +211,33 @@ function eventsVisible(){
  const sp=calendarSpecialty();
  return (state.data.events||[]).filter(e=>!sp||eventSpecialtiesOf(e).includes(sp)).slice().sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
 }
-function eventConvocation(e){
+function eventConvocation(e,publishedOnly=false){
  const specialties=eventSpecialtiesOf(e);
- return !e?null:(state.data.convocations||[]).find(x=>String(x.id)===String(e.convocationId||'')||(x.date===e.date&&specialties.includes(x.specialty)&&x.title===e.title))||null;
+ return !e?null:(state.data.convocations||[]).find(x=>(!publishedOnly||(x.status||'published')==='published'&&x.publicVisible!==false)&&(String(x.id)===String(e.convocationId||'')||(x.date===e.date&&specialties.includes(x.specialty)&&x.title===e.title)))||null;
+}
+function eventRegistrationState(e){
+ const convocation=eventConvocation(e,true);
+ const mode=convocation||e?.convocationId?'convocation':e?.registrationMode||(e?.registrationOpen?'open':'none');
+ const capacity=e?.registrationCapacity==null?null:Number(e.registrationCapacity);
+ const count=Math.max(0,Number(e?.registrationCount)||0);
+ const remaining=capacity==null?null:Math.max(0,capacity-count);
+ return {mode,convocation,capacity,count,remaining,full:remaining===0,available:!!e&&mode==='open'&&!!e.registrationOpen&&String(e.date||'')>=todayKey()&&remaining!==0};
 }
 function eventRegistrationAvailable(e){
- return !!e&&!eventConvocation(e)&&!!e.registrationOpen&&String(e.date||'')>=todayKey();
+ return eventRegistrationState(e).available;
+}
+function openEventConvocation(id){
+ const e=(state.data.events||[]).find(x=>String(x.id)===String(id)),c=eventConvocation(e,true);
+ if(c)return openConv(c.id);
+ toast('Convocation pas encore publiée.',4500);
 }
 function eventCard(e){
- const c=eventConvocation(e);
+ const participation=eventRegistrationState(e);
  const d=new Date(e.date+'T12:00:00');
  return `<article class="v19-card v19-event-card">
   <div class="v19-date"><strong>${d.getDate()}</strong><span>${d.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').toUpperCase()}</span></div>
   <div class="v19-event-body"><h3>${esc(e.title)}</h3><div class="v19-meta">${esc(eventTimeLabel(e))} · ${esc(e.place||'—')}</div><div class="v19-meta">${esc(e.ageCategory||'Toutes catégories')}</div>${specBadge(e.specialty)}</div>
-  <div class="v19-card-actions">${c?`<button class="v19-chip" onclick="app.openConv('${c.id}')">Voir convocation</button>`:eventRegistrationAvailable(e)?`<button class="v19-chip v2115-registration-chip" onclick="app.openEventRegistration('${e.id}')">Inscription</button>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
+  <div class="v19-card-actions">${participation.mode==='convocation'?`<button class="v19-chip" onclick="app.openEventConvocation('${e.id}')">Convocation</button>`:participation.mode==='open'&&String(e.date||'')>=todayKey()?`<div class="v318-registration"><button class="v19-chip v2115-registration-chip" ${participation.available?'':'disabled aria-disabled="true"'} onclick="app.openEventRegistration('${e.id}')">${participation.full?'Complet':'Inscription libre'}</button>${participation.remaining!==null?`<small aria-live="polite">${participation.remaining} place${participation.remaining>1?'s':''} restante${participation.remaining>1?'s':''} sur ${participation.capacity}</small>`:''}</div>`:''}${isManager()?`<button class="v19-link" onclick="app.editEvent('${e.id}')">Modifier</button><button class="v19-link danger" onclick="app.deleteEvent('${e.id}')">Supprimer</button>`:''}</div>
  </article>`;
 }
 function specialtyNote(){
@@ -266,6 +279,7 @@ function convCard(c){
 }
 function convocationsPage(){
  let list=(state.data.convocations||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ if(!isManager())list=list.filter(c=>(c.status||'published')==='published'&&c.publicVisible!==false);
  if(state.role==='public')list=list.filter(c=>String(c.date||'')>=todayKey());
  if(isEducator()) list=list.filter(c=>c.specialty===roleSpecialty());
  const actions=isManager()?`<button class="v19-btn" onclick="app.editConv()">+ Convocation</button><button class="v19-btn secondary" onclick="app.exportExcel('convocations')">Exporter Excel</button>`:'';
@@ -400,11 +414,18 @@ function adminPage(){
  </div></div>`;
 }
 function denied(){return `<div class="v19-container"><div class="v19-empty">Cet espace n’est pas accessible avec ce profil.</div></div>`}
-function render(){
+function render({preserveScroll=false}={}){
+ const position={x:window.scrollX||0,y:window.scrollY||0};
+ const tableScroll=[...root.querySelectorAll('.v19-table-wrap')].map(el=>({left:el.scrollLeft,top:el.scrollTop}));
+ const active=document.activeElement,focus=active&&root.contains(active)?{id:active.id,onchange:active.getAttribute('onchange'),onclick:active.getAttribute('onclick')}:null;
  const pages={home:homePage,calendar:calendarPage,convocations:convocationsPage,licenses:licensesPage,orders:ordersPage,reports:reportsPage,appreciations:appreciationsPage,registrations:registrationsPage,appreciationReview:appreciationReviewPage,shop:shopPage,documents:documentsPage,more:morePage,admin:adminPage};
  root.innerHTML=layout((pages[state.route]||homePage)());
- window.scrollTo({top:0,behavior:'instant'});
  window.dispatchEvent(new CustomEvent('bs-app-rendered',{detail:{route:state.route,role:state.role}}));
+ if(preserveScroll){
+  [...root.querySelectorAll('.v19-table-wrap')].forEach((el,i)=>{el.scrollLeft=tableScroll[i]?.left||0;el.scrollTop=tableScroll[i]?.top||0});
+  if(focus){const target=focus.id?document.getElementById(focus.id):[...root.querySelectorAll('button,select,input')].find(el=>focus.onchange?el.getAttribute('onchange')===focus.onchange:focus.onclick&&el.getAttribute('onclick')===focus.onclick);target?.focus({preventScroll:true})}
+  window.scrollTo({left:position.x,top:position.y,behavior:'instant'});
+ }else window.scrollTo({top:0,behavior:'instant'});
 }
 
 function modal(title,html,wide=false){
@@ -500,8 +521,8 @@ function editLicense(id){
  m.querySelector('#v19-license-form').onsubmit=ev=>{ev.preventDefault();const fd=new FormData(ev.currentTarget),fullName=String(fd.get('fullName')||'').trim(),studentId=l?.studentId||uid('s'),o={id:l?.id||uid('l'),studentId,fullName,className:fd.get('className'),category:fd.get('category'),contribution:fd.get('contribution'),paymentStatus:fd.get('paymentStatus'),amount:Number(fd.get('amount')||0),charterSigned:fd.get('charterSigned'),sectionOption:fd.get('sectionOption')};l?Object.assign(l,o):state.data.licenses.push(o);let s=(state.data.students||[]).find(x=>x.id===studentId);s?Object.assign(s,{fullName,className:o.className,specialty:o.sectionOption}):state.data.students.push({id:studentId,fullName,className:o.className,specialty:o.sectionOption});save();closeModal();render()};
 }
 function toggleLicensePayment(id){const l=(state.data.licenses||[]).find(x=>x.id===id);if(!l)return;l.paymentStatus=l.paymentStatus==='Payé'?'En attente':'Payé';save();render()}
-function licenseFilter(k,v){state.filters.licenses={...(state.filters.licenses||{}),[k]:v};render()}
-function clearLicenseFilters(){state.filters.licenses={};render()}
+function licenseFilter(k,v){state.filters.licenses={...(state.filters.licenses||{}),[k]:v};render({preserveScroll:true})}
+function clearLicenseFilters(){state.filters.licenses={};render({preserveScroll:true})}
 
 function editReport(id){
  if(!isManager())return;const r=id?(state.data.reports||[]).find(x=>x.id===id):null;
@@ -622,9 +643,10 @@ async function refreshAppreciationReview(quiet=false){
 }
 
 function hydrateFromServer(data,role){
+ const sameRole=!ROLE_LABELS[role]||role===state.role;
  if(data&&typeof data==='object')state.data=data;
  if(ROLE_LABELS[role])state.role=role;
- render();
+ render({preserveScroll:sameRole});
 }
 
 function manageSpecialtyNotes(){
@@ -758,14 +780,14 @@ async function exportRegistrationsExcel(){
 
 window.app={
  go,openPublicSpecialty,theme,profile,setRole,closeModal,search,
- editEvent,deleteEvent,openConv,editConv,deleteConv,
+ editEvent,deleteEvent,openConv,openEventConvocation,editConv,deleteConv,
  editLicense,toggleLicensePayment,licenseFilter,clearLicenseFilters,
  editReport,deleteReport,order,toggleOrder,
  setTerm,editApp,saveAppDraft,validateApp,copyApp,copyReviewApp,
  openEventRegistration,refreshEventRegistrations,deleteEventRegistration,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
  manageSpecialtyNotes,saveSpecialtyNote,manageTerms,
  openLicenseImport,commitImport,downloadLicenseTemplate,openDoc,downloadDoc,exportExcel,exportRegistrationsExcel,
- readData:()=>state.data, role:()=>state.role, roleSpecialty,calendarSpecialty,eventSpecialties:eventSpecialtiesOf,eventTimeLabel,studentName,hydrateFromServer
+ readData:()=>state.data, role:()=>state.role,route:()=>state.route,refreshView:(route)=>{if(!route||state.route===route)render({preserveScroll:true})}, roleSpecialty,calendarSpecialty,eventSpecialties:eventSpecialtiesOf,eventRegistrationState,eventTimeLabel,studentName,hydrateFromServer
 };
 window.ASV2115={version:'v21.15.2-20260910',features:['event-registrations','single-registration-delete','appreciation-review','direct-event-sync']};
 render();
