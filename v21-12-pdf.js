@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v31.8.2-20261008';
+const VERSION='v31.8.3-20261008';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -78,7 +78,7 @@ async function ensurePdf(){
  if(pdfLoader)return pdfLoader;
  pdfLoader=new Promise((resolve,reject)=>{
   document.querySelector('script[data-v2112-jspdf]')?.remove();
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.2');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'31.8.3');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
   const fail=()=>{clearTimeout(timer);script.remove();reject(new Error('Le module PDF ne peut pas être chargé. Vérifiez votre connexion puis réessayez.'))};
   const timer=setTimeout(fail,20000);script.onload=()=>{clearTimeout(timer);if(window.jspdf?.jsPDF)resolve(window.jspdf);else fail()};script.onerror=fail;document.head.appendChild(script);
  }).catch(error=>{pdfLoader=null;throw error});
@@ -156,32 +156,59 @@ function drawEventDate(doc,event,x,y,w,h,theme,{tv=false}={}){
  fill(doc,C.yellow);doc.roundedRect(x+5,monthTop-1.8,w-10,.85,.4,.4,'F');
  font(doc,'anton');doc.setFontSize(month.size);color(doc,theme.accent);doc.text(month.value,x+w/2,monthBaseline,{align:'center'});
 }
-function eventTitleLayout(doc,text,w,h,{maxFont=22,minFont=12,maxLines=2}={}){
- const raw=displayText(text||'Rendez-vous').trim();let size=maxFont,lines=[];
- const ascender=/[À-ÆÈ-ÖØ-Þà-æè-öø-ÿ]/.test(raw)?.94:.74,descender=/[gjpqyÇç]/.test(raw)?.22:0,lineFactor=1.18;
- font(doc,'eventSans','bold');
- for(;size>=minFont;size-=.5){
-  doc.setFontSize(size);lines=doc.splitTextToSize(raw,w);
-  if(lines.length<=maxLines&&mm(size)*(ascender+descender+lineFactor*(lines.length-1))<=h)break;
+function spacedTextWidth(doc,text,spacing){return doc.getTextWidth(text)+Math.max(0,Array.from(text).length-1)*spacing}
+function spacedTitleLines(doc,text,w,spacing){
+ const lines=[];let line='';
+ for(const word of text.split(/\s+/)){
+  const next=line?`${line} ${word}`:word;
+  if(spacedTextWidth(doc,next,spacing)<=w){line=next;continue}
+  if(line){lines.push(line);line=''}
+  for(const letter of Array.from(word)){
+   if(line&&spacedTextWidth(doc,line+letter,spacing)>w){lines.push(line);line=''}
+   line+=letter;
+  }
  }
- if(size<minFont){const fitted=fitLines(doc,raw,w,{start:minFont,min:minFont,maxLines,kind:'eventSans',style:'bold'});lines=fitted.lines;size=minFont}
- const cap=mm(size)*ascender,gap=mm(size)*lineFactor;
- return{lines,size,cap,gap,height:cap+mm(size)*descender+(lines.length-1)*gap};
+ if(line)lines.push(line);return lines;
+}
+function eventTitleLayout(doc,text,w,h,{tv=false,compact=false}={}){
+ const raw=displayText(text||'Rendez-vous').replace(/\s+/g,' ').trim().toUpperCase();
+ const parts=raw.match(/^(.+?)\s+-\s+(.+)$/),heading=parts?parts[1]:raw,detail=parts?parts[2]:'';
+ const base=tv?(compact?22:26):(compact?19:22),detailBase=tv?(compact?15:17):(compact?13.5:15);
+ const spacing=tv?.18:.14,detailSpacing=tv?.12:.1,between=tv?1.4:1.3;
+ font(doc,'anton');
+ const block=(text,size,maxLines,tracking,truncate=false)=>{
+  doc.setFontSize(size);let lines=spacedTitleLines(doc,text,w,tracking);
+  if(truncate&&lines.length>maxLines){lines=lines.slice(0,maxLines);let last=lines.at(-1);while(last.length&&spacedTextWidth(doc,last+'...',tracking)>w)last=last.slice(0,-1);lines[lines.length-1]=last.trim()+'...'}
+  const cap=mm(size)*(/[À-ÆÈ-ÖØ-Þ]/.test(text)?1.11:.88),descent=mm(size)*(text.includes('Ç')?.22:0),gap=mm(size)*1.34;
+  return{lines,size,spacing:tracking,cap,descent,gap,height:cap+descent+(lines.length-1)*gap,valid:lines.length<=maxLines};
+ };
+ let result;
+ for(let size=base;size>=11.5;size-=.5){
+  const main=block(heading,size,detail?1:2,spacing),sub=detail?block(detail,Math.max(9,detailBase*size/base),compact?1:2,detailSpacing):null;
+  result={main,sub,between,height:main.height+(sub?between+sub.height:0)};
+  if(main.valid&&(!sub||sub.valid)&&result.height<=h)return result;
+ }
+ const main=block(heading,11.5,detail?1:2,spacing,true),sub=detail?block(detail,9,1,detailSpacing,true):null;
+ return{main,sub,between,height:main.height+(sub?between+sub.height:0)};
 }
 // Both programme formats share the same hierarchy and aligned information columns.
 function drawEventDetails(doc,event,x,top,w,h,{tv=false,compact=false}={}){
- const metaH=tv?(compact?9.5:13.5):(compact?11.5:13),gap=tv?(compact?1.5:2.2):2.4;
- const title=eventTitleLayout(doc,event.title,w,h-metaH-gap,{maxFont:tv?(compact?24:28):(compact?18.5:22),minFont:12});
+ const metaH=tv?(compact?8.8:12.5):(compact?10:12.5),gap=tv?(compact?1.6:2.8):2.6;
+ const title=eventTitleLayout(doc,event.title,w,h-metaH-gap,{tv,compact});
  const titleTop=top+Math.max(0,(h-title.height-gap-metaH)/2);
- font(doc,'eventSans','bold');doc.setFontSize(title.size);color(doc,C.ink);
- title.lines.forEach((line,i)=>doc.text(line,x,titleTop+title.cap+i*title.gap));
+ const drawTitleBlock=(block,blockTop,ink)=>{
+  font(doc,'anton');doc.setFontSize(block.size);color(doc,ink);
+  block.lines.forEach((line,i)=>doc.text(line,x,blockTop+block.cap+i*block.gap,{charSpace:block.spacing}));
+ };
+ drawTitleBlock(title.main,titleTop,C.dark);
+ if(title.sub)drawTitleBlock(title.sub,titleTop+title.main.height+title.between,C.muted);
  const lineY=titleTop+title.height+gap;
  doc.setDrawColor(...C.line);doc.setLineWidth(.3);doc.line(x,lineY,x+w,lineY);
  const columnGap=tv?8:5,hourW=(w-columnGap)*.38,placeX=x+hourW+columnGap;
- const labelSize=tv?(compact?8:8.5):7.4,valueSize=tv?(compact?12:14.5):(compact?11:12.5);
- const labelY=lineY+(tv?(compact?3.1:3.7):3.5),valueY=lineY+(tv?(compact?8:9.3):9);
+ const labelSize=tv?(compact?7.6:8.5):7.4,valueSize=tv?(compact?11.5:14):(compact?10.5:12);
+ const labelY=lineY+(tv?(compact?2.8:3.7):3.3),valueY=lineY+(tv?(compact?7.7:9.3):8.5);
  [{x,w:hourW,label:'HORAIRES',text:eventTimeLabel(event)},{x:placeX,w:w-hourW-columnGap,label:'LIEU',text:event.place||'À préciser'}].forEach(c=>{
-  font(doc,'eventSans','bold');doc.setFontSize(labelSize);color(doc,C.muted);doc.text(c.label,c.x,labelY);
+  font(doc,'anton');doc.setFontSize(labelSize);color(doc,C.muted);doc.text(c.label,c.x,labelY,{charSpace:0});
   value(doc,displayText(c.text),c.x,valueY,c.w,{size:valueSize,min:tv?10:9,kind:'eventSans',style:'normal'});
  });
 }
@@ -228,7 +255,7 @@ function drawTvEvent(doc,event,slot){
  let tagX=bodyX;tagX+=pill(doc,theme.short,tagX,tagY,{bg:theme.pale,fg:theme.accent,maxW:80,height:tagH,fontSize:9.5})+2.5;
  if(event.ageCategory&&tagRight-tagX>=22)pill(doc,event.ageCategory,tagX,tagY,{bg:C.soft,fg:C.ink,maxW:Math.min(65,tagRight-tagX),height:tagH,fontSize:9.5});
  const top=tagY+tagH+(compact?1:1.6);
- drawEventDetails(doc,event,bodyX,top,bodyW,y+h-2.7-top,{tv:true,compact});
+ drawEventDetails(doc,event,bodyX,top,bodyW,y+h-2.4-top,{tv:true,compact});
 }
 async function buildTvPdf(selectedEvents){
  const dep=await ensurePdf(),{jsPDF}=dep||{};if(!jsPDF)throw new Error('Module PDF indisponible.');

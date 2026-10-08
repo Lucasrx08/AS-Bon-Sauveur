@@ -1,8 +1,8 @@
 {
-  "version": "31.8.2",
-  "build": "20261008-pdf-harmony",
+  "version": "31.8.3",
+  "build": "20261008-anton-titles",
   "channel": "stable",
   "releasedAt": "2026-10-08",
-  "message": "Exports PDF et TV harmonisés : titres plus sobres, horaires et lieux alignés ; dates conservées",
+  "message": "Titres des exports en ANTON avec activité et détail séparés, espacement équilibré ; dates conservées",
   "serviceWorker": "sw.js"
 }
