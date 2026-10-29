@@ -12,6 +12,7 @@ assert.match(ui,/PAYMENTS=\['HelloAsso','Chèque','Virement'\]/);
 assert.match(ui,/postPublic\('public-order',payload\)/);
 assert.match(ui,/postPublic\('helloasso-checkout'/);
 assert.match(ui,/requestId=uuid\(\)/);
+assert.match(ui,/lastOrderPayload!==fingerprint/);
 assert.match(ui,/data-order-total/);
 assert.match(ui,/hostname!=='www\.helloasso\.com'/);
 assert.match(order,/Math\.round\(Number\(product\.price\)\*100\)/);

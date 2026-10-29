@@ -77,7 +77,8 @@ window.addEventListener('pageshow',()=>{
 function secureOrder(productId){
   const product=productById(productId);if(!product)return toast('Produit introuvable.');
   if(product.active===false||(product.deadline&&String(product.deadline)<todayParis()))return toast('Les commandes pour cet article sont closes.');
-  const requestId=uuid(),unitPrice=Number(product.price)||0;
+  let requestId=uuid(),lastOrderPayload='';
+  const unitPrice=Number(product.price)||0;
   const w=modal('Commander — '+product.name,
     '<div class="v22-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
     '<form id="v22-order-form" class="v19-form">'+
@@ -118,7 +119,11 @@ function secureOrder(productId){
   }
   form.onsubmit=async e=>{
     e.preventDefault();const fd=new FormData(form);
-    const payload={requestId,productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
+    const fields={productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
+    const fingerprint=JSON.stringify(fields);
+    if(lastOrderPayload&&lastOrderPayload!==fingerprint)requestId=uuid();
+    lastOrderPayload=fingerprint;
+    const payload={requestId,...fields};
     if(!ORDER_RECIPIENTS.includes(payload.className)){status.textContent='Choisissez une classe ou un profil.';status.className='v22-status error';return}
     button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='v22-status';
     try{
