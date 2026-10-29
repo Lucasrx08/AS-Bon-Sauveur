@@ -1,8 +1,8 @@
 {
-  "version": "31.8.3",
-  "build": "20261008-anton-titles",
+  "version": "31.9.0",
+  "build": "20261029-helloasso-checkout",
   "channel": "stable",
-  "releasedAt": "2026-10-08",
-  "message": "Titres des exports en ANTON avec activité et détail séparés, espacement équilibré ; dates conservées",
+  "releasedAt": "2026-10-29",
+  "message": "Préparation paiement boutique HelloAsso et suivi sécurisé",
   "serviceWorker": "sw.js"
 }

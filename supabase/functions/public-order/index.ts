@@ -3,7 +3,7 @@ import {clientIp,corsHeaders,hashKey,json,normalizeLogin,readJson,rejectOrigin} 
 
 const ORDER_RECIPIENTS=new Set(['6e AVIGNON','6e Georges BIZET','6e Paul CEZANNE','6e Alphonse DAUDET','5e Jacqueline AURIOL','5e Adrienne BOLLAND','5e Bessie COLEMAN','5e Elise DEROCHE','4e ESTANGUET','4e FLESSEL','4e Cyril MORE','4e DELAUNAY','3e Antonio GAUDI','3e BARCELONE','3e CASTILLE','3e DALI','3e ESPINOZA','Seconde Pro ECP','Seconde Pro Maslow','Seconde Pro Henderson','Seconde GT','Première Pro ECP','Première Pro Curie','Première Pro Pasteur','Première ST2S','Terminale ST2S','Terminale ASSP','Enseignant','Personnel']);
 const SIZES=new Set(['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL']);
-const PAYMENTS=new Set(['Virement','Chèque']);
+const PAYMENTS=new Set(['Virement','Chèque','HelloAsso']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID=/^[A-Za-z0-9_-]{1,80}$/;
 const clean=(value:unknown,max:number)=>String(value||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ').slice(0,max);
@@ -32,12 +32,15 @@ Deno.serve(async request=>{
   const identityHash=await hashKey(serviceKey,'order-person:'+normalizeLogin(studentName)+'|'+className);
   const [ipLimit,identityLimit]=await Promise.all([consume(admin,'public-order-ip',ipHash,20,3600,3600),consume(admin,'public-order-person',identityHash,6,3600,3600)]);
   if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de commandes ont été envoyées. Réessayez plus tard.'},429);
-  const {data:product,error:productError}=await admin.from('v20_products').select('id,active,deadline').eq('id',productId).maybeSingle();
+  const {data:product,error:productError}=await admin.from('v20_products').select('id,active,deadline,price').eq('id',productId).maybeSingle();
   if(productError)throw productError;
   const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
   const today=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
   if(!product||product.active!==true||(product.deadline&&String(product.deadline)<today))return json(request,{error:'Ce produit n’est plus disponible à la commande.'},409);
-  const {data:created,error:createError}=await admin.from('v20_orders').insert({id:requestId,request_id:requestId,product_id:productId,student_name:studentName,class_name:className,size,quantity,payment_method:paymentMethod,color:color||null,paid:false,distributed:false}).select('reference,created_at').single();
+  const unitCents=Math.round(Number(product.price)*100);
+  const amountCents=unitCents*quantity;
+  if(!Number.isSafeInteger(amountCents)||amountCents<1||amountCents>100000000)return json(request,{error:'Prix invalide pour cet article.'},409);
+  const {data:created,error:createError}=await admin.from('v20_orders').insert({id:requestId,request_id:requestId,product_id:productId,student_name:studentName,class_name:className,size,quantity,payment_method:paymentMethod,amount_cents:amountCents,color:color||null,paid:false,distributed:false}).select('reference,created_at').single();
   if(createError){
    if(createError.code==='23505'){
     const {data:retry}=await admin.from('v20_orders').select('reference,created_at').eq('request_id',requestId).maybeSingle();

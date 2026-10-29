@@ -60,7 +60,7 @@ function buildSummaryRows(kind,data){
   for(const l of data.licenses||[]){const amount=money(l.amount),enc=l.paymentStatus==='Payé'?amount:0,mode=payMode(l.contribution);count++;total+=amount;paid+=enc;const x=modes.get(mode)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;modes.set(mode,x)}
  }else{
   const products=productMap(data);
-  for(const o of data.orders||[]){const p=products.get(o.productId),amount=money(p?.price)*Math.max(1,Number(o.quantity||1)),enc=o.paid?amount:0,mode=payMode(o.paymentMethod);count++;total+=amount;paid+=enc;const x=modes.get(mode)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;modes.set(mode,x)}
+  for(const o of data.orders||[]){const p=products.get(o.productId),amount=o.amountCents!=null?Number(o.amountCents)/100:money(p?.price)*Math.max(1,Number(o.quantity||1)),enc=o.paid?amount:0,mode=payMode(o.paymentMethod);count++;total+=amount;paid+=enc;const x=modes.get(mode)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;modes.set(mode,x)}
  }
  return{count,total,paid,pending:total-paid,modes:[...modes.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr'))};
 }
@@ -89,7 +89,7 @@ function buildDetailSheet(wb,kind,data){
  }else{
   const products=productMap(data);
   headers=['Élève','Classe','Produit','Taille','Quantité','Prix unitaire','Total','Mode de règlement','Statut paiement','Encaissé','Reste','Distribution','Date'];
-  rows=(data.orders||[]).map(o=>{const p=products.get(o.productId),unit=money(p?.price),total=unit*Math.max(1,Number(o.quantity||1)),enc=o.paid?total:0;return[o.studentName,o.className,p?.name||'Produit supprimé',o.size,Number(o.quantity||1),unit,total,payMode(o.paymentMethod),o.paid?'Payé':'En attente',enc,total-enc,o.distributed?'Distribué':'À distribuer',dateFr(o.createdAt)]});
+  rows=(data.orders||[]).map(o=>{const p=products.get(o.productId),q=Math.max(1,Number(o.quantity||1)),total=o.amountCents!=null?Number(o.amountCents)/100:money(p?.price)*q,unit=total/q,enc=o.paid?total:0;return[o.studentName,o.className,p?.name||'Produit supprimé',o.size,Number(o.quantity||1),unit,total,payMode(o.paymentMethod),o.paid?'Payé':'En attente',enc,total-enc,o.distributed?'Distribué':'À distribuer',dateFr(o.createdAt)]});
   moneyCols=[6,7,10,11];
  }
  styleTitle(ws,kind==='licenses'?'DÉTAIL DES LICENCES':'DÉTAIL DES COMMANDES',headers.length);styleHeaderRow(ws,4,headers);

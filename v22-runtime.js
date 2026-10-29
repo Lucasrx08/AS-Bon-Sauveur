@@ -13,7 +13,7 @@ const CLASSES=[
 ];
 const ORDER_RECIPIENTS=[...CLASSES,'Enseignant','Personnel'];
 const SIZES=['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL'];
-const PAYMENTS=['Virement','Chèque'];
+const PAYMENTS=['HelloAsso','Chèque','Virement'];
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tidy=s=>String(s||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ');
 const time=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?`${m[1].padStart(2,'0')}:${m[2]}`:''};
@@ -68,9 +68,17 @@ function fmtDate(value){
   try{return new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(value+'T12:00:00'))}catch{return value}
 }
 
+window.addEventListener('pageshow',()=>{
+  const url=new URL(location.href);if(!url.searchParams.has('ha'))return;
+  const state=url.searchParams.get('ha');for(const key of ['ha','checkoutIntentId','orderId','code','error'])url.searchParams.delete(key);history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+  setTimeout(()=>toast(state==='return'?'Paiement HelloAsso : confirmation en cours.':'Paiement non terminé : commande en attente.'),500);
+});
+
 function secureOrder(productId){
   const product=productById(productId);if(!product)return toast('Produit introuvable.');
   if(product.active===false||(product.deadline&&String(product.deadline)<todayParis()))return toast('Les commandes pour cet article sont closes.');
+  let requestId=uuid(),lastOrderPayload='';
+  const unitPrice=Number(product.price)||0;
   const w=modal('Commander — '+product.name,
     '<div class="v22-secure-note"><strong>Commande sécurisée</strong><span>Vos informations sont transmises directement au service AS et ne sont pas conservées durablement dans ce navigateur.</span></div>'+
     '<form id="v22-order-form" class="v19-form">'+
@@ -78,20 +86,51 @@ function secureOrder(productId){
     '<label class="full"><span>Classe / profil</span><select name="className" required><option value="">Choisir une classe ou un profil</option>'+opts(ORDER_RECIPIENTS)+'</select></label>'+
     '<label><span>Taille</span><select name="size">'+opts(SIZES,'M')+'</select></label>'+
     '<label><span>Quantité</span><input type="number" name="quantity" min="1" max="10" value="1"></label>'+
-    '<label><span>Mode de paiement</span><select name="paymentMethod">'+opts(PAYMENTS,'Chèque')+'</select></label>'+
+    '<label><span>Mode de paiement</span><select name="paymentMethod">'+opts(PAYMENTS,'HelloAsso')+'</select></label>'+
     '<label><span>Couleur / modèle</span><input name="color" maxlength="80" value="'+esc(product.color||'')+'"></label>'+
+    '<div class="full v22-secure-note" data-order-total>Montant total : '+unitPrice.toLocaleString('fr-FR',{style:'currency',currency:'EUR'})+'</div>'+ 
     '<div class="full v221-inline-privacy">Données utilisées uniquement pour gérer cette commande, conservées jusqu’au 1er juillet de l’année scolaire concernée. <button type="button" onclick="app.privacy()">En savoir plus</button></div><div class="full v19-modal-actions"><button class="v19-btn yellow" type="submit">Valider la commande</button></div></form>'+
     '<div class="v22-status" aria-live="polite"></div>');
   const form=w.querySelector('#v22-order-form'),status=w.querySelector('.v22-status'),button=form.querySelector('[type=submit]');
+  form.querySelector('[name="quantity"]').addEventListener('input',e=>{
+    const quantity=Number(e.target.value);
+    const total=Number.isInteger(quantity)&&quantity>=1&&quantity<=10?unitPrice*quantity:0;
+    form.querySelector('[data-order-total]').textContent='Montant total : '+total.toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+  });
+  async function payOnHelloAsso(){
+    const result=await postPublic('helloasso-checkout',{orderId:requestId},20000);
+    if(result.status==='paid'){showConfirmation(result.reference);return}
+    const link=new URL(String(result.redirectUrl||''));
+    if(link.protocol!=='https:'||link.hostname!=='www.helloasso.com')throw new Error('Adresse de paiement HelloAsso invalide.');
+    location.assign(link.href);
+  }
+  function showConfirmation(reference,onlineUnavailable=false){
+    const target=w.querySelector('.v19-modal-body');
+    target.innerHTML='<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>Référence <strong>'+esc(reference||'AS')+'</strong>.</p><p>'+(onlineUnavailable?'Paiement en ligne non ouvert. Votre commande reste en attente. Aucun règlement n’a été réalisé.':'Le règlement sera vérifié par l’équipe AS.')+'</p>'+(onlineUnavailable?'<button type="button" class="v19-btn yellow" data-pay>Payer sur HelloAsso</button><p data-pay-error role="alert"></p>':'')+'<button type="button" class="v19-btn secondary" data-ok>Fermer</button></div>';
+    target.querySelector('[data-ok]').onclick=()=>w.remove();
+    const retry=target.querySelector('[data-pay]');
+    if(retry)retry.onclick=async()=>{
+      retry.disabled=true;retry.textContent='Ouverture du paiement…';
+      try{await payOnHelloAsso()}catch(error){
+        target.querySelector('[data-pay-error]').textContent=error.message||'Service temporairement indisponible.';
+        retry.disabled=false;retry.textContent='Réessayer le paiement';
+      }
+    };
+  }
   form.onsubmit=async e=>{
     e.preventDefault();const fd=new FormData(form);
-    const payload={requestId:uuid(),productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
+    const fields={productId:String(productId),studentName:tidy(fd.get('studentName')),className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),color:tidy(fd.get('color'))};
+    const fingerprint=JSON.stringify(fields);
+    if(lastOrderPayload&&lastOrderPayload!==fingerprint)requestId=uuid();
+    lastOrderPayload=fingerprint;
+    const payload={requestId,...fields};
     if(!ORDER_RECIPIENTS.includes(payload.className)){status.textContent='Choisissez une classe ou un profil.';status.className='v22-status error';return}
     button.disabled=true;button.textContent='Enregistrement…';status.textContent='';status.className='v22-status';
     try{
       const result=await postPublic('public-order',payload);
-      w.querySelector('.v19-modal-body').innerHTML='<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>Référence <strong>'+esc(result.reference||'AS')+'</strong>. Le paiement sera vérifié manuellement par l’équipe de l’AS.</p><button class="v19-btn" data-ok>Fermer</button></div>';
-      w.querySelector('[data-ok]').onclick=()=>w.remove();
+      if(payload.paymentMethod==='HelloAsso'){
+        try{await payOnHelloAsso()}catch(error){showConfirmation(result.reference,true);w.querySelector('[data-pay-error]').textContent=error.message||'Service temporairement indisponible.'}
+      }else showConfirmation(result.reference);
     }catch(error){status.textContent=error.message;status.className='v22-status error';button.disabled=false;button.textContent='Valider la commande'}
   };
 }
@@ -145,6 +184,12 @@ async function secureRegistration(eventId){
 function install(){
   if(!window.app)return setTimeout(install,60);
   window.app.order=secureOrder;
+  const oldToggleOrder=window.app.toggleOrder;
+  window.app.toggleOrder=(id,kind)=>{
+    const row=(currentData().orders||[]).find(o=>String(o.id)===String(id));
+    if(kind==='paid'&&row?.paymentMethod==='HelloAsso')return toast('Paiement HelloAsso : statut automatique.');
+    return oldToggleOrder?.(id,kind);
+  };
   window.app.openEventRegistration=secureRegistration;
   window.ASV22={version:'22.1.0',features:['privacy-session-storage','secure-public-orders','secure-public-registrations','rate-limits','automatic-retention']};
   if(!window.__BS_RELEASE)document.documentElement.dataset.appVersion='22';
