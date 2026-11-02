@@ -281,7 +281,7 @@ function calendarPage(){
  <div class="v19-stack">${list.map(eventCard).join('')||`<div class="v19-empty">Aucun rendez-vous prévu pour ${esc(sp||'cette sélection')}.</div>`}</div></div>`;
 }
 function convCard(c){
- const names=(c.studentIds||[]).map(studentName).filter(Boolean);
+ const names=state.role==='public'?(c.publicStudentNames||[]):(c.studentIds||[]).map(studentName).filter(Boolean);
  const draft=(c.status||'published')!=='published';
  return `<article class="v19-card v19-conv-card">
   <div class="v19-row"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}${isManager()?` · ${draft?'BROUILLON':'PUBLIÉE'}`:''}</div><h3>${esc(c.title||'Convocation')}</h3><div class="v19-meta">${fmtLong(c.date)} · ${esc(c.place||'—')}</div></div>${specBadge(c.specialty)}</div>
@@ -492,7 +492,7 @@ function deleteEvent(id){if(!isManager())return;const count=(state.data.eventReg
 
 function studentName(id){return (state.data.students||[]).find(s=>s.id===id)?.fullName||(state.data.licenses||[]).find(l=>l.studentId===id)?.fullName||''}
 function openConv(id){
- const c=(state.data.convocations||[]).find(x=>x.id===id);if(!c)return;const names=(c.studentIds||[]).map(studentName).filter(Boolean);
+ const c=(state.data.convocations||[]).find(x=>x.id===id);if(!c)return;const names=state.role==='public'?(c.publicStudentNames||[]):(c.studentIds||[]).map(studentName).filter(Boolean);
  modal('Convocation',`<div class="v19-conv-detail-head"><div><div class="v19-kicker">${esc(c.activity||'ACTIVITÉ')}</div><h2>${esc(c.title)}</h2></div>${specBadge(c.specialty)}</div>
   <div class="v19-detail-grid"><div><span>Date</span><strong>${fmtLong(c.date)}</strong></div><div><span>Lieu</span><strong>${esc(c.place||'—')}</strong></div><div><span>Départ</span><strong>${esc(c.departure||'—')}</strong></div><div><span>Retour</span><strong>${esc(c.returnTime||'—')}</strong></div><div class="wide"><span>Point de rendez-vous</span><strong>${esc(c.meetingPoint||'—')}</strong></div><div class="wide"><span>Professeur référent</span><strong>${esc(c.teacher||(state.role==='public'?'Référent communiqué via ÉcoleDirecte':'Non renseigné'))}</strong><a class="v19-ed" href="https://www.ecoledirecte.com/" target="_blank" rel="noopener"><img src="assets/logo-ecoledirecte.svg"><span>Ouvrir ÉcoleDirecte</span>↗</a></div><div class="wide important"><span>Informations importantes</span><strong>${esc(c.extraInfo||'Aucune information particulière.')}</strong></div></div>
   <div class="v19-students"><h3>Élèves convoqués</h3><div>${names.length?names.map(n=>`<span>${esc(n)}</span>`).join(''):`<span>${esc(state.role==='public'?'Liste transmise via ÉcoleDirecte':'Aucun élève sélectionné.')}</span>`}</div></div>
