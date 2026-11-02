@@ -265,7 +265,7 @@ async function buildTvPdf(selectedEvents){
  doc.setProperties({title:`Programme TV AS - ${periodLabel(events)}`,subject:'Programme TV 16:9 de l’Association Sportive du Bon Sauveur',author:'Association Sportive du Bon Sauveur',creator:`Application AS Bon Sauveur ${VERSION}`});return doc;
 }
 function studentRows(convocation){
- if(window.app?.role?.()==='public')return[];
+ if(window.app?.role?.()==='public')return (convocation.publicStudentNames||[]).map(name=>({name:String(name),className:''})).filter(row=>row.name).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
  const data=read(),students=new Map((data.students||[]).map(s=>[String(s.id),s])),licenses=new Map((data.licenses||[]).map(l=>[String(l.studentId),l]));
  return (convocation.studentIds||[]).map(id=>{const s=students.get(String(id))||{},l=licenses.get(String(id))||{};return{name:s.fullName||l.fullName||window.app?.studentName?.(id)||'',className:s.className||l.className||''}}).filter(x=>x.name).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
 }
