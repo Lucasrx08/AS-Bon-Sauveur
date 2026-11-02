@@ -108,6 +108,18 @@ async function hydratePublic(expectedEpoch=authEpoch){
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
  const results=await Promise.all(maps.map(async([key,table])=>[key,await selectAll(table)]));
  for(const [key,{data:rows,error}] of results){if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
+ // Public: the database provides only first name and surname initial for published future invitations.
+ const {data:publicRoster,error:rosterError}=await sb.rpc('v3184_public_convocation_roster');
+ if(!rosterError&&Array.isArray(publicRoster)){
+  const byConvocation=new Map();
+  for(const entry of publicRoster){
+   const id=String(entry.convocation_id||''),name=String(entry.display_name||'').trim();
+   if(!id||!name)continue;
+   if(!byConvocation.has(id))byConvocation.set(id,[]);
+   byConvocation.get(id).push(name);
+  }
+  data.convocations=(data.convocations||[]).map(c=>({...c,publicStudentNames:byConvocation.get(String(c.id))||[]}));
+ }else if(rosterError){console.warn('Liste publique des convocations indisponible',rosterError.message)}
  if(expectedEpoch!==authEpoch){hydrating=false;return data}
  localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');setupRealtime().catch(()=>{});
  return data;
