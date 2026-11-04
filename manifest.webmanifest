@@ -9,7 +9,7 @@
   "display":"standalone",
   "orientation":"any",
   "background_color":"#f4f7fb",
-  "theme_color":"#0757C9",
+  "theme_color":"#004aad",
   "categories":["education","sports"],
   "icons":[
     {"src":"assets/logo-as.png","sizes":"1500x1500","type":"image/png","purpose":"any"},

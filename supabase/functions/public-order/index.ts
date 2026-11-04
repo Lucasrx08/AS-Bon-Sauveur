@@ -27,6 +27,15 @@ Deno.serve(async request=>{
   const url=Deno.env.get('SUPABASE_URL')||'',serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
   if(!url||!serviceKey)throw new Error('CONFIG');
   const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
+  let staffId='';const bearer=request.headers.get('Authorization')?.match(/^Bearer (.+)$/i)?.[1];
+  if(bearer){
+   const {data:userData,error:authError}=await admin.auth.getUser(bearer);
+   if(authError||!userData?.user)return json(request,{error:'Session expirée. Reconnectez-vous.'},401);
+   const {data:profile,error:profileError}=await admin.from('profiles').select('role').eq('id',userData.user.id).maybeSingle();
+   if(profileError)throw profileError;
+   if(!profile||!['teacher_as','admin'].includes(profile.role))return json(request,{error:'Ce compte ne peut pas saisir de commande pour le personnel.'},403);
+   staffId=userData.user.id;
+  }
   const signature=await hashKey(serviceKey,JSON.stringify({studentName,className,paymentMethod,items}));
   const success=(rows:any[],status=200)=>json(request,{reference:rows[0]?.reference,references:rows.map(row=>row.reference),status:'payment_pending',createdAt:rows[0]?.created_at,total:rows.reduce((n,row)=>n+Number(row.unit_price||0)*Number(row.quantity||1),0)},status);
   const previous=async()=>{const result=await admin.from('v20_orders').select('reference,created_at,unit_price,quantity,checkout_signature').eq('checkout_id',requestId).order('checkout_line');if(result.error)throw result.error;return result.data||[]};
@@ -36,8 +45,8 @@ Deno.serve(async request=>{
   const {data:legacy,error:legacyError}=await admin.from('v20_orders').select('reference,created_at,unit_price,quantity').eq('request_id',requestId).maybeSingle();
   if(legacyError)throw legacyError;if(legacy)return success([legacy]);
   const ipHash=await hashKey(serviceKey,'order-ip:'+clientIp(request)),identityHash=await hashKey(serviceKey,'order-person:'+normalizeLogin(studentName)+'|'+className);
-  const [ipLimit,identityLimit]=await Promise.all([consume(admin,'public-order-ip',ipHash,20,3600,3600),consume(admin,'public-order-person',identityHash,6,3600,3600)]);
-  if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de commandes ont été envoyées. Réessayez plus tard.'},429);
+  const limits=staffId?await Promise.all([consume(admin,'v33-order-staff',await hashKey(serviceKey,staffId),120,3600,60)]):await Promise.all([consume(admin,'v33-order-ip-hour',ipHash,300,3600,300),consume(admin,'v33-order-ip-burst',ipHash,30,60,60),consume(admin,'public-order-person',identityHash,6,3600,3600)]);
+  if(limits.some(limit=>!limit?.allowed))return json(request,{error:'Trop de commandes ont été envoyées. Réessayez plus tard.'},429);
   const {data:products,error:productError}=await admin.from('v20_products').select('id,name,price,active,deadline,color').in('id',[...new Set(items.map(item=>item.productId))]);
   if(productError)throw productError;
   const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));

@@ -16,7 +16,7 @@ const instructions=method=>staff()?'':method==='Chèque'?"Chèque à l’ordre d
 let cart=[];
 function addToCart(productId){
  const p=products().find(p=>p.id===productId);if(!p)return;
- if(cart.length>=20)return;
+ if(cart.length>=20){window.alert('Le panier contient déjà 20 lignes. Ouvrez Mon panier pour modifier les quantités.');return;}
  cart.push({productId:p.id,size:'M',quantity:1});updateCartButton();
  let note=document.querySelector('[data-v32-added]');if(!note){note=document.createElement('div');note.className='v19-toast';note.dataset.v32Added='';note.setAttribute('role','status');document.body.appendChild(note)}
  note.textContent=p.name+' ajouté au panier';clearTimeout(addToCart.timer);addToCart.timer=setTimeout(()=>note.remove(),2200);
@@ -45,8 +45,9 @@ function openCart(productId){
   if(!CLASSES.includes(fields.className)||fields.items.some(l=>!Number.isInteger(l.quantity)||l.quantity<1||l.quantity>10)){error.textContent='Vérifiez la classe et les quantités.';return}
   busy=true;form.querySelectorAll('input,select,button').forEach(x=>x.disabled=true);error.textContent='';submit.textContent='Enregistrement…';
   try{
+   const authHeaders={};if(staff()){const session=await window.__BS_SUPABASE_CLIENT?.auth.getSession();const token=session?.data?.session?.access_token;if(!token)throw new Error('Votre session a expiré. Reconnectez-vous avant de saisir la commande.');authHeaders.Authorization='Bearer '+token;}
    const cfg=window.APP_CONFIG||{},controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);let response;
-   try{response=await fetch(cfg.supabaseUrl+'/functions/v1/public-order',{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.supabaseAnonKey},body:JSON.stringify({requestId,...fields}),signal:controller.signal,cache:'no-store',credentials:'omit'})}finally{clearTimeout(timer)}
+   try{response=await fetch(cfg.supabaseUrl+'/functions/v1/public-order',{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.supabaseAnonKey,...authHeaders},body:JSON.stringify({requestId,...fields}),signal:controller.signal,cache:'no-store',credentials:'omit'})}finally{clearTimeout(timer)}
    const result=await response.json();if(!response.ok)throw new Error(result.error||'Commande non enregistrée. Réessayez.');
    cart=[];modal.querySelector('.v19-modal-body').innerHTML=`<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>${esc((result.references||[result.reference]).filter(Boolean).join(' · '))}</p><p>${esc(instructions(fields.paymentMethod))}</p><p>Statut : en attente de paiement.</p>${!staff()&&fields.paymentMethod==='Virement'?`<a class="v19-btn yellow" href="${HELLOASSO}" rel="noopener noreferrer">Ouvrir HelloAsso</a>`:'<button class="v19-btn" data-done>Fermer</button>'}</div>`;
    modal.querySelector('[data-done]')?.addEventListener('click',()=>modal.remove());updateCartButton();

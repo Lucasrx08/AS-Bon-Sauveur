@@ -5,7 +5,8 @@
     "test": "node tests/smoke-v31-3.mjs && node tests/smoke-v31-4.mjs && node tests/smoke-v31-5.mjs && node tests/smoke-v31-7.mjs && node tests/smoke-v31-7-auth.mjs && node tests/regression-v31-8.mjs && node tests/convocations-v31-8-1.mjs",
     "test:quota": "node tests/quota-v31-8.mjs",
     "test:pdf": "node tests/pdf-v31-8.mjs && node tests/pdf-v31-8-1.mjs",
-    "test:shop": "node tests/shop-v32.mjs"
+    "test:shop": "node tests/shop-v32.mjs",
+    "test:audit": "node tests/audit-v33.mjs"
   },
   "devDependencies": {
     "jsdom": "30.1.2",

@@ -11,24 +11,25 @@ const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,de
 // The real HTTP handler with in-memory transport. No production calls.
 {
  const rows=[];let handler,inserts=0;
+ let staffRole='teacher_as';const rateCalls=[];
  class Query{
   constructor(table){this.table=table;this.filters=[]}
   select(){return this} eq(k,v){this.filters.push(r=>r[k]===v);return this} in(k,vs){this.filters.push(r=>vs.includes(r[k]));return this} order(){return this}
   insert(records){this.records=records;return this}
   async execute(){
    if(this.records){inserts++;if(this.records.some(r=>rows.some(old=>old.checkout_id===r.checkout_id&&old.checkout_line===r.checkout_line)))return{data:null,error:{code:'23505'}};const created=this.records.map((r,i)=>({...r,reference:'AS-'+(rows.length+i+1),created_at:'2026-11-04'}));rows.push(...created);return{data:created,error:null}}
-   return{data:(this.table==='v20_products'?products:rows).filter(r=>this.filters.every(f=>f(r))),error:null}
+   return{data:(this.table==='v20_products'?products:this.table==='profiles'?[{id:'staff-test',role:staffRole}]:rows).filter(r=>this.filters.every(f=>f(r))),error:null}
   }
   then(ok,ko){return this.execute().then(ok,ko)}
   async maybeSingle(){const r=await this.execute();return{...r,data:r.data?.[0]||null}}
  }
- const context={createClient:()=>({from:table=>new Query(table),rpc:async()=>({data:{allowed:true},error:null})}),Deno:{env:{get:()=> 'fixture'},serve:fn=>handler=fn},Request,Response,TextDecoder,TextEncoder,crypto:webcrypto,console,Date,Intl,setTimeout,clearTimeout};
+ const context={createClient:()=>({auth:{getUser:async token=>token==='valid-test-token'?{data:{user:{id:'staff-test'}},error:null}:{data:{user:null},error:{message:'Invalid'}}},from:table=>new Query(table),rpc:async(_name,args)=>{rateCalls.push(args);return{data:{allowed:true},error:null}}}),Deno:{env:{get:()=> 'fixture'},serve:fn=>handler=fn},Request,Response,TextDecoder,TextEncoder,crypto:webcrypto,console,Date,Intl,setTimeout,clearTimeout};
  vm.createContext(context);
  let shared=stripTypeScriptTypes(read('supabase/functions/_shared/http.ts')).replaceAll('export ','');
  let edge=stripTypeScriptTypes(read('supabase/functions/public-order/index.ts').replace(/^import .*;\n/gm,''));
  vm.runInContext(shared+'\n'+edge,context);
  const base={requestId:'c09107aa-f330-4ef0-833c-bb40b65acabc',studentName:'ÉLÈVE FICTIF',className:'6e AVIGNON',paymentMethod:'Chèque',items:[{productId:'p1',size:'M',quantity:1},{productId:'p2',size:'S',quantity:2}]};
- const send=(body,origin='https://lucasrx08.github.io')=>handler(new Request('https://example.invalid/functions/public-order',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
+ const send=(body,origin='https://lucasrx08.github.io',token='')=>handler(new Request('https://example.invalid/functions/public-order',{method:'POST',headers:{origin,'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)}));
  let response=await send(base);assert.equal(response.status,201);let result=await response.json();assert.equal(result.references.length,2);assert.equal(result.total,46);assert.equal(rows.length,2);assert.ok(rows.every(r=>r.paid===false));
  response=await send(base);assert.equal(response.status,200);assert.equal(rows.length,2);assert.equal(inserts,1,'Retry of a lost response must reuse the whole cart.');
  response=await send({...base,studentName:'AUTRE FICTIF'});assert.equal(response.status,409);
@@ -37,6 +38,10 @@ const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,de
  response=await send({...base,requestId:webcrypto.randomUUID(),items:Array(21).fill(base.items[0])});assert.equal(response.status,400);
  response=await send(base,'https://untrusted.invalid');assert.equal(response.status,403);
  response=await send({...base,requestId:webcrypto.randomUUID(),items:undefined,productId:'p1',size:'M',quantity:1});assert.equal(response.status,201,'Existing clients remain supported.');
+ response=await send({...base,requestId:webcrypto.randomUUID()},undefined,'invalid');assert.equal(response.status,401);
+ staffRole='educator_escalade';response=await send({...base,requestId:webcrypto.randomUUID()},undefined,'valid-test-token');assert.equal(response.status,403);
+ staffRole='teacher_as';rateCalls.length=0;response=await send({...base,requestId:webcrypto.randomUUID()},undefined,'valid-test-token');assert.equal(response.status,201);assert.equal(rateCalls.length,1);assert.equal(rateCalls[0].p_bucket,'v33-order-staff');assert.equal(rateCalls[0].p_limit,120);
+ rateCalls.length=0;response=await send({...base,requestId:webcrypto.randomUUID()});assert.equal(response.status,201);assert.equal(rateCalls.length,3);assert.ok(rateCalls.some(x=>x.p_limit===300));assert.ok(rateCalls.some(x=>x.p_window_seconds===60));
 }
 // Real cart UI: one identity, multiple lines, stable retry and exact payment copy.
 {
@@ -80,7 +85,7 @@ console.log('Boutique V32 : panier atomique, trois règlements, HelloAsso, repri
 // Staff checkout: three methods, no family banner or HelloAsso link.
 for(const role of ['admin','teacher_as']){
  const dom=new JSDOM('<main></main>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
- w.sessionStorage.setItem('bs-v20-verified-role',role);w.app={role:()=>role,readData:()=>({products}),route:()=> 'shop'};
+ w.sessionStorage.setItem('bs-v20-verified-role',role);w.__BS_SUPABASE_CLIENT={auth:{getSession:async()=>({data:{session:{access_token:'test-token'}}})}};w.app={role:()=>role,readData:()=>({products}),route:()=> 'shop'};
  w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.AbortController=AbortController;
  w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();
  const f=w.document.querySelector('form');assert.equal(f.elements.paymentMethod.options.length,3);

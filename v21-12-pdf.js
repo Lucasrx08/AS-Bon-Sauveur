@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-const VERSION='v32.0.4-20261008';
+const VERSION='v33.0.0-20261008';
 const MAX_PROGRAM_EVENTS=5;
 const MAX_TV_EVENTS=3;
 const ASSETS={
@@ -14,7 +14,7 @@ const ASSETS={
  sansBold:'assets/fonts/DejaVuSans-Latin-Bold.ttf'
 };
 const C={
- blue:[45,79,170],dark:[46,46,46],yellow:[255,214,26],paper:[251,250,247],
+ blue:[0,74,173],dark:[46,46,46],yellow:[255,213,2],paper:[251,250,247],
  ink:[38,46,62],muted:[101,112,133],line:[216,226,239],soft:[246,248,252],white:[255,255,255]
 };
 const SPECIALTIES={
@@ -78,7 +78,7 @@ async function ensurePdf(){
  if(pdfLoader)return pdfLoader;
  pdfLoader=new Promise((resolve,reject)=>{
   document.querySelector('script[data-v2112-jspdf]')?.remove();
-  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'32.0.4');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
+  const script=document.createElement('script');script.dataset.v2112Jspdf='1';script.src='assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'33.0.0');script.integrity='sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/';script.crossOrigin='anonymous';script.referrerPolicy='no-referrer';
   const fail=()=>{clearTimeout(timer);script.remove();reject(new Error('Le module PDF ne peut pas être chargé. Vérifiez votre connexion puis réessayez.'))};
   const timer=setTimeout(fail,20000);script.onload=()=>{clearTimeout(timer);if(window.jspdf?.jsPDF)resolve(window.jspdf);else fail()};script.onerror=fail;document.head.appendChild(script);
  }).catch(error=>{pdfLoader=null;throw error});
