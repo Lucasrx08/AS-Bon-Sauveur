@@ -1,6 +1,6 @@
 {
-  "version": "33.0.0",
-  "build": "20261104-professional-audit",
+  "version": "33.0.1",
+  "build": "20261104-shop-deadline",
   "channel": "stable",
   "releasedAt": "2026-11-04",
   "message": "Exports harmonisés, convocations robustes, notice actualisée et commandes adaptées aux réseaux partagés",

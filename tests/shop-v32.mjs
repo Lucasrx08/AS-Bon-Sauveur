@@ -115,7 +115,7 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
  const dom=new JSDOM('<div class="v19-page-head"><h1>Boutique AS</h1></div><div class="v19-products"></div>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
  const catalogue=[{...products[0],id:'f',name:'Sweat Bleu - Logo floqué',price:22},{...products[0],id:'b',name:'Sweat Bleu - Logo brodé',price:26}];
  w.app={readData:()=>({products:catalogue}),route:()=> 'shop'};w.eval(read('v32-shop.js'));
- assert.equal(w.document.querySelectorAll('.v19-product').length,1);const buttons=w.document.querySelectorAll('[data-v32-product]');assert.equal(buttons.length,2);
+ assert.equal(w.document.querySelectorAll('.v19-product').length,1);assert.match(w.document.body.textContent,/Commandes jusqu’au/);const buttons=w.document.querySelectorAll('[data-v32-product]');assert.equal(buttons.length,2);
  buttons[0].click();buttons[1].click();assert.equal(w.document.getElementById('v32-cart'),null);assert.match(w.document.querySelector('[data-v32-cart]').textContent,/2/);
  w.document.querySelector('[data-v32-cart]').click();const selected=[...w.document.querySelectorAll('[data-field="productId"]')].map(x=>x.value);assert.deepEqual(selected,['f','b']);dom.window.close();
 }

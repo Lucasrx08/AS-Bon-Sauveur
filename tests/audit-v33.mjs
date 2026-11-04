@@ -13,3 +13,5 @@ assert.equal(rows.length,5);assert.ok(rows.every(x=>x.convocation_id==='visible'
 for(const f of ['v22-1-privacy.js','v23-privacy.js']){const s=read(f);assert.match(s,/HelloAsso/);assert.match(s,/prénom et l’initiale/);assert.doesNotMatch(s,/Uniquement les personnels autorisés/)}
 const s=read('v19-app.js');assert.match(s,/Par panier \/ référence/);const exports=s.slice(s.indexOf('async function exportExcel('));assert.doesNotMatch(exports,/Aptos/);assert.match(exports,/name:'Anton'/);assert.match(exports,/name:'Montserrat'/);
 console.log('V33 : noms toutes casses, projection publique filtrée, confidentialité, vue par panier et charte Excel OK.');
+
+const ordersPage=s.slice(s.indexOf('function ordersPage(){'),s.indexOf('function reportsPage(){'));assert.equal((ordersPage.match(/\+ Commande/g)||[]).length,1);assert.match(ordersPage,/data-v21-order-add/);
