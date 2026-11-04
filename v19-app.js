@@ -327,11 +327,13 @@ function filter(key,label,items,val=''){
 }
 function ordersPage(){
  if(!isManager()) return denied();
- const rows=(state.data.orders||[]).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+ const f=state.filters.orders||{}, all=state.data.orders||[], names=[...new Set(all.map(o=>o.productName||productName(o.productId)))].sort((a,b)=>a.localeCompare(b,'fr'));
+ const rows=all.filter(o=>(!f.payment||o.paymentMethod===f.payment)&&(!f.product||(o.productName||productName(o.productId))===f.product)).slice().sort((a,b)=>f.sort==='article'?(a.productName||productName(a.productId)).localeCompare(b.productName||productName(b.productId),'fr')||a.studentName.localeCompare(b.studentName,'fr'):f.sort==='payment'?String(a.paymentMethod).localeCompare(String(b.paymentMethod),'fr')||a.studentName.localeCompare(b.studentName,'fr'):(b.createdAt||'').localeCompare(a.createdAt||''));
  const pending=rows.filter(x=>!x.paid).length, dist=rows.filter(x=>x.paid&&!x.distributed).length;
  return `<div class="v19-container">${pageTitle('BOUTIQUE','Gestion des commandes','Paiement et distribution.',`<button class="v19-btn" onclick="app.exportExcel('orders')">Exporter Excel</button>`)}
   <div class="v19-stats"><div><strong>${rows.length}</strong><span>Commandes</span></div><div><strong>${pending}</strong><span>Paiements en attente</span></div><div><strong>${dist}</strong><span>À distribuer</span></div></div>
-  <div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Élève</th><th>Classe</th><th>Produit</th><th>Taille</th><th>Paiement</th><th>Payé</th><th>Distribution</th><th>Date</th></tr></thead><tbody>${rows.map(o=>`<tr><td><strong>${esc(o.studentName)}</strong></td><td>${esc(o.className)}</td><td>${esc(productName(o.productId))}</td><td>${esc(o.size)}</td><td>${esc(o.paymentMethod)}</td><td><button class="v19-status ${o.paid?'on':'off'}" onclick="app.toggleOrder('${o.id}','paid')"><span>${o.paid?'Payé':'En attente'}</span>${icon('chevron')}</button></td><td><button class="v19-status ${o.distributed?'on':'off'}" onclick="app.toggleOrder('${o.id}','distributed')"><span>${o.distributed?'Distribué':'À distribuer'}</span>${icon('chevron')}</button></td><td>${fmtShort(o.createdAt)}</td></tr>`).join('')}</tbody></table></div>
+  <div class="v19-filters"><label class="v19-filter"><span>Règlement</span><select onchange="app.orderFilter('payment',this.value)"><option value="">Tous</option>${['Chèque','Espèces','Virement'].map(x=>`<option ${f.payment===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label><label class="v19-filter"><span>Article</span><select onchange="app.orderFilter('product',this.value)"><option value="">Tous</option>${names.map(x=>`<option ${f.product===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label><label class="v19-filter"><span>Trier par</span><select onchange="app.orderFilter('sort',this.value)">${[['date','Date'],['article','Article'],['payment','Règlement']].map(([v,t])=>`<option value="${v}" ${(f.sort||'date')===v?'selected':''}>${t}</option>`).join('')}</select></label><button class="v19-btn secondary" onclick="app.openCart()">+ Commande</button></div>
+  <div class="v19-table-wrap"><table class="v19-table"><thead><tr><th>Élève</th><th>Classe</th><th>Produit</th><th>Taille</th><th>Paiement</th><th>Payé</th><th>Distribution</th><th>Date</th></tr></thead><tbody>${rows.map(o=>`<tr><td><strong>${esc(o.studentName)}</strong></td><td>${esc(o.className)}</td><td>${esc(o.productName||productName(o.productId))}</td><td>${esc(o.size)}</td><td>${esc(o.paymentMethod)}</td><td><button class="v19-status ${o.paid?'on':'off'}" onclick="app.toggleOrder('${o.id}','paid')"><span>${o.paid?'Payé':'En attente'}</span>${icon('chevron')}</button></td><td><button class="v19-status ${o.distributed?'on':'off'}" onclick="app.toggleOrder('${o.id}','distributed')"><span>${o.distributed?'Distribué':'À distribuer'}</span>${icon('chevron')}</button></td><td>${fmtShort(o.createdAt)}</td></tr>`).join('')}</tbody></table></div>
  </div>`;
 }
 function reportsPage(){
@@ -608,7 +610,7 @@ function order(productId){
   <div class="full v19-modal-actions"><button class="v19-btn" type="submit">Enregistrer la commande</button></div></form>`,true);
  m.querySelector('#v19-order-form').onsubmit=ev=>{ev.preventDefault();const fd=new FormData(ev.currentTarget);state.data.orders.push({id:uid('o'),productId,studentName:String(fd.get('studentName')||'').trim(),className:fd.get('className'),size:fd.get('size'),quantity:Number(fd.get('quantity')||1),paymentMethod:fd.get('paymentMethod'),color:String(fd.get('color')||'').trim(),paid:false,distributed:false,createdAt:new Date().toISOString().slice(0,10)});save();closeModal();toast('Commande enregistrée')};
 }
-function toggleOrder(id,kind){const o=(state.data.orders||[]).find(x=>x.id===id);if(!o)return;o[kind]=!o[kind];save();render()}
+function toggleOrder(id,kind){if(!isManager()||!['paid','distributed'].includes(kind))return;const o=(state.data.orders||[]).find(x=>x.id===id);if(!o)return;o[kind]=!o[kind];save();render({preserveScroll:true})}
 
 function setTerm(t){state.term=t;render()}
 function canManageAppreciation(studentId){
@@ -806,7 +808,7 @@ async function exportExcel(kind){
  const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('Données');
  const defs={
   licenses:{title:'LICENCES',headers:['Nom & prénom','Classe','Catégorie','Spécialité','Cotisation','Statut','Montant','Charte'],rows:(state.data.licenses||[]).map(l=>[l.fullName,l.className,l.category,l.sectionOption,l.contribution,l.paymentStatus,Number(l.amount||0),l.charterSigned])},
-  orders:{title:'COMMANDES',headers:['Élève','Classe','Produit','Taille','Qté','Couleur','Paiement','Payé','Distribué','Date'],rows:(state.data.orders||[]).map(o=>[o.studentName,o.className,productName(o.productId),o.size,o.quantity||1,o.color||'',o.paymentMethod,o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',o.createdAt])},
+  orders:{title:'COMMANDES',headers:['Élève','Classe','Produit','Taille','Qté','Couleur','Paiement','Payé','Distribué','Date'],rows:(state.data.orders||[]).map(o=>[o.studentName,o.className,o.productName||productName(o.productId),o.size,o.quantity||1,o.color||'',o.paymentMethod,o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',o.createdAt])},
   reports:{title:'BILANS AS',headers:['Date','Activité','Enseignant(s)','Niveau','Lieu','Catégorie','Nombre d’élèves','Commentaire'],rows:(state.data.reports||[]).map(r=>[r.date,r.activity,r.teacher,r.level,r.place,r.category,Number(r.participants||0),r.comment])},
   convocations:{title:'CONVOCATIONS',headers:['Date','Titre','Activité','Spécialité','Catégorie','Lieu','Départ','Retour','Rendez-vous','Professeur','Informations','Élèves'],rows:(state.data.convocations||[]).map(c=>[c.date,c.title,c.activity,c.specialty,c.ageCategory,c.place,c.departure,c.returnTime,c.meetingPoint,c.teacher,c.extraInfo,(c.studentIds||[]).map(studentName).join(' · ')])},
   appreciations:{title:'APPRÉCIATIONS',headers:['Élève','Classe','Spécialité','Trimestre','Appréciation','Statut'],rows:isEducator()?(state.data.licenses||[]).filter(l=>EDU_SPECIALTIES.includes(l.sectionOption)&&l.sectionOption===roleSpecialty()).map(l=>{const a=currentApp(l.studentId);return[l.fullName,l.className,l.sectionOption,state.term,a?.text||'',a?.status||'À faire']}):[]}
@@ -835,7 +837,7 @@ window.app={
  go,openPublicSpecialty,theme,profile,setRole,closeModal,search,
  editEvent,deleteEvent,openConv,openEventConvocation,eventConvocation,prepareConvocation,editConv,deleteConv,
  editLicense,toggleLicensePayment,licenseFilter,clearLicenseFilters,
- editReport,deleteReport,order,toggleOrder,
+ editReport,deleteReport,order,toggleOrder,orderFilter:(k,v)=>{if(!isManager())return;state.filters.orders={...(state.filters.orders||{}),[k]:v};render({preserveScroll:true})},
  setTerm,editApp,saveAppDraft,validateApp,copyApp,copyReviewApp,
  openEventRegistration,refreshEventRegistrations,deleteEventRegistration,refreshAppreciationReview,setRegistrationFilter,clearRegistrationFilters,setAppreciationReviewFilter,
  manageSpecialtyNotes,saveSpecialtyNote,manageTerms,

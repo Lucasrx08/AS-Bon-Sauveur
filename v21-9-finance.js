@@ -26,7 +26,7 @@ function products(data){return new Map((data.products||[]).map(p=>[p.id,p]))}
 function summary(data,kind){
  const map=new Map();let count=0,total=0,paid=0;
  if(kind==='licenses')for(const l of data.licenses||[]){const amount=euro(l.amount),enc=l.paymentStatus==='Payé'?amount:0,k=mode(l.contribution),x=map.get(k)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;map.set(k,x);count++;total+=amount;paid+=enc}
- else{const pm=products(data);for(const o of data.orders||[]){const p=pm.get(o.productId),amount=euro(p?.price)*Math.max(1,Number(o.quantity||1)),enc=o.paid?amount:0,k=mode(o.paymentMethod),x=map.get(k)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;map.set(k,x);count++;total+=amount;paid+=enc}}
+ else{const pm=products(data);for(const o of data.orders||[]){const p=pm.get(o.productId),amount=euro(o.unitPrice??p?.price)*Math.max(1,Number(o.quantity||1)),enc=o.paid?amount:0,k=mode(o.paymentMethod),x=map.get(k)||{count:0,total:0,paid:0};x.count++;x.total+=amount;x.paid+=enc;map.set(k,x);count++;total+=amount;paid+=enc}}
  return{count,total,paid,pending:total-paid,modes:[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr'))};
 }
 function buildSummary(wb,data,kind){
@@ -50,7 +50,7 @@ function buildDetail(wb,data,kind){
   rows=(data.licenses||[]).map(l=>[l.fullName,l.className,l.category,l.sectionOption,mode(l.contribution),l.paymentStatus,euro(l.amount),l.charterSigned]);
  }else{
   const pm=products(data);hs=['Élève','Classe','Produit','Taille / Qté','Règlement','Paiement','Total','Distribution','Date'];totalCol=7;
-  rows=(data.orders||[]).map(o=>{const p=pm.get(o.productId),unit=euro(p?.price),q=Math.max(1,Number(o.quantity||1));return[o.studentName,o.className,`${p?.name||'Produit supprimé'}\n${moneyText(unit)} / unité`,`${o.size||'—'} · x${q}`,mode(o.paymentMethod),o.paid?'Payé':'En attente',unit*q,o.distributed?'Distribué':'À distribuer',dateFr(o.createdAt)]});
+  rows=(data.orders||[]).map(o=>{const p=pm.get(o.productId),unit=euro(o.unitPrice??p?.price),q=Math.max(1,Number(o.quantity||1));return[o.studentName,o.className,`${o.productName||p?.name||'Ancien article — nom non disponible'}\n${moneyText(unit)} / unité`,`${o.size||'—'} · x${q}`,mode(o.paymentMethod),o.paid?'Payé':'En attente',unit*q,o.distributed?'Distribué':'À distribuer',dateFr(o.createdAt)]});
  }
  headers(ws,4,hs);
  rows.forEach((vals,i)=>{const r=5+i;vals.forEach((v,c)=>ws.getCell(r,c+1).value=v);rowStyle(ws,r,cols);moneyFormat(ws.getCell(r,totalCol));if(!isLic)ws.getRow(r).height=42});
@@ -60,8 +60,25 @@ function buildDetail(wb,data,kind){
  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,margins:{left:.2,right:.2,top:.35,bottom:.35,header:.15,footer:.15}};
  ws.pageSetup.printArea=`A1:${ws.getCell(tr,cols).address}`;
 }
+function buildSupplier(wb,data){
+ const pm=products(data),orders=data.orders||[];
+ for(const [name,key] of [['Par règlement','payment'],['Par article','article']]){
+  const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:1}]});
+  ws.addRow(['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
+  const product=o=>o.productName||pm.get(o.productId)?.name||'Ancien article — nom non disponible';
+  orders.slice().sort((a,b)=>(key==='payment'?mode(a.paymentMethod).localeCompare(mode(b.paymentMethod),'fr'):product(a).localeCompare(product(b),'fr'))||product(a).localeCompare(product(b),'fr')||String(a.size).localeCompare(String(b.size),'fr')||a.studentName.localeCompare(b.studentName,'fr')).forEach(o=>{const q=Math.max(1,Number(o.quantity||1)),u=euro(o.unitPrice??pm.get(o.productId)?.price);ws.addRow([product(o),o.size,q,o.studentName,o.className,mode(o.paymentMethod),o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',u,q*u])});
+  headers(ws,1,['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
+  [36,14,12,26,24,18,16,18,16,16].forEach((width,i)=>ws.getColumn(i+1).width=width);
+  for(let r=2;r<=ws.rowCount;r++){rowStyle(ws,r,10);moneyFormat(ws.getCell(r,9));moneyFormat(ws.getCell(r,10))}
+  ws.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,ws.rowCount),column:10}};
+ }
+ const ws=wb.addWorksheet('Quantités fabricant');headers(ws,1,['Article','Taille','Quantité']);
+ const groups=new Map();for(const o of orders){const name=o.productName||pm.get(o.productId)?.name||'Ancien article — nom non disponible',key=JSON.stringify([name,o.size]);const row=groups.get(key)||[name,o.size,0];row[2]+=Math.max(1,Number(o.quantity||1));groups.set(key,row)}
+ [...groups.values()].sort((a,b)=>a[0].localeCompare(b[0],'fr')||String(a[1]).localeCompare(String(b[1]),'fr')).forEach(row=>ws.addRow(row));
+ [40,16,16].forEach((width,i)=>ws.getColumn(i+1).width=width);ws.autoFilter='A1:C1';
+}
 async function exportAccounting(kind){
- await ensureExcel();const data=window.app?.readData?.()||JSON.parse(localStorage.getItem(STORE)||'{}');const wb=new ExcelJS.Workbook();wb.creator='Association Sportive du Bon Sauveur';wb.company='Bon Sauveur Saint-Lô';wb.created=new Date();wb.calcProperties.fullCalcOnLoad=true;buildSummary(wb,data,kind);buildDetail(wb,data,kind);const name=kind==='licenses'?'Licences_Comptabilite_AS_Bon_Sauveur.xlsx':'Commandes_Comptabilite_AS_Bon_Sauveur.xlsx';const buf=await wb.xlsx.writeBuffer();download(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name)
+ await ensureExcel();const data=window.app?.readData?.()||JSON.parse(localStorage.getItem(STORE)||'{}');const wb=new ExcelJS.Workbook();wb.creator='Association Sportive du Bon Sauveur';wb.company='Bon Sauveur Saint-Lô';wb.created=new Date();wb.calcProperties.fullCalcOnLoad=true;buildSummary(wb,data,kind);buildDetail(wb,data,kind);if(kind==='orders')buildSupplier(wb,data);const name=kind==='licenses'?'Licences_Comptabilite_AS_Bon_Sauveur.xlsx':'Commandes_Comptabilite_AS_Bon_Sauveur.xlsx';const buf=await wb.xlsx.writeBuffer();download(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name)
 }
 function install(){if(!window.app)return setTimeout(install,80);window.app.exportExcel=kind=>kind==='licenses'||kind==='orders'?exportAccounting(kind):previousExport?.(kind);window.ASV219_FINANCE={version:'21.9'}}
 install();

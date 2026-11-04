@@ -115,10 +115,11 @@ async function bulkLicensePaymentMode(){
 
 /* ---------- Commandes fiables ---------- */
 function normalizeOrderDates(){const data=app()?.readData?.();if(!data)return;(data.orders||[]).forEach(o=>{const raw=String(o.createdAt||'');if(/^\d{4}-\d{2}-\d{2}/.test(raw))o.createdAt=raw.slice(0,10)})}
+const orderUpdates=new Set();
 async function toggleOrder(id,kind){
  if(!manager()||!['paid','distributed'].includes(kind))return;const data=app()?.readData?.(),order=(data?.orders||[]).find(x=>String(x.id)===String(id));if(!order)return;
- const client=sb();if(!client)return toast('Connexion à la base indisponible.');const next=!order[kind],payload={};payload[kind]=next;
- try{const {error}=await client.from('v20_orders').update(payload).eq('id',String(id));if(error)throw error;order[kind]=next;persist(data);app()?.go?.('orders');if(window.__BS_SAVED)window.__BS_SAVED('Commande mise à jour')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}
+ const client=sb();if(!client)return toast('Connexion à la base indisponible.');const key=id+':'+kind;if(orderUpdates.has(key))return;orderUpdates.add(key);const next=!order[kind],payload={};payload[kind]=next;
+ try{const {data:confirmed,error}=await client.from('v20_orders').update(payload).eq('id',String(id)).select('id,'+kind).single();if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const current=app()?.readData?.()||data,updated=(current.orders||[]).find(x=>String(x.id)===String(id));if(updated)updated[kind]=confirmed[kind];persist(current);app()?.refreshView?.('orders');if(window.__BS_SAVED)window.__BS_SAVED('Commande mise à jour')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{orderUpdates.delete(key)}
 }
 
 /* ---------- Interface ---------- */
