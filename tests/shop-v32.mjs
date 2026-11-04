@@ -44,7 +44,7 @@ const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,de
  w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.__BS_SHOP_PREVIEW=true;
  w.app={readData:()=>({products}),route:()=> 'shop'};w.AbortController=AbortController;
  const requests=[];let fail=true;w.fetch=async(_url,options)=>{requests.push(JSON.parse(options.body));if(fail)throw new Error('Réponse fictive perdue');return{ok:true,json:async()=>({references:['AS-FICTIVE-1','AS-FICTIVE-2']})}};
- w.eval(read('v32-shop.js'));w.app.order('p1');w.document.querySelector('[data-add]').click();
+ w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();w.document.querySelector('[data-add]').click();
  const form=w.document.querySelector('form');form.elements.lastName.value='TEST';form.elements.firstName.value='Fictif';form.elements.className.value='6e AVIGNON';
  assert.equal(w.document.querySelectorAll('[data-line]').length,2);assert.equal(w.document.querySelectorAll('[name=lastName]').length,1);
  assert.match(w.document.querySelector('[data-payment]').textContent,/Chèque à l’ordre de l’AS du Bon Sauveur/);
@@ -82,7 +82,7 @@ for(const role of ['admin','teacher_as']){
  const dom=new JSDOM('<main></main>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
  w.sessionStorage.setItem('bs-v20-verified-role',role);w.app={role:()=>role,readData:()=>({products}),route:()=> 'shop'};
  w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.AbortController=AbortController;
- w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v32-shop.js'));w.app.order('p1');
+ w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();
  const f=w.document.querySelector('form');assert.equal(f.elements.paymentMethod.options.length,3);
  for(const method of ['Chèque','Espèces','Virement']){f.elements.paymentMethod.value=method;f.elements.paymentMethod.onchange();assert.equal(w.document.querySelector('[data-payment]').hidden,true);assert.doesNotMatch(w.document.querySelector('[data-submit]').textContent,/HelloAsso/)}
  f.elements.lastName.value='TEST';f.elements.firstName.value='Fictif';f.elements.className.value='6e AVIGNON';await f.onsubmit({preventDefault(){}});assert.equal(w.document.querySelector('a'),null);assert.doesNotMatch(w.document.body.textContent,/transmettre|HelloAsso/);dom.window.close();
@@ -104,4 +104,13 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
  const build=new Function('products','headers','rowStyle','moneyFormat','mode','euro',body+';return buildSupplier;')(()=>new Map(),headers,()=>{},()=>{},String,Number);
  build(wb,{orders:[{productName:'Sweat bleu — brodé',size:'M',quantity:2,paymentMethod:'Virement',studentName:'B',unitPrice:26},{productName:'Sweat bleu — brodé',size:'M',quantity:1,paymentMethod:'Chèque',studentName:'A',unitPrice:26}]});
  assert.equal(sheets.length,3);assert.equal(sheets[0].rows[1][5],'Chèque');assert.equal(sheets[2].rows[1][2],3);assert.equal(sheets[2].rows[1][0],'Sweat bleu — brodé');
+}
+// Catalogue buttons select the exact finish without opening checkout or replacing the cards.
+{
+ const dom=new JSDOM('<div class="v19-head-actions"></div><div class="v19-products"></div>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
+ const catalogue=[{...products[0],id:'f',name:'Sweat Bleu - Logo floqué',price:22},{...products[0],id:'b',name:'Sweat Bleu - Logo brodé',price:26}];
+ w.app={readData:()=>({products:catalogue}),route:()=> 'shop'};w.eval(read('v32-shop.js'));
+ assert.equal(w.document.querySelectorAll('.v19-product').length,1);const buttons=w.document.querySelectorAll('[data-v32-product]');assert.equal(buttons.length,2);
+ buttons[0].click();buttons[1].click();assert.equal(w.document.getElementById('v32-cart'),null);assert.match(w.document.querySelector('[data-v32-cart]').textContent,/2/);
+ w.document.querySelector('[data-v32-cart]').click();const selected=[...w.document.querySelectorAll('[data-field="productId"]')].map(x=>x.value);assert.deepEqual(selected,['f','b']);dom.window.close();
 }

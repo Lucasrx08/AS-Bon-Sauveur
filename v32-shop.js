@@ -14,6 +14,13 @@ const opts=(xs,value)=>xs.map(x=>`<option value="${esc(x)}" ${x===value?'selecte
 const staff=()=>['admin','teacher_as'].includes(window.app?.role?.())&&sessionStorage.getItem('bs-v20-verified-role')===window.app.role();
 const instructions=method=>staff()?'':method==='Chèque'?"Chèque à l’ordre de l’AS du Bon Sauveur, à transmettre à un enseignant d’EPS.":method==='Espèces'?"Espèces à transmettre à un enseignant d’EPS.":"Après l’enregistrement, vous serez redirigé vers HelloAsso. Sélectionnez à nouveau les mêmes articles, tailles et quantités pour régler votre commande. Le paiement sera vérifié par l’équipe EPS.";
 let cart=[];
+function addToCart(productId){
+ const p=products().find(p=>p.id===productId);if(!p)return;
+ if(cart.length>=20)return;
+ cart.push({productId:p.id,size:'M',quantity:1});updateCartButton();
+ let note=document.querySelector('[data-v32-added]');if(!note){note=document.createElement('div');note.className='v19-toast';note.dataset.v32Added='';note.setAttribute('role','status');document.body.appendChild(note)}
+ note.textContent=p.name+' ajouté au panier';clearTimeout(addToCart.timer);addToCart.timer=setTimeout(()=>note.remove(),2200);
+}
 function openCart(productId){
  const available=products();if(productId){const p=available.find(p=>p.id===productId);if(!p)return;cart.push({productId:p.id,size:'M',quantity:1})}
  document.getElementById('v32-cart')?.remove();
@@ -55,13 +62,13 @@ function updateCartButton(){
  const available=products(),groups=new Map();
  for(const p of available){const key=p.name.replace(/\s*[-–]\s*Logo (floqué|brodé)$/i,'');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p)}
  const grid=document.querySelector('.v19-products'),signature=JSON.stringify(available);
- if(grid&&groups.size<available.length&&grid.dataset.v32Catalogue!==signature){
+ if(grid&&grid.dataset.v32Catalogue!==signature){
   grid.dataset.v32Catalogue=signature;
-  grid.innerHTML=[...groups.entries()].map(([name,variants])=>{const first=variants[0],src=/^(https?:\/\/|assets\/)/.test(first.image||'')?first.image:'assets/logo-as.png';return `<article class="v19-card v19-product"><img src="${esc(src)}" alt="${esc(name)}" loading="lazy"><div><h3>${esc(name)}</h3><p>${variants.map(v=>`${esc(v.name.match(/Logo (floqué|brodé)$/i)?.[0]||v.name)} : <strong>${euro(v.price)}</strong>`).join('<br>')}</p><div class="v19-meta">Plusieurs tailles · finition au choix dans le panier</div><button type="button" class="v19-btn yellow" data-v32-product="${esc(first.id)}">Ajouter au panier</button></div></article>`}).join('');
-  grid.querySelectorAll('[data-v32-product]').forEach(b=>b.onclick=()=>openCart(b.dataset.v32Product));
+  grid.innerHTML=[...groups.entries()].map(([name,variants])=>{const first=variants[0],src=/^(https?:\/\/|assets\/)/.test(first.image||'')?first.image:'assets/logo-as.png';return `<article class="v19-card v19-product"><img src="${esc(src)}" alt="${esc(name)}" loading="lazy"><div><h3>${esc(name)}</h3><div class="v32-variants">${variants.map(v=>`<div class="v32-variant"><div><span>${esc(v.name.match(/Logo (floqué|brodé)$/i)?.[0]||v.name)}</span><strong>${euro(v.price)}</strong></div><button type="button" class="v19-btn yellow" data-v32-product="${esc(v.id)}" aria-label="${esc('Ajouter '+v.name+' au panier')}">Ajouter au panier</button></div>`).join('')}</div><div class="v19-meta">Tailles et quantités à vérifier dans Mon panier</div></div></article>`}).join('');
+  grid.querySelectorAll('[data-v32-product]').forEach(b=>b.onclick=()=>addToCart(b.dataset.v32Product));
  }
  document.querySelectorAll('.v19-product button').forEach(b=>b.textContent='Ajouter au panier');
 }
-window.app.order=openCart;window.app.openCart=()=>openCart();window.ASV32_SHOP={instructions,helloAssoUrl:HELLOASSO};
+window.app.order=addToCart;window.app.openCart=()=>openCart();window.ASV32_SHOP={instructions,helloAssoUrl:HELLOASSO};
 window.addEventListener('bs-app-rendered',()=>requestAnimationFrame(updateCartButton));updateCartButton();
 })();
