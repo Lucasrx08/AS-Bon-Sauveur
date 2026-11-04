@@ -1,6 +1,6 @@
 {
-  "version": "32.0.2",
-  "build": "20261104-public-cart",
+  "version": "32.0.3",
+  "build": "20261104-person-orders",
   "channel": "stable",
   "releasedAt": "2026-11-04",
   "message": "Panier multi-articles, consignes de paiement, HelloAsso et historique des produits",

@@ -62,6 +62,7 @@ function sortTable(table,col,label,button,direction){
 function enhance(){
   if(!isTargetPage())return;
   const table=document.querySelector('.v19-table-wrap table.v19-table'); if(!table)return;
+  if(table.querySelector('.v32-order-person'))return;
   reorderRegistrations(table);
   const row=table.tHead?.rows?.[0]; if(!row)return;
   [...row.cells].forEach((th,col)=>{

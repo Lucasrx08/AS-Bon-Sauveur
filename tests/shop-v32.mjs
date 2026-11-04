@@ -114,3 +114,12 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
  buttons[0].click();buttons[1].click();assert.equal(w.document.getElementById('v32-cart'),null);assert.match(w.document.querySelector('[data-v32-cart]').textContent,/2/);
  w.document.querySelector('[data-v32-cart]').click();const selected=[...w.document.querySelectorAll('[data-field="productId"]')].map(x=>x.value);assert.deepEqual(selected,['f','b']);dom.window.close();
 }
+// Grouping is visual only: same name + class shares a header; homonyms in other classes stay apart.
+{
+ const source=read('v19-app.js'),body=source.slice(source.indexOf('function ordersPage(){'),source.indexOf('function reportsPage(){'));
+ const orders=[1,2,3,4].map(i=>({id:'o'+i,studentName:'Test Lucas',className:'6e AVIGNON',productName:'Sweat '+i,size:'M',quantity:1,unitPrice:22,paymentMethod:'Chèque',createdAt:'2026-11-04'}));orders.push({...orders[0],id:'other',className:'5e BOLLAND'});
+ const state={filters:{orders:{}},data:{orders,products:[]}};
+ const render=new Function('state','isManager','denied','productName','pageTitle','esc','money','icon','fmtShort',body+';return ordersPage;')(state,()=>true,()=>'',()=>'',()=>'',String,n=>n+' €',()=>'',String);
+ const dom=new JSDOM(render());assert.equal(dom.window.document.querySelectorAll('.v32-order-person').length,2);assert.match(dom.window.document.querySelector('.v32-order-person').textContent,/4 article\(s\) · 88 €/);assert.equal(dom.window.document.querySelectorAll('[onclick*="toggleOrder"]').length,10);
+ state.filters.orders.product='Sweat 2';const filtered=new JSDOM(render());assert.match(filtered.window.document.body.textContent,/1 article\(s\) · 22 € · sélection filtrée/);dom.window.close();filtered.window.close();
+}
