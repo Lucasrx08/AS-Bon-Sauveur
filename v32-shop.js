@@ -11,7 +11,8 @@ const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).forma
 const data=()=>window.app.readData();
 const products=()=>data().products.filter(p=>p.active!==false&&(!p.deadline||p.deadline>=today()));
 const opts=(xs,value)=>xs.map(x=>`<option value="${esc(x)}" ${x===value?'selected':''}>${esc(x)}</option>`).join('');
-const instructions=method=>method==='Chèque'?"Chèque à l’ordre de l’AS du Bon Sauveur, à transmettre à un enseignant d’EPS.":method==='Espèces'?"Espèces à transmettre à un enseignant d’EPS.":"Après l’enregistrement, vous serez redirigé vers HelloAsso. Sélectionnez à nouveau les mêmes articles, tailles et quantités pour régler votre commande. Le paiement sera vérifié par l’équipe EPS.";
+const staff=()=>['admin','teacher_as'].includes(window.app?.role?.())&&sessionStorage.getItem('bs-v20-verified-role')===window.app.role();
+const instructions=method=>staff()?'':method==='Chèque'?"Chèque à l’ordre de l’AS du Bon Sauveur, à transmettre à un enseignant d’EPS.":method==='Espèces'?"Espèces à transmettre à un enseignant d’EPS.":"Après l’enregistrement, vous serez redirigé vers HelloAsso. Sélectionnez à nouveau les mêmes articles, tailles et quantités pour régler votre commande. Le paiement sera vérifié par l’équipe EPS.";
 let cart=[];
 function openCart(productId){
  const available=products();if(productId){const p=available.find(p=>p.id===productId);if(!p)return;cart.push({productId:p.id,size:'M',quantity:1})}
@@ -27,7 +28,7 @@ function openCart(productId){
   items.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{cart.splice(Number(b.dataset.remove),1);renderItems()});total();
  }
  function total(){const amount=cart.reduce((sum,l)=>sum+Number(available.find(p=>p.id===l.productId)?.price||0)*l.quantity,0);modal.querySelector('[data-total]').textContent=`${cart.reduce((n,l)=>n+l.quantity,0)} article(s) · Total : ${euro(amount)}`;submit.disabled=!cart.length||busy;updateCartButton()}
- function payment(){modal.querySelector('[data-payment]').textContent=instructions(form.elements.paymentMethod.value);submit.textContent=form.elements.paymentMethod.value==='Virement'?'Enregistrer et poursuivre sur HelloAsso':'Enregistrer ma commande'}
+ function payment(){modal.querySelector('[data-payment]').textContent=instructions(form.elements.paymentMethod.value);modal.querySelector('[data-payment]').hidden=staff();submit.textContent=!staff()&&form.elements.paymentMethod.value==='Virement'?'Enregistrer et poursuivre sur HelloAsso':'Enregistrer ma commande'}
  modal.querySelector('[data-add]').onclick=()=>{if(cart.length>=20){error.textContent='20 lignes maximum par commande.';return}if(available[0])cart.push({productId:available[0].id,size:'M',quantity:1});renderItems()};
  form.elements.paymentMethod.onchange=payment;
  form.onsubmit=async event=>{
@@ -40,9 +41,9 @@ function openCart(productId){
    const cfg=window.APP_CONFIG||{},controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);let response;
    try{response=await fetch(cfg.supabaseUrl+'/functions/v1/public-order',{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.supabaseAnonKey},body:JSON.stringify({requestId,...fields}),signal:controller.signal,cache:'no-store',credentials:'omit'})}finally{clearTimeout(timer)}
    const result=await response.json();if(!response.ok)throw new Error(result.error||'Commande non enregistrée. Réessayez.');
-   cart=[];modal.querySelector('.v19-modal-body').innerHTML=`<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>${esc((result.references||[result.reference]).filter(Boolean).join(' · '))}</p><p>${esc(instructions(fields.paymentMethod))}</p><p>Statut : en attente de paiement.</p>${fields.paymentMethod==='Virement'?`<a class="v19-btn yellow" href="${HELLOASSO}" rel="noopener noreferrer">Ouvrir HelloAsso</a>`:'<button class="v19-btn" data-done>Fermer</button>'}</div>`;
+   cart=[];modal.querySelector('.v19-modal-body').innerHTML=`<div class="v2115-registration-success"><span>✓</span><h3>Commande enregistrée</h3><p>${esc((result.references||[result.reference]).filter(Boolean).join(' · '))}</p><p>${esc(instructions(fields.paymentMethod))}</p><p>Statut : en attente de paiement.</p>${!staff()&&fields.paymentMethod==='Virement'?`<a class="v19-btn yellow" href="${HELLOASSO}" rel="noopener noreferrer">Ouvrir HelloAsso</a>`:'<button class="v19-btn" data-done>Fermer</button>'}</div>`;
    modal.querySelector('[data-done]')?.addEventListener('click',()=>modal.remove());updateCartButton();
-   if(modal.isConnected&&fields.paymentMethod==='Virement'&&!window.__BS_SHOP_PREVIEW)location.assign(HELLOASSO);
+   if(!staff()&&modal.isConnected&&fields.paymentMethod==='Virement'&&!window.__BS_SHOP_PREVIEW)location.assign(HELLOASSO);
   }catch(e){error.textContent=e.name==='AbortError'?'Le serveur met trop de temps à répondre. Réessayez : la même commande sera reprise.':e.message;busy=false;form.querySelectorAll('input,select,button').forEach(x=>x.disabled=false);payment();total()}
  };
  renderItems();payment();

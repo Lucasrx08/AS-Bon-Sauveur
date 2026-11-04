@@ -76,3 +76,32 @@ const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,de
  assert.match(source,/o\.productName\|\|p\?\.name/);assert.match(source,/o\.unitPrice\?\?p\?\.price/);
 }
 console.log('Boutique V32 : panier atomique, trois règlements, HelloAsso, reprises sans doublon, historique après suppression et calcul Excel OK (données fictives).');
+
+// Staff checkout: three methods, no family banner or HelloAsso link.
+for(const role of ['admin','teacher_as']){
+ const dom=new JSDOM('<main></main>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
+ w.sessionStorage.setItem('bs-v20-verified-role',role);w.app={role:()=>role,readData:()=>({products}),route:()=> 'shop'};
+ w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.AbortController=AbortController;
+ w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v32-shop.js'));w.app.order('p1');
+ const f=w.document.querySelector('form');assert.equal(f.elements.paymentMethod.options.length,3);
+ for(const method of ['Chèque','Espèces','Virement']){f.elements.paymentMethod.value=method;f.elements.paymentMethod.onchange();assert.equal(w.document.querySelector('[data-payment]').hidden,true);assert.doesNotMatch(w.document.querySelector('[data-submit]').textContent,/HelloAsso/)}
+ f.elements.lastName.value='TEST';f.elements.firstName.value='Fictif';f.elements.className.value='6e AVIGNON';await f.onsubmit({preventDefault(){}});assert.equal(w.document.querySelector('a'),null);assert.doesNotMatch(w.document.body.textContent,/transmettre|HelloAsso/);dom.window.close();
+}
+// Authoritative status handler must confirm persistence and preserve current route/scroll.
+{
+ const source=read('v25-1-functional.js'),body=source.slice(source.indexOf('const orderUpdates='),source.indexOf('/* ---------- Interface'));
+ const order={id:'fixture',paid:false},data={orders:[order]};let refresh=0;
+ const client={from:()=>({update:p=>({eq:()=>({select:()=>({single:async()=>({data:{id:order.id,...p},error:null})})})})})};
+ const fn=new Function('manager','app','sb','toast','persist','window',body+';return toggleOrder;')(()=>true,()=>({readData:()=>data,refreshView:r=>{assert.equal(r,'orders');refresh++},go:()=>assert.fail('Must not navigate')}),()=>client,()=>{},()=>{},{});
+ await fn('fixture','paid');assert.equal(order.paid,true);assert.equal(refresh,1);
+}
+console.log('Personnel : règlements sans redirection ni bandeau ; statut confirmé sans navigation OK.');
+// Supplier worksheets: quantities aggregate across payments, while payment sorting stays separate.
+{
+ const source=read('v21-9-finance.js'),body=source.slice(source.indexOf('function buildSupplier('),source.indexOf('async function exportAccounting('));
+ const sheets=[];const wb={addWorksheet(name){const rows=[];const ws={name,rows,addRow:r=>rows.push(r),get rowCount(){return rows.length},getColumn:()=>({}),getCell:()=>({})};sheets.push(ws);return ws}};
+ const headers=(ws,r,values)=>{ws.rows[r-1]=values};
+ const build=new Function('products','headers','rowStyle','moneyFormat','mode','euro',body+';return buildSupplier;')(()=>new Map(),headers,()=>{},()=>{},String,Number);
+ build(wb,{orders:[{productName:'Sweat bleu — brodé',size:'M',quantity:2,paymentMethod:'Virement',studentName:'B',unitPrice:26},{productName:'Sweat bleu — brodé',size:'M',quantity:1,paymentMethod:'Chèque',studentName:'A',unitPrice:26}]});
+ assert.equal(sheets.length,3);assert.equal(sheets[0].rows[1][5],'Chèque');assert.equal(sheets[2].rows[1][2],3);assert.equal(sheets[2].rows[1][0],'Sweat bleu — brodé');
+}

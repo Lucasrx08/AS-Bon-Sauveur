@@ -20,3 +20,10 @@ Catalogue préparé : sweats rose/bleu/gris, floqués 22 € et brodés 26 € ;
 Validation : `npm test`, `npm run test:shop`, `npm run test:quota`, `npm run test:pdf`. Tests fictifs uniquement, aucun règlement ni commande de production.
 
 L’aperçu HTML est autonome et simulé : son formulaire n’appelle pas Supabase et ne redirige pas automatiquement. Le bouton HelloAsso reste disponible pour vérifier la destination. L’export de démonstration est un CSV compatible Excel ; les exports de l’application conservent le format XLSX.
+
+## Complément personnel et préparation fabricant
+- Personnel AS/admin vérifié : panier avec Chèque, Espèces, Virement ; aucune redirection ni consigne destinée aux familles. Permet la saisie manuelle de commandes HelloAsso reçues directement.
+- Gestion : filtres règlement/article et tri date/article/règlement, conservés pendant les changements de statut.
+- Statuts : confirmation serveur, protection double clic, refresh sans navigation ni retour en haut.
+- Excel : feuilles Par règlement, Par article, Quantités fabricant (modèle/finition/taille, quantités additionnées). Toutes les commandes figurent dans le classeur, avec filtres Excel.
+- Tests complémentaires avec données fictives : parcours personnel sans lien HelloAsso, statut confirmé sans navigation, regroupement des quantités et tri des règlements.
