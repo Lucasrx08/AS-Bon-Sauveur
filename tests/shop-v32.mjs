@@ -107,7 +107,7 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
 }
 // Catalogue buttons select the exact finish without opening checkout or replacing the cards.
 {
- const dom=new JSDOM('<div class="v19-head-actions"></div><div class="v19-products"></div>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
+ const dom=new JSDOM('<div class="v19-page-head"><h1>Boutique AS</h1></div><div class="v19-products"></div>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
  const catalogue=[{...products[0],id:'f',name:'Sweat Bleu - Logo floqué',price:22},{...products[0],id:'b',name:'Sweat Bleu - Logo brodé',price:26}];
  w.app={readData:()=>({products:catalogue}),route:()=> 'shop'};w.eval(read('v32-shop.js'));
  assert.equal(w.document.querySelectorAll('.v19-product').length,1);const buttons=w.document.querySelectorAll('[data-v32-product]');assert.equal(buttons.length,2);

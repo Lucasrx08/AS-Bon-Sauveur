@@ -57,7 +57,8 @@ function openCart(productId){
 }
 function updateCartButton(){
  if(window.app.route()!=='shop')return;
- const actions=document.querySelector('.v19-head-actions');if(!actions)return;
+ let actions=document.querySelector('.v19-page-head .v19-head-actions')||document.querySelector('.v19-head-actions');
+ if(!actions){const head=document.querySelector('.v19-page-head');if(!head)return;actions=document.createElement('div');actions.className='v19-head-actions';head.appendChild(actions)}
  let b=actions.querySelector('[data-v32-cart]');if(!b){b=document.createElement('button');b.className='v19-btn yellow';b.dataset.v32Cart='';b.onclick=()=>openCart();actions.appendChild(b)}b.textContent=`Mon panier${cart.length?' ('+cart.length+')':''}`;
  const available=products(),groups=new Map();
  for(const p of available){const key=p.name.replace(/\s*[-–]\s*Logo (floqué|brodé)$/i,'');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p)}
