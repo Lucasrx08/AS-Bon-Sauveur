@@ -15,10 +15,10 @@ function border(cell,color='FFDCE5F0'){cell.border={top:{style:'thin',color:{arg
 function align(cell,{wrap=true}={}){cell.alignment={horizontal:'center',vertical:'middle',wrapText:wrap}}
 function moneyFormat(cell){cell.numFmt='#,##0.00 "€"'}
 function titleBlock(ws,title,cols){
- ws.mergeCells(1,1,1,cols);const t=ws.getCell(1,1);t.value=title;font(t,{title:true,white:true});fill(t,'FF0757C9');align(t,{wrap:false});ws.getRow(1).height=42;
+ ws.mergeCells(1,1,1,cols);const t=ws.getCell(1,1);t.value=title;font(t,{title:true,white:true});fill(t,'FF004AAD');align(t,{wrap:false});ws.getRow(1).height=42;
  ws.mergeCells(2,1,2,cols);const s=ws.getCell(2,1);s.value='ASSOCIATION SPORTIVE DU BON SAUVEUR · SAINT-LÔ';font(s,{header:true,size:11});align(s,{wrap:false});ws.getRow(2).height=24;
 }
-function headers(ws,row,values){values.forEach((v,i)=>{const c=ws.getCell(row,i+1);c.value=v;font(c,{header:true,size:12});fill(c,'FFFFD21A');border(c,'FFB8C9DF');align(c)});ws.getRow(row).height=36}
+function headers(ws,row,values){values.forEach((v,i)=>{const c=ws.getCell(row,i+1);c.value=v;font(c,{header:true,size:12});fill(c,'FFFFD502');border(c,'FFB8C9DF');align(c)});ws.getRow(row).height=36}
 function rowStyle(ws,row,cols){for(let c=1;c<=cols;c++){const cell=ws.getCell(row,c);font(cell,{size:11});border(cell);align(cell);if(row%2===0)fill(cell,'FFF7F9FC')}ws.getRow(row).height=34}
 function totalStyle(ws,row,cols){for(let c=1;c<=cols;c++){const cell=ws.getCell(row,c);font(cell,{header:true,size:11});fill(cell,'FFEAF3FF');border(cell,'FFB8C9DF');align(cell)}ws.getRow(row).height=34}
 function products(data){return new Map((data.products||[]).map(p=>[p.id,p]))}
@@ -55,27 +55,29 @@ function buildDetail(wb,data,kind){
  headers(ws,4,hs);
  rows.forEach((vals,i)=>{const r=5+i;vals.forEach((v,c)=>ws.getCell(r,c+1).value=v);rowStyle(ws,r,cols);moneyFormat(ws.getCell(r,totalCol));if(!isLic)ws.getRow(r).height=42});
  const tr=5+rows.length;ws.getCell(tr,1).value='TOTAL GÉNÉRAL';if(rows.length)ws.getCell(tr,totalCol).value={formula:`SUM(${ws.getCell(5,totalCol).address}:${ws.getCell(tr-1,totalCol).address})`};else ws.getCell(tr,totalCol).value=0;totalStyle(ws,tr,cols);moneyFormat(ws.getCell(tr,totalCol));
- if(isLic){[22,18,13,22,17,13,12,10].forEach((w,i)=>ws.getColumn(i+1).width=w)}else{[20,17,22,13,16,13,12,15,12].forEach((w,i)=>ws.getColumn(i+1).width=w)}
+ if(isLic){[22,18,13,22,17,13,12,10].forEach((w,i)=>ws.getColumn(i+1).width=w)}else{[24,22,38,18,20,18,16,20,16].forEach((w,i)=>ws.getColumn(i+1).width=w)}
  ws.autoFilter={from:{row:4,column:1},to:{row:4,column:cols}};
  ws.pageSetup={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,margins:{left:.2,right:.2,top:.35,bottom:.35,header:.15,footer:.15}};
  ws.pageSetup.printArea=`A1:${ws.getCell(tr,cols).address}`;
 }
+function supplierPrint(ws,last,cols){ws.pageSetup={orientation:cols>3?'landscape':'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,printTitlesRow:'1:4',margins:{left:.25,right:.25,top:.4,bottom:.4,header:.15,footer:.15},printArea:`A1:${ws.getCell(last,cols).address}`};}
 function buildSupplier(wb,data){
  const pm=products(data),orders=data.orders||[];
  for(const [name,key] of [['Par règlement','payment'],['Par article','article']]){
-  const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:1}]});
-  ws.addRow(['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
+  const ws=wb.addWorksheet(name,{views:[{state:'frozen',ySplit:4,showGridLines:false,zoomScale:90}]});titleBlock(ws,name==='Par règlement'?'COMMANDES PAR RÈGLEMENT':'COMMANDES PAR ARTICLE',10);
+  headers(ws,4,['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
   const product=o=>o.productName||pm.get(o.productId)?.name||'Ancien article — nom non disponible';
   orders.slice().sort((a,b)=>(key==='payment'?mode(a.paymentMethod).localeCompare(mode(b.paymentMethod),'fr'):product(a).localeCompare(product(b),'fr'))||product(a).localeCompare(product(b),'fr')||String(a.size).localeCompare(String(b.size),'fr')||a.studentName.localeCompare(b.studentName,'fr')).forEach(o=>{const q=Math.max(1,Number(o.quantity||1)),u=euro(o.unitPrice??pm.get(o.productId)?.price);ws.addRow([product(o),o.size,q,o.studentName,o.className,mode(o.paymentMethod),o.paid?'Payé':'En attente',o.distributed?'Distribué':'À distribuer',u,q*u])});
-  headers(ws,1,['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
+  headers(ws,4,['Article','Taille','Quantité','Nom et prénom','Classe / profil','Règlement','Payé','Distribué','Prix unitaire','Total']);
   [36,14,12,26,24,18,16,18,16,16].forEach((width,i)=>ws.getColumn(i+1).width=width);
-  for(let r=2;r<=ws.rowCount;r++){rowStyle(ws,r,10);moneyFormat(ws.getCell(r,9));moneyFormat(ws.getCell(r,10))}
-  ws.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,ws.rowCount),column:10}};
+  for(let r=5;r<=ws.rowCount;r++){rowStyle(ws,r,10);moneyFormat(ws.getCell(r,9));moneyFormat(ws.getCell(r,10))}
+  const last=ws.rowCount;ws.autoFilter={from:{row:4,column:1},to:{row:Math.max(4,last),column:10}};
+  const tr=last+1;ws.getCell(tr,1).value='TOTAL GÉNÉRAL';ws.getCell(tr,3).value=orders.reduce((n,o)=>n+Math.max(1,Number(o.quantity||1)),0);ws.getCell(tr,10).value=orders.reduce((n,o)=>n+euro(o.unitPrice??pm.get(o.productId)?.price)*Math.max(1,Number(o.quantity||1)),0);totalStyle(ws,tr,10);moneyFormat(ws.getCell(tr,10));supplierPrint(ws,tr,10);
  }
- const ws=wb.addWorksheet('Quantités fabricant');headers(ws,1,['Article','Taille','Quantité']);
+ const ws=wb.addWorksheet('Quantités fabricant',{views:[{state:'frozen',ySplit:4,showGridLines:false,zoomScale:90}]});titleBlock(ws,'QUANTITÉS POUR LE FABRICANT',3);headers(ws,4,['Article','Taille','Quantité']);
  const groups=new Map();for(const o of orders){const name=o.productName||pm.get(o.productId)?.name||'Ancien article — nom non disponible',key=JSON.stringify([name,o.size]);const row=groups.get(key)||[name,o.size,0];row[2]+=Math.max(1,Number(o.quantity||1));groups.set(key,row)}
  [...groups.values()].sort((a,b)=>a[0].localeCompare(b[0],'fr')||String(a[1]).localeCompare(String(b[1]),'fr')).forEach(row=>ws.addRow(row));
- [40,16,16].forEach((width,i)=>ws.getColumn(i+1).width=width);ws.autoFilter='A1:C1';
+ [48,18,18].forEach((width,i)=>ws.getColumn(i+1).width=width);const last=ws.rowCount;for(let r=5;r<=last;r++)rowStyle(ws,r,3);ws.autoFilter={from:{row:4,column:1},to:{row:Math.max(4,last),column:3}};const tr=last+1;ws.getCell(tr,1).value='TOTAL ARTICLES';ws.getCell(tr,3).value=[...groups.values()].reduce((n,row)=>n+row[2],0);totalStyle(ws,tr,3);supplierPrint(ws,tr,3);
 }
 async function exportAccounting(kind){
  await ensureExcel();const data=window.app?.readData?.()||JSON.parse(localStorage.getItem(STORE)||'{}');const wb=new ExcelJS.Workbook();wb.creator='Association Sportive du Bon Sauveur';wb.company='Bon Sauveur Saint-Lô';wb.created=new Date();wb.calcProperties.fullCalcOnLoad=true;buildSummary(wb,data,kind);buildDetail(wb,data,kind);if(kind==='orders')buildSupplier(wb,data);const name=kind==='licenses'?'Licences_Comptabilite_AS_Bon_Sauveur.xlsx':'Commandes_Comptabilite_AS_Bon_Sauveur.xlsx';const buf=await wb.xlsx.writeBuffer();download(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name)

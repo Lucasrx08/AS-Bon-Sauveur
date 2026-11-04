@@ -100,10 +100,10 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
 {
  const source=read('v21-9-finance.js'),body=source.slice(source.indexOf('function buildSupplier('),source.indexOf('async function exportAccounting('));
  const sheets=[];const wb={addWorksheet(name){const rows=[];const ws={name,rows,addRow:r=>rows.push(r),get rowCount(){return rows.length},getColumn:()=>({}),getCell:()=>({})};sheets.push(ws);return ws}};
- const headers=(ws,r,values)=>{ws.rows[r-1]=values};
- const build=new Function('products','headers','rowStyle','moneyFormat','mode','euro',body+';return buildSupplier;')(()=>new Map(),headers,()=>{},()=>{},String,Number);
+ const headers=(ws,r,values)=>{ws.rows[r-1]=values};const titleBlock=(ws)=>{ws.rows.length=3};
+ const build=new Function('products','headers','rowStyle','moneyFormat','mode','euro','titleBlock','totalStyle','supplierPrint',body+';return buildSupplier;')(()=>new Map(),headers,()=>{},()=>{},String,Number,titleBlock,()=>{},()=>{});
  build(wb,{orders:[{productName:'Sweat bleu — brodé',size:'M',quantity:2,paymentMethod:'Virement',studentName:'B',unitPrice:26},{productName:'Sweat bleu — brodé',size:'M',quantity:1,paymentMethod:'Chèque',studentName:'A',unitPrice:26}]});
- assert.equal(sheets.length,3);assert.equal(sheets[0].rows[1][5],'Chèque');assert.equal(sheets[2].rows[1][2],3);assert.equal(sheets[2].rows[1][0],'Sweat bleu — brodé');
+ assert.equal(sheets.length,3);assert.equal(sheets[0].rows[4][5],'Chèque');assert.equal(sheets[2].rows[4][2],3);assert.equal(sheets[2].rows[4][0],'Sweat bleu — brodé');
 }
 // Catalogue buttons select the exact finish without opening checkout or replacing the cards.
 {
