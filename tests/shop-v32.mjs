@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {stripTypeScriptTypes} from 'node:module';
+import vm from 'node:vm';
+import {webcrypto} from 'node:crypto';
+import {JSDOM} from 'jsdom';
+import {PGlite} from '@electric-sql/pglite';
+import {readdirSync} from 'node:fs';
+const read=f=>readFileSync(new URL('../'+f,import.meta.url),'utf8');
+const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,deadline:'2099-12-01',color:'Rose'},{id:'p2',name:'Tee-shirt Bleu ciel - Logo floqué',price:10,active:true,deadline:'2099-12-01',color:'Bleu ciel'}];
+// The real HTTP handler with in-memory transport. No production calls.
+{
+ const rows=[];let handler,inserts=0;
+ class Query{
+  constructor(table){this.table=table;this.filters=[]}
+  select(){return this} eq(k,v){this.filters.push(r=>r[k]===v);return this} in(k,vs){this.filters.push(r=>vs.includes(r[k]));return this} order(){return this}
+  insert(records){this.records=records;return this}
+  async execute(){
+   if(this.records){inserts++;if(this.records.some(r=>rows.some(old=>old.checkout_id===r.checkout_id&&old.checkout_line===r.checkout_line)))return{data:null,error:{code:'23505'}};const created=this.records.map((r,i)=>({...r,reference:'AS-'+(rows.length+i+1),created_at:'2026-11-04'}));rows.push(...created);return{data:created,error:null}}
+   return{data:(this.table==='v20_products'?products:rows).filter(r=>this.filters.every(f=>f(r))),error:null}
+  }
+  then(ok,ko){return this.execute().then(ok,ko)}
+  async maybeSingle(){const r=await this.execute();return{...r,data:r.data?.[0]||null}}
+ }
+ const context={createClient:()=>({from:table=>new Query(table),rpc:async()=>({data:{allowed:true},error:null})}),Deno:{env:{get:()=> 'fixture'},serve:fn=>handler=fn},Request,Response,TextDecoder,TextEncoder,crypto:webcrypto,console,Date,Intl,setTimeout,clearTimeout};
+ vm.createContext(context);
+ let shared=stripTypeScriptTypes(read('supabase/functions/_shared/http.ts')).replaceAll('export ','');
+ let edge=stripTypeScriptTypes(read('supabase/functions/public-order/index.ts').replace(/^import .*;\n/gm,''));
+ vm.runInContext(shared+'\n'+edge,context);
+ const base={requestId:'c09107aa-f330-4ef0-833c-bb40b65acabc',studentName:'ÉLÈVE FICTIF',className:'6e AVIGNON',paymentMethod:'Chèque',items:[{productId:'p1',size:'M',quantity:1},{productId:'p2',size:'S',quantity:2}]};
+ const send=(body,origin='https://lucasrx08.github.io')=>handler(new Request('https://example.invalid/functions/public-order',{method:'POST',headers:{origin,'Content-Type':'application/json'},body:JSON.stringify(body)}));
+ let response=await send(base);assert.equal(response.status,201);let result=await response.json();assert.equal(result.references.length,2);assert.equal(result.total,46);assert.equal(rows.length,2);assert.ok(rows.every(r=>r.paid===false));
+ response=await send(base);assert.equal(response.status,200);assert.equal(rows.length,2);assert.equal(inserts,1,'Retry of a lost response must reuse the whole cart.');
+ response=await send({...base,studentName:'AUTRE FICTIF'});assert.equal(response.status,409);
+ for(const method of ['Espèces','Virement']){response=await send({...base,requestId:webcrypto.randomUUID(),paymentMethod:method});assert.equal(response.status,201)}
+ response=await send({...base,requestId:webcrypto.randomUUID(),items:[base.items[0],{...base.items[1],productId:'missing'}]});assert.equal(response.status,409);assert.equal(rows.length,6,'A failed cart must not partially insert.');
+ response=await send({...base,requestId:webcrypto.randomUUID(),items:Array(21).fill(base.items[0])});assert.equal(response.status,400);
+ response=await send(base,'https://untrusted.invalid');assert.equal(response.status,403);
+ response=await send({...base,requestId:webcrypto.randomUUID(),items:undefined,productId:'p1',size:'M',quantity:1});assert.equal(response.status,201,'Existing clients remain supported.');
+}
+// Real cart UI: one identity, multiple lines, stable retry and exact payment copy.
+{
+ const dom=new JSDOM('<main></main>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
+ w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.__BS_SHOP_PREVIEW=true;
+ w.app={readData:()=>({products}),route:()=> 'shop'};w.AbortController=AbortController;
+ const requests=[];let fail=true;w.fetch=async(_url,options)=>{requests.push(JSON.parse(options.body));if(fail)throw new Error('Réponse fictive perdue');return{ok:true,json:async()=>({references:['AS-FICTIVE-1','AS-FICTIVE-2']})}};
+ w.eval(read('v32-shop.js'));w.app.order('p1');w.document.querySelector('[data-add]').click();
+ const form=w.document.querySelector('form');form.elements.lastName.value='TEST';form.elements.firstName.value='Fictif';form.elements.className.value='6e AVIGNON';
+ assert.equal(w.document.querySelectorAll('[data-line]').length,2);assert.equal(w.document.querySelectorAll('[name=lastName]').length,1);
+ assert.match(w.document.querySelector('[data-payment]').textContent,/Chèque à l’ordre de l’AS du Bon Sauveur/);
+ form.elements.paymentMethod.value='Espèces';form.elements.paymentMethod.onchange();assert.match(w.document.querySelector('[data-payment]').textContent,/Espèces à transmettre à un enseignant d’EPS/);
+ form.elements.paymentMethod.value='Virement';form.elements.paymentMethod.onchange();assert.match(w.document.querySelector('[data-payment]').textContent,/Sélectionnez à nouveau/);
+ await form.onsubmit({preventDefault(){}});assert.ok(form.isConnected);fail=false;await form.onsubmit({preventDefault(){}});
+ assert.equal(requests[0].items.length,2);assert.equal(requests[0].requestId,requests[1].requestId);
+ assert.equal(w.document.querySelector('a').href,w.ASV32_SHOP.helloAssoUrl);assert.match(w.document.body.textContent,/en attente de paiement/);dom.window.close();
+}
+// Durable historical name/price and atomic inserts in an isolated PostgreSQL.
+{
+ const db=new PGlite();await db.exec(`create role anon;create role authenticated;create role service_role;
+ create table public.v20_products(id text primary key,name text,price numeric);
+ create table public.v20_orders(id text primary key,product_id text,quantity int check(quantity between 1 and 10),paid boolean);
+ insert into v20_products values('p1','Nom historique',22),('p2','Autre article',10);
+ insert into v20_orders values('old','p1',1,false);`);
+ const migration=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(f=>f.endsWith('_shop_checkout_history.sql'));
+ await db.exec(read('supabase/migrations/'+migration));
+ await db.exec("update v20_products set name='Nouveau nom',price=30 where id='p1';delete from v20_products where id='p1';update v20_orders set paid=true,product_name='Altération',unit_price=999 where id='old';");
+ let row=(await db.query("select product_name,unit_price from v20_orders where id='old'")).rows[0];assert.equal(row.product_name,'Nom historique');assert.equal(Number(row.unit_price),22);
+ await db.exec("insert into v20_orders(id,product_id,quantity,product_name,unit_price) values('new','p2',1,'Faux',0);");row=(await db.query("select product_name,unit_price from v20_orders where id='new'")).rows[0];assert.equal(row.product_name,'Autre article');assert.equal(Number(row.unit_price),10);
+ await assert.rejects(db.exec("insert into v20_orders(id,product_id,quantity) values('cart1','p2',1),('cart2','p2',11);"));assert.equal((await db.query("select count(*)::int n from v20_orders where id like 'cart%'")).rows[0].n,0);await db.close();
+}
+// The live Excel export must derive both names and amounts from snapshots.
+{
+ const source=read('v21-9-finance.js');const body=source.slice(source.indexOf('function summary('),source.indexOf('function buildSummary('));
+ const summary=new Function('products','euro','mode',body+';return summary;')(()=>new Map(),Number,String);
+ const result=summary({orders:[{productId:'deleted',productName:'Sweat historique',unitPrice:26,quantity:2,paymentMethod:'Espèces',paid:true}]},'orders');assert.equal(result.total,52);assert.equal(result.paid,52);
+ assert.match(source,/o\.productName\|\|p\?\.name/);assert.match(source,/o\.unitPrice\?\?p\?\.price/);
+}
+console.log('Boutique V32 : panier atomique, trois règlements, HelloAsso, reprises sans doublon, historique après suppression et calcul Excel OK (données fictives).');

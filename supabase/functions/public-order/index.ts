@@ -3,7 +3,7 @@ import {clientIp,corsHeaders,hashKey,json,normalizeLogin,readJson,rejectOrigin} 
 
 const ORDER_RECIPIENTS=new Set(['6e AVIGNON','6e Georges BIZET','6e Paul CEZANNE','6e Alphonse DAUDET','5e Jacqueline AURIOL','5e Adrienne BOLLAND','5e Bessie COLEMAN','5e Elise DEROCHE','4e ESTANGUET','4e FLESSEL','4e Cyril MORE','4e DELAUNAY','3e Antonio GAUDI','3e BARCELONE','3e CASTILLE','3e DALI','3e ESPINOZA','Seconde Pro ECP','Seconde Pro Maslow','Seconde Pro Henderson','Seconde GT','Première Pro ECP','Première Pro Curie','Première Pro Pasteur','Première ST2S','Terminale ST2S','Terminale ASSP','Enseignant','Personnel']);
 const SIZES=new Set(['7/8 ans','9/11 ans','12/13 ans','XS','S','M','L','XL','XXL','XXXL','XXXXL']);
-const PAYMENTS=new Set(['Virement','Chèque']);
+const PAYMENTS=new Set(['Espèces','Virement','Chèque']);
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID=/^[A-Za-z0-9_-]{1,80}$/;
 const clean=(value:unknown,max:number)=>String(value||'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().replace(/\s+/g,' ').slice(0,max);
@@ -18,34 +18,38 @@ Deno.serve(async request=>{
  const originResponse=rejectOrigin(request);if(originResponse)return originResponse;
  if(request.method!=='POST')return json(request,{error:'Méthode refusée.'},405);
  try{
-  const body=await readJson(request,8192);
-  const requestId=clean(body.requestId,64),productId=clean(body.productId,80),studentName=clean(body.studentName,120),className=clean(body.className,80),size=clean(body.size,20),paymentMethod=clean(body.paymentMethod,30),color=clean(body.color,80);
-  const quantity=Number(body.quantity);
-  if(!UUID.test(requestId)||!SAFE_ID.test(productId)||studentName.length<2||!ORDER_RECIPIENTS.has(className)||!SIZES.has(size)||!PAYMENTS.has(paymentMethod)||!Number.isInteger(quantity)||quantity<1||quantity>10)return json(request,{error:'Vérifiez les informations de la commande.'},400);
+  const body=await readJson(request,16384);
+  const requestId=clean(body.requestId,64),studentName=clean(body.studentName,120),className=clean(body.className,80),paymentMethod=clean(body.paymentMethod,30);
+  const rawItems=Array.isArray(body.items)?body.items:[body];
+  if(!UUID.test(requestId)||studentName.length<2||!ORDER_RECIPIENTS.has(className)||!PAYMENTS.has(paymentMethod)||rawItems.length<1||rawItems.length>20)return json(request,{error:'Vérifiez les informations de la commande.'},400);
+  const items=rawItems.map(item=>({productId:clean(item?.productId,80),size:clean(item?.size,20),quantity:Number(item?.quantity),color:clean(item?.color,80)}));
+  if(items.some(item=>!SAFE_ID.test(item.productId)||!SIZES.has(item.size)||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>10))return json(request,{error:'Vérifiez les articles, les tailles et les quantités.'},400);
   const url=Deno.env.get('SUPABASE_URL')||'',serviceKey=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
   if(!url||!serviceKey)throw new Error('CONFIG');
   const admin=createClient(url,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
-  const {data:existing,error:existingError}=await admin.from('v20_orders').select('id,reference,created_at').eq('request_id',requestId).maybeSingle();
-  if(existingError)throw existingError;
-  if(existing)return json(request,{reference:existing.reference,status:'payment_pending',createdAt:existing.created_at},200);
-  const ipHash=await hashKey(serviceKey,'order-ip:'+clientIp(request));
-  const identityHash=await hashKey(serviceKey,'order-person:'+normalizeLogin(studentName)+'|'+className);
+  const signature=await hashKey(serviceKey,JSON.stringify({studentName,className,paymentMethod,items}));
+  const success=(rows:any[],status=200)=>json(request,{reference:rows[0]?.reference,references:rows.map(row=>row.reference),status:'payment_pending',createdAt:rows[0]?.created_at,total:rows.reduce((n,row)=>n+Number(row.unit_price||0)*Number(row.quantity||1),0)},status);
+  const previous=async()=>{const result=await admin.from('v20_orders').select('reference,created_at,unit_price,quantity,checkout_signature').eq('checkout_id',requestId).order('checkout_line');if(result.error)throw result.error;return result.data||[]};
+  const existing=await previous();
+  if(existing.length){if(existing[0].checkout_signature!==signature)return json(request,{error:'Cette référence correspond déjà à une autre commande.'},409);return success(existing)}
+  // Retain compatibility with requests accepted before cart support was deployed.
+  const {data:legacy,error:legacyError}=await admin.from('v20_orders').select('reference,created_at,unit_price,quantity').eq('request_id',requestId).maybeSingle();
+  if(legacyError)throw legacyError;if(legacy)return success([legacy]);
+  const ipHash=await hashKey(serviceKey,'order-ip:'+clientIp(request)),identityHash=await hashKey(serviceKey,'order-person:'+normalizeLogin(studentName)+'|'+className);
   const [ipLimit,identityLimit]=await Promise.all([consume(admin,'public-order-ip',ipHash,20,3600,3600),consume(admin,'public-order-person',identityHash,6,3600,3600)]);
   if(!ipLimit?.allowed||!identityLimit?.allowed)return json(request,{error:'Trop de commandes ont été envoyées. Réessayez plus tard.'},429);
-  const {data:product,error:productError}=await admin.from('v20_products').select('id,active,deadline').eq('id',productId).maybeSingle();
+  const {data:products,error:productError}=await admin.from('v20_products').select('id,name,price,active,deadline,color').in('id',[...new Set(items.map(item=>item.productId))]);
   if(productError)throw productError;
   const dateParts=Object.fromEntries(new Intl.DateTimeFormat('fr-FR',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
   const today=`${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-  if(!product||product.active!==true||(product.deadline&&String(product.deadline)<today))return json(request,{error:'Ce produit n’est plus disponible à la commande.'},409);
-  const {data:created,error:createError}=await admin.from('v20_orders').insert({id:requestId,request_id:requestId,product_id:productId,student_name:studentName,class_name:className,size,quantity,payment_method:paymentMethod,color:color||null,paid:false,distributed:false}).select('reference,created_at').single();
-  if(createError){
-   if(createError.code==='23505'){
-    const {data:retry}=await admin.from('v20_orders').select('reference,created_at').eq('request_id',requestId).maybeSingle();
-    if(retry)return json(request,{reference:retry.reference,status:'payment_pending',createdAt:retry.created_at},200);
-   }
-   throw createError;
-  }
-  return json(request,{reference:created.reference,status:'payment_pending',createdAt:created.created_at},201);
+  const catalogue=new Map((products||[]).map(product=>[product.id,product]));
+  if(items.some(item=>{const p=catalogue.get(item.productId);return !p||p.active!==true||(p.deadline&&String(p.deadline)<today)}))return json(request,{error:'Un article du panier n’est plus disponible. Actualisez la boutique.'},409);
+  const rows=items.map((item,index)=>{const p=catalogue.get(item.productId)!;return{id:crypto.randomUUID(),request_id:items.length===1?requestId:crypto.randomUUID(),checkout_id:requestId,checkout_line:index,checkout_signature:signature,product_id:item.productId,product_name:p.name,unit_price:p.price,student_name:studentName,class_name:className,size:item.size,quantity:item.quantity,payment_method:paymentMethod,color:p.color||item.color||null,paid:false,distributed:false}});
+  // One INSERT statement: either every cart line is saved, or none is saved.
+  const {data:created,error:createError}=await admin.from('v20_orders').insert(rows).select('reference,created_at,unit_price,quantity');
+  if(createError){if(createError.code==='23505'){const retry=await previous();if(retry.length&&retry[0].checkout_signature===signature)return success(retry)}throw createError}
+  if(!Array.isArray(created)||created.length!==items.length)throw new Error('CHECKOUT_UNCONFIRMED');
+  return success(created,201);
  }catch(error){
   const code=error instanceof Error?error.message:'';
   if(code==='PAYLOAD_TOO_LARGE')return json(request,{error:'Requête trop volumineuse.'},413);
