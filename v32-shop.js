@@ -51,6 +51,14 @@ function updateCartButton(){
  if(window.app.route()!=='shop')return;
  const actions=document.querySelector('.v19-head-actions');if(!actions)return;
  let b=actions.querySelector('[data-v32-cart]');if(!b){b=document.createElement('button');b.className='v19-btn yellow';b.dataset.v32Cart='';b.onclick=()=>openCart();actions.appendChild(b)}b.textContent=`Mon panier${cart.length?' ('+cart.length+')':''}`;
+ const available=products(),groups=new Map();
+ for(const p of available){const key=p.name.replace(/\s*[-–]\s*Logo (floqué|brodé)$/i,'');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p)}
+ const grid=document.querySelector('.v19-products'),signature=JSON.stringify(available);
+ if(grid&&groups.size<available.length&&grid.dataset.v32Catalogue!==signature){
+  grid.dataset.v32Catalogue=signature;
+  grid.innerHTML=[...groups.entries()].map(([name,variants])=>{const first=variants[0],src=/^(https?:\/\/|assets\/)/.test(first.image||'')?first.image:'assets/logo-as.png';return `<article class="v19-card v19-product"><img src="${esc(src)}" alt="${esc(name)}" loading="lazy"><div><h3>${esc(name)}</h3><p>${variants.map(v=>`${esc(v.name.match(/Logo (floqué|brodé)$/i)?.[0]||v.name)} : <strong>${euro(v.price)}</strong>`).join('<br>')}</p><div class="v19-meta">Plusieurs tailles · finition au choix dans le panier</div><button type="button" class="v19-btn yellow" data-v32-product="${esc(first.id)}">Ajouter au panier</button></div></article>`}).join('');
+  grid.querySelectorAll('[data-v32-product]').forEach(b=>b.onclick=()=>openCart(b.dataset.v32Product));
+ }
  document.querySelectorAll('.v19-product button').forEach(b=>b.textContent='Ajouter au panier');
 }
 window.app.order=openCart;window.app.openCart=()=>openCart();window.ASV32_SHOP={instructions,helloAssoUrl:HELLOASSO};

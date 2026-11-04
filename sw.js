@@ -13,6 +13,7 @@ const CDN_ASSETS=[
 const PRECACHE=[
   APP_SHELL_URL,
   OFFLINE_URL,
+  './assets/shop-2026-rose.png','./assets/shop-2026-bleu.png','./assets/shop-2026-gris.png','./assets/shop-2026-tee.png',
   './v32-shop.js?v=32.0.0','./v32-shop.css?v=32.0.0',
   './manifest.webmanifest?v=32.0.0',
   './assets/logo-as.png?v=32.0.0','./assets/logo-as.png',
