@@ -1,6 +1,6 @@
 {
-  "version": "34.0.0",
-  "build": "20261119-order-import",
+  "version": "34.0.1",
+  "build": "20261119-excel-loader",
   "channel": "stable",
   "releasedAt": "2026-11-04",
   "message": "Exports harmonisés, convocations robustes, notice actualisée et commandes adaptées aux réseaux partagés",
