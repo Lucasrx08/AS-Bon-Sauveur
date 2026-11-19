@@ -16,7 +16,7 @@ const PAYMENTS=['Espèces','Virement','Chèque'];
 const sb=window.__BS_SUPABASE_CLIENT||null;
 const client=()=>window.__BS_SUPABASE_CLIENT||sb;
 const request=query=>window.__BS_REQUEST?window.__BS_REQUEST(query):Promise.resolve(query);
-const canManageOrders=()=>['admin','teacher_as'].includes(window.app?.role?.())&&sessionStorage.getItem('bs-v20-verified-role')===window.app.role();
+const canManageOrders=()=>isAdmin();
 const PRODUCT_IMAGE_BUCKET='public-assets';
 const PRODUCT_IMAGE_FALLBACK='assets/logo-as.png';
 const MAX_SOURCE_IMAGE_SIZE=15*1024*1024;
@@ -165,7 +165,7 @@ function ordersManager(scrollTop=0){
  w.querySelector('.v19-modal-body').scrollTop=Number(scrollTop)||0;
 }
 function orderForm(id=''){
- if(!canManageOrders())return toast('Accès gestion requis.');
+ if(!canManageOrders()||window.app?.route?.()!=='admin')return toast('Modification réservée à l’administration.');
  const managerBody=document.querySelector('#v21-admin-modal [data-order-manager]')?.closest('.v19-modal-body'),returnToManager=!!managerBody,managerScroll=managerBody?.scrollTop||0;
  const data=read(),o=(data.orders||[]).find(x=>x.id===id),products=(data.products||[]).filter(p=>p.active!==false||p.id===o?.productId);
  if(o&&!products.some(p=>p.id===o.productId))products.push({id:o.productId,name:o.productName||'Ancien article — nom non disponible',price:o.unitPrice??0,active:false});
@@ -178,7 +178,7 @@ function orderForm(id=''){
  e.preventDefault();if(saving)return;const form=e.currentTarget,fd=new FormData(form),btn=form.querySelector('[type="submit"]'),status=form.querySelector('[data-order-status]');
  const lastName=String(fd.get('lastName')||'').trim(),firstName=String(fd.get('firstName')||'').trim();
  const row={id:formId,productId:String(fd.get('productId')||''),studentName:window.ASOrderIdentity?window.ASOrderIdentity.full(lastName,firstName):lastName.toLocaleUpperCase('fr')+' '+firstName,className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')),paymentMethod:String(fd.get('paymentMethod')||''),paid:fd.get('paid')==='on',distributed:fd.get('distributed')==='on',color:String(fd.get('color')||'').trim()};
- if(!canManageOrders()){status.textContent='Session expirée. Reconnectez-vous pour modifier cette commande.';return}
+ if(!canManageOrders()||window.app?.route?.()!=='admin'){status.textContent='Session expirée. Reconnectez-vous pour modifier cette commande.';return}
  if(!lastName||!firstName||row.studentName.length>120||!recipientOptions.includes(row.className)||!SIZES.includes(row.size)||!PAYMENTS.includes(row.paymentMethod)||!Number.isInteger(row.quantity)||row.quantity<1||row.quantity>10||!products.some(p=>String(p.id||'')===row.productId)||!o&&!row.productId){status.textContent='Vérifiez le nom, le prénom, la classe, le produit et la quantité (1 à 10 par ligne).';return}
  saving=true;btn.disabled=true;btn.textContent='Enregistrement…';status.textContent='Enregistrement en cours…';
  try{

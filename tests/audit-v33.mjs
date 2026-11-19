@@ -11,7 +11,7 @@ const file=readdirSync(new URL('../supabase/migrations/',import.meta.url)).find(
 const rows=(await db.query('select * from v3184_public_convocation_roster()')).rows;
 assert.equal(rows.length,5);assert.ok(rows.every(x=>x.convocation_id==='visible'));assert.equal(rows.filter(x=>x.display_name==='Jean D.').length,3);assert.ok(rows.some(x=>x.display_name==='Anne-Marie L.'));assert.ok(rows.some(x=>x.display_name==='M.'));assert.ok(rows.every(x=>!x.display_name.includes('DUPONT')));await db.close();
 for(const f of ['v22-1-privacy.js','v23-privacy.js']){const s=read(f);assert.match(s,/HelloAsso/);assert.match(s,/prénom et l’initiale/);assert.doesNotMatch(s,/Uniquement les personnels autorisés/)}
-const s=read('v19-app.js');assert.doesNotMatch(s,/<span>Regrouper<\/span>/);assert.match(s,/Nom \(A → Z\)/);const exports=s.slice(s.indexOf('async function exportExcel('));assert.doesNotMatch(exports,/Aptos/);assert.match(exports,/name:'Anton'/);assert.match(exports,/name:'Montserrat'/);
+const s=read('v19-app.js');assert.doesNotMatch(s,/<span>Regrouper<\/span>/);assert.match(s,/data-order-sort/);const exports=s.slice(s.indexOf('async function exportExcel('));assert.doesNotMatch(exports,/Aptos/);assert.match(exports,/name:'Anton'/);assert.match(exports,/name:'Montserrat'/);
 console.log('V33 : noms toutes casses, projection publique filtrée, confidentialité, tri des commandes et charte Excel OK.');
 
 const ordersPage=s.slice(s.indexOf('function ordersPage(){'),s.indexOf('function reportsPage(){'));assert.equal((ordersPage.match(/\+ Commande/g)||[]).length,1);assert.match(ordersPage,/data-v21-order-add/);

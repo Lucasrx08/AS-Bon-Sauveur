@@ -23,7 +23,7 @@ function setup(role='admin'){
  dom.window.close();
 }
 {
- const {dom,w,app,data}=setup('teacher_as');data.products=[{id:'p',name:'Article fictif',price:10}];data.orders=[{id:'legacy',productId:'p',studentName:'FICTIF Jean',className:'6e AVIGNON',size:'M',quantity:1,paymentMethod:'Espèces'}];w.eval(read('v21-admin.js'));w.eval(read('v21-role-guard.js'));let stored;w.__BS_SUPABASE_CLIENT={from:()=>({update:p=>({eq:(_,id)=>({select:()=>({single:async()=>{stored=p;return{data:{id,...p},error:null}}})})})})};app.go('orders');assert.match(w.document.body.textContent,/Modifier la commande/);app.v21OrderForm('legacy');w.dispatchEvent(new w.Event('focus'));assert.ok(w.document.querySelector('#v21-order-form'));let f=w.document.querySelector('form');f.elements.paid.checked=true;await f.onsubmit({preventDefault(){},currentTarget:f});assert.equal(stored.paid,true);assert.equal(app.route(),'orders');dom.window.close();
+ const {dom,w,app,data}=setup('teacher_as');data.products=[{id:'p',name:'Article fictif',price:10}];data.orders=[{id:'legacy',productId:'p',studentName:'FICTIF Jean',className:'6e AVIGNON',size:'M',quantity:1,paymentMethod:'Espèces'}];w.eval(read('v21-admin.js'));w.eval(read('v21-role-guard.js'));app.go('orders');assert.doesNotMatch(w.document.body.textContent,/Modifier la commande|Modifier le nom/);app.v21OrderForm('legacy');assert.equal(w.document.querySelector('#v21-order-form'),null);dom.window.close();
 }
 // Timeout aborts the request transport when its builder supports abortSignal.
 {
@@ -37,7 +37,7 @@ function setup(role='admin'){
 for(const role of ['public','admin','teacher_as','educator_gymnastique','educator_football','educator_escalade']){
  const {dom,w,app}=setup(role);for(const f of ['v21-admin.js','v25-1-functional.js','v30-multispecialty.js','v32-shop.js','v34-order-import.js'])w.eval(read(f));for(const route of ['home','calendar','convocations','shop','documents','reports','licenses','appreciations','admin','more']){assert.doesNotThrow(()=>app.go(route),role+' / '+route);assert.ok(w.document.querySelector('#app').textContent.trim())}dom.window.close();
 }
-console.log('V34.1.1 : édition administrateur/EPS, dates/prix/checkout conservés, refus/absence de réponse, délai/annulation, double clic, reprise client, verrou auth et 60 parcours par rôle OK.');
+console.log('V34.1.1 : édition administrateur et refus EPS, dates/prix/checkout conservés, refus/absence de réponse, délai/annulation, double clic, reprise client, verrou auth et 60 parcours par rôle OK.');
 // Orders are private cache data and must be cleared on sign-out.
 {
  const bridge=read('v20-bridge.js');const f=bridge.slice(bridge.indexOf('function clearPrivateCache(){'),bridge.indexOf('\n\nfunction modal('));let stored;

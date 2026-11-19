@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';import{readFileSync}from'node:fs';import{PGlite}from'@electric-sql/pglite';import{JSDOM}from'jsdom';
+const read=n=>readFileSync(new URL('../'+n,import.meta.url),'utf8');
+for(const role of ['admin','teacher_as']){
+ const dom=new JSDOM('<div id="app"></div>',{url:'https://example.invalid',runScripts:'dangerously',pretendToBeVisual:true}),w=dom.window;w.scrollTo=()=>{};w.localStorage.setItem('bs-demo-role-v4',role);w.sessionStorage.setItem('bs-v20-verified-role',role);
+ for(const f of ['v34-order-identity.js','v19-app.js','v21-admin.js','v21-role-guard.js','v31-6-table-sort.js'])w.eval(read(f));const d=w.app.readData();d.products=[{id:'p1',name:'Sweat bleu',price:22},{id:'p2',name:'T-shirt',price:10}];d.orders=[{id:'1',studentName:'ZÈBRE Anne',className:'6e AVIGNON',productId:'p1',size:'S',quantity:1,paid:true,paymentMethod:'Chèque',createdAt:'2026-01-20'},{id:'2',studentName:'ALPHA Luc',className:'5e Adrienne BOLLAND',productId:'p2',size:'M',quantity:1,paid:false,paymentMethod:'Espèces',createdAt:'2026-11-10'},{id:'3',studentName:'ZÈBRE Anne',className:'6e AVIGNON',productId:'p2',size:'L',quantity:2,paid:true,paymentMethod:'Virement',createdAt:'2026-11-01'}];
+ w.app.go('orders');assert.doesNotMatch(w.document.querySelector('.v19-container').textContent,/Modifier|Vérifier le nom|Trier par|Regrouper/);assert.equal(w.document.querySelectorAll('[data-order-id]').length,3);assert.equal(w.document.querySelectorAll('[data-order-sort]').length,8);assert.equal(w.document.querySelectorAll('select').length,0);assert.equal(w.document.querySelectorAll('.v32-order-person').length,0);
+ const ids=()=>[...w.document.querySelectorAll('[data-order-id]')].map(x=>x.dataset.orderId);
+ assert.equal(ids()[0],'2');w.document.querySelector('[data-order-sort="name"]').click();assert.equal(ids().at(-1),'2');assert.equal(w.document.querySelector('[data-order-sort="name"]').closest('th').getAttribute('aria-sort'),'descending');w.document.querySelector('[data-order-sort="date"]').click();assert.deepEqual(ids(),['1','3','2']);w.document.querySelector('[data-order-sort="date"]').click();assert.deepEqual(ids(),['2','3','1']);assert.equal(w.document.querySelector('[data-order-sort="date"]').closest('th').getAttribute('aria-sort'),'descending');
+ w.app.orderSearch('Zèbre');assert.equal(ids().length,2);w.document.querySelector('[data-order-sort="article"]').click();assert.equal(w.document.querySelector('[data-order-search]').value,'Zèbre');assert.equal(w.document.querySelectorAll('.v31-sort-button').length,0,'No competing DOM sorting layer');
+ w.app.v21OrderForm('1');assert.equal(w.document.querySelector('#v21-order-form'),null,'No detailed editing in shared page, even as admin');w.app.editOrderIdentity('1');assert.equal(w.document.querySelector('[data-order-identity]'),null);
+ w.app.go('admin');w.app.v21OrderForm('1');assert.equal(!!w.document.querySelector('#v21-order-form'),role==='admin');dom.window.close();
+}
+const db=new PGlite();await db.exec(`create role authenticated;create role anon;create role service_role;
+create function public.is_admin() returns boolean language sql stable as $$select current_setting('test.app_role',true)='admin'$$;
+create function public.is_teacher_or_admin() returns boolean language sql stable as $$select current_setting('test.app_role',true) in ('admin','teacher_as')$$;
+create table public.v20_orders(id text primary key,student_name text,class_name text,product_id text,size text,quantity int,paid boolean,distributed boolean,unit_price numeric,checkout_id text,created_at date);
+alter table public.v20_orders enable row level security;
+create policy read_staff on public.v20_orders for select to authenticated using(public.is_teacher_or_admin());
+create policy update_staff on public.v20_orders for update to authenticated using(public.is_teacher_or_admin()) with check(public.is_teacher_or_admin());
+create policy v20_orders_staff_delete on public.v20_orders for delete to authenticated using(public.is_teacher_or_admin());
+grant select,update,delete on public.v20_orders to authenticated;
+insert into public.v20_orders values ('test','FICTIF Jean','6e AVIGNON','p','M',1,false,false,22,'checkout',current_date);`);
+await db.exec(read('supabase/migrations/20261119194208_orders_admin_edit_only.sql'));await db.exec("set role authenticated;select set_config('test.app_role','teacher_as',false)");
+await db.exec("update public.v20_orders set paid=true,distributed=true where id='test'");assert.equal((await db.query("select paid from v20_orders where id='test'")).rows[0].paid,true);
+for(const change of ["student_name='AUTRE Nom'","class_name='Personnel'","product_id='autre'","quantity=2","size='L'","unit_price=0","checkout_id='autre'","created_at='2026-01-01'"]){await assert.rejects(db.exec("update public.v20_orders set "+change+" where id='test'"),/ORDER_EDIT_ADMIN_ONLY/)}
+await db.exec("delete from public.v20_orders where id='test'");assert.equal((await db.query('select count(*)::int n from public.v20_orders')).rows[0].n,1,'Teacher deletion blocked by RLS');
+await db.exec("select set_config('test.app_role','admin',false);update public.v20_orders set quantity=2,student_name='CORRIGÉ Jean' where id='test'");assert.equal((await db.query("select quantity from public.v20_orders where id='test'")).rows[0].quantity,2);
+await db.exec("delete from public.v20_orders where id='test'");assert.equal((await db.query('select count(*)::int n from public.v20_orders')).rows[0].n,0);await db.close();console.log('V34.1.2 : tableau sans redites, tri en-têtes global asc/desc, recherche persistante ; édition uniquement en administration ; base : suivi EPS autorisé, détails/suppression interdits, administration autorisée.');

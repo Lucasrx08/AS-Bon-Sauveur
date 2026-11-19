@@ -5,3 +5,5 @@
 .v32-order-person td{background:#eaf2ff!important;border-top:3px solid #004aad;padding:16px!important}.v32-order-person td>strong{font-size:19px}.v32-order-person td>span{display:inline-block;margin-left:18px;font-weight:700;color:#004aad}
 
 .v32-deadline{display:inline-block;background:#fff8ce;color:#004aad;border:1px solid #ffd502;border-radius:10px;padding:8px 12px;margin:10px 0 0;font-weight:700;font-size:14px;line-height:1.5}.v32-variant small{font-size:12px;color:#004aad}
+
+.v3412-order-search{display:flex;flex-wrap:wrap;align-items:end;gap:14px;margin:20px 0}.v3412-order-search label{display:grid;gap:7px;flex:1;min-width:220px}.v3412-order-search label>span{font-size:12px;font-weight:800;color:#6b7890;text-transform:uppercase}.v3412-order-search input{width:100%;padding:12px 14px;border:1px solid #dce5f0;border-radius:12px;font:inherit;box-sizing:border-box}.v3412-order-search p{font-size:13px;color:#6b7890;margin:0 0 10px}.v19-table[data-order-table] th button{white-space:nowrap}.v19-table[data-order-table] td{vertical-align:middle}
