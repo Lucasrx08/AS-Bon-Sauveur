@@ -1,5 +1,5 @@
 (() => {
 'use strict';
-window.__BS_RELEASE={major:31,label:'V34.0.2',version:'34.0.2',channel:'stable'};
+window.__BS_RELEASE={major:31,label:'V34.1.0',version:'34.1.0',channel:'stable'};
 document.documentElement.dataset.appVersion='31';
 })();

@@ -49,7 +49,7 @@ const products=[{id:'p1',name:'Sweat Rose - Logo brodé',price:26,active:true,de
  w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.__BS_SHOP_PREVIEW=true;
  w.app={readData:()=>({products}),route:()=> 'shop'};w.AbortController=AbortController;
  const requests=[];let fail=true;w.fetch=async(_url,options)=>{requests.push(JSON.parse(options.body));if(fail)throw new Error('Réponse fictive perdue');return{ok:true,json:async()=>({references:['AS-FICTIVE-1','AS-FICTIVE-2']})}};
- w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();w.document.querySelector('[data-add]').click();
+ w.eval(read('v34-order-identity.js'));w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();w.document.querySelector('[data-add]').click();
  const form=w.document.querySelector('form');form.elements.lastName.value='TEST';form.elements.firstName.value='Fictif';form.elements.className.value='6e AVIGNON';
  assert.equal(w.document.querySelectorAll('[data-line]').length,2);assert.equal(w.document.querySelectorAll('[name=lastName]').length,1);
  assert.match(w.document.querySelector('[data-payment]').textContent,/Chèque à l’ordre de l’AS du Bon Sauveur/);
@@ -87,7 +87,7 @@ for(const role of ['admin','teacher_as']){
  const dom=new JSDOM('<main></main>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
  w.sessionStorage.setItem('bs-v20-verified-role',role);w.__BS_SUPABASE_CLIENT={auth:{getSession:async()=>({data:{session:{access_token:'test-token'}}})}};w.app={role:()=>role,readData:()=>({products}),route:()=> 'shop'};
  w.APP_CONFIG={supabaseUrl:'https://example.invalid',supabaseAnonKey:'fixture'};w.AbortController=AbortController;
- w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();
+ w.fetch=async()=>({ok:true,json:async()=>({references:['TEST']})});w.eval(read('v34-order-identity.js'));w.eval(read('v32-shop.js'));w.app.order('p1');assert.equal(w.document.getElementById('v32-cart'),null);w.app.openCart();
  const f=w.document.querySelector('form');assert.equal(f.elements.paymentMethod.options.length,3);
  for(const method of ['Chèque','Espèces','Virement']){f.elements.paymentMethod.value=method;f.elements.paymentMethod.onchange();assert.equal(w.document.querySelector('[data-payment]').hidden,true);assert.doesNotMatch(w.document.querySelector('[data-submit]').textContent,/HelloAsso/)}
  f.elements.lastName.value='TEST';f.elements.firstName.value='Fictif';f.elements.className.value='6e AVIGNON';await f.onsubmit({preventDefault(){}});assert.equal(w.document.querySelector('a'),null);assert.doesNotMatch(w.document.body.textContent,/transmettre|HelloAsso/);dom.window.close();
@@ -114,7 +114,7 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
 {
  const dom=new JSDOM('<div class="v19-page-head"><h1>Boutique AS</h1></div><div class="v19-products"></div>',{url:'https://example.invalid/',runScripts:'outside-only'}),w=dom.window;
  const catalogue=[{...products[0],id:'f',name:'Sweat Bleu - Logo floqué',price:22},{...products[0],id:'b',name:'Sweat Bleu - Logo brodé',price:26}];
- w.app={readData:()=>({products:catalogue}),route:()=> 'shop'};w.eval(read('v32-shop.js'));
+ w.app={readData:()=>({products:catalogue}),route:()=> 'shop'};w.eval(read('v34-order-identity.js'));w.eval(read('v32-shop.js'));
  assert.equal(w.document.querySelectorAll('.v19-product').length,1);assert.match(w.document.body.textContent,/Commandes jusqu’au/);const buttons=w.document.querySelectorAll('[data-v32-product]');assert.equal(buttons.length,2);
  buttons[0].click();buttons[1].click();assert.equal(w.document.getElementById('v32-cart'),null);assert.match(w.document.querySelector('[data-v32-cart]').textContent,/2/);
  w.document.querySelector('[data-v32-cart]').click();const selected=[...w.document.querySelectorAll('[data-field="productId"]')].map(x=>x.value);assert.deepEqual(selected,['f','b']);dom.window.close();
@@ -124,7 +124,7 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
  const source=read('v19-app.js'),body=source.slice(source.indexOf('function ordersPage(){'),source.indexOf('function reportsPage(){'));
  const orders=[1,2,3,4].map(i=>({id:'o'+i,studentName:'Test Lucas',className:'6e AVIGNON',productName:'Sweat '+i,size:'M',quantity:1,unitPrice:22,paymentMethod:'Chèque',createdAt:'2026-11-04'}));orders.push({...orders[0],id:'other',className:'5e BOLLAND'});
  const state={filters:{orders:{}},data:{orders,products:[]}};
- const render=new Function('state','isManager','denied','productName','pageTitle','esc','money','icon','fmtShort',body+';return ordersPage;')(state,()=>true,()=>'',()=>'',()=>'',String,n=>n+' €',()=>'',String);
- const dom=new JSDOM(render());assert.equal(dom.window.document.querySelectorAll('.v32-order-person').length,2);assert.match(dom.window.document.querySelector('.v32-order-person').textContent,/4 article\(s\) · 88 €/);assert.equal(dom.window.document.querySelectorAll('[onclick*="toggleOrder"]').length,10);
+ const render=new Function('window','state','isManager','denied','productName','pageTitle','esc','money','icon','fmtShort',body+';return ordersPage;')({},state,()=>true,()=>'',()=>'',()=>'',String,n=>n+' €',()=>'',String);
+ const dom=new JSDOM(render());assert.equal(dom.window.document.querySelectorAll('.v32-order-person').length,2);assert.match([...dom.window.document.querySelectorAll('.v32-order-person')].find(r=>r.textContent.includes('6e AVIGNON')).textContent,/4 article\(s\) · 88 €/);assert.equal(dom.window.document.querySelectorAll('[onclick*="toggleOrder"]').length,10);
  state.filters.orders.product='Sweat 2';const filtered=new JSDOM(render());assert.match(filtered.window.document.body.textContent,/1 article\(s\) · 22 € · sélection filtrée/);dom.window.close();filtered.window.close();
 }

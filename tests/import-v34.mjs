@@ -1,5 +1,5 @@
 import {webcrypto} from 'node:crypto';import assert from 'node:assert/strict';import {readFileSync}from'node:fs';import{JSDOM}from'jsdom';
-const d=new JSDOM('<main/>',{url:'https://example.invalid',runScripts:'outside-only'}),w=d.window;Object.defineProperty(w.crypto,'subtle',{value:webcrypto.subtle});w.TextEncoder=TextEncoder;w.app={role:()=> 'public'};w.eval(readFileSync(new URL('../v34-order-import.js',import.meta.url),'utf8'));
+const d=new JSDOM('<main/>',{url:'https://example.invalid',runScripts:'outside-only'}),w=d.window;Object.defineProperty(w.crypto,'subtle',{value:webcrypto.subtle});w.TextEncoder=TextEncoder;w.app={role:()=> 'public'};w.eval(readFileSync(new URL('../v34-order-identity.js',import.meta.url),'utf8'));w.eval(readFileSync(new URL('../v34-order-import.js',import.meta.url),'utf8'));
 const parse=w.ASV34_IMPORT.parseSheet,p=[{id:'p',name:'Sweat Bleu - Logo floqué',price:22}];
 const sheet=rows=>({rowCount:rows.length,eachRow(fn){rows.forEach((r,i)=>fn(this.getRow(i+1),i+1))},getRow(n){const row=rows[n-1];return{values:[undefined,...row],getCell(i){return{text:String(row[i-1]??'')}}}}});
 const headers=['Référence commande','Statut de la commande','Tarif','Montant tarif','Nom et prénom du destinataire du vêtement','Classe ou fonction','Taille du vêtement'];const row=['123','Validé',p[0].name,22,'TEST Fictif','6e AVIGNON','M'];
@@ -12,11 +12,11 @@ const loaderDom=new JSDOM('<head></head>',{url:'https://example.invalid',runScri
 if(process.env.XLSX_READER && process.env.HELLOASSO_XLSX){
  const {createRequire}=await import('node:module'),require=createRequire(import.meta.url);
  const dom=new JSDOM('<main/>',{url:'https://example.invalid',runScripts:'outside-only'}),v=dom.window;
- Object.defineProperty(v.crypto,'subtle',{value:webcrypto.subtle});v.TextEncoder=TextEncoder;v.app={role:()=> 'public'};v.XLSX=require(process.env.XLSX_READER);v.eval(readFileSync(new URL('../v34-order-import.js',import.meta.url),'utf8'));
+ Object.defineProperty(v.crypto,'subtle',{value:webcrypto.subtle});v.TextEncoder=TextEncoder;v.app={role:()=> 'public'};v.XLSX=require(process.env.XLSX_READER);v.eval(readFileSync(new URL('../v34-order-identity.js',import.meta.url),'utf8'));v.eval(readFileSync(new URL('../v34-order-import.js',import.meta.url),'utf8'));
  const s=await v.ASV34_IMPORT.readSheet(new Uint8Array(readFileSync(process.env.HELLOASSO_XLSX)));
  const headers=s.getRow(1).values,ai=headers.indexOf('Tarif'),pi=headers.indexOf('Montant tarif'),catalog=[];
  for(let i=2;i<=s.rowCount;i++){const r=s.getRow(i);if(!catalog.some(p=>p.name===r.getCell(ai).text))catalog.push({id:'p'+i,name:r.getCell(ai).text,price:Number(r.getCell(pi).text)})}
- const rows=await v.ASV34_IMPORT.parseSheet(s,catalog);assert.equal(rows.length,18);assert.ok(rows.every(r=>!r.error&&r.paid&&r.payment==='Virement'));
+ const rows=await v.ASV34_IMPORT.parseSheet(s,catalog);assert.equal(rows.length,18);assert.ok(rows.every(r=>!r.error&&r.paid&&r.payment==='Virement'&&v.ASOrderIdentity.classes.includes(r.cl)));
  const book=v.XLSX.utils.book_new();v.XLSX.utils.book_append_sheet(book,v.XLSX.utils.aoa_to_sheet([['Référence groupe','Nom et prénom','Classe ou fonction','Article','Taille','Quantité','Règlement','Payé'],['TEST','Fictif Test','Personnel',catalog[0].name,'M',12,'Chèque','Non']]),'Commandes');
  const manual=await v.ASV34_IMPORT.parseSheet(await v.ASV34_IMPORT.readSheet(v.XLSX.write(book,{type:'array',bookType:'xlsx'})),catalog);assert.equal(manual[0].error,'');assert.equal(manual[0].q,12);dom.window.close();console.log('Lecture du vrai XLSX HelloAsso : 18 lignes valides ; classeur manuel 12 articles valide. Aucune écriture en base.');
 }
