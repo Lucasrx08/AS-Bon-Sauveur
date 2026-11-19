@@ -46,7 +46,11 @@ function replacePublicLabel(root=document){
 function removeForbiddenAdminUI(r){
   if(r==='admin')return;
   document.querySelectorAll('[data-v20-users],[data-v21-docs],[data-v21-products],.v19-admin-cards').forEach(el=>el.remove());
-  document.querySelectorAll('#v20-users-modal,#v21-admin-modal').forEach(el=>el.remove());
+  document.querySelectorAll('#v20-users-modal,#v21-admin-modal').forEach(el=>{
+    // EPS staff may edit orders; all other administration modals remain restricted.
+    if(r==='teacher_as'&&el.id==='v21-admin-modal'&&el.querySelector('#v21-order-form'))return;
+    el.remove();
+  });
   const kicker=(document.querySelector('.v19-page-head .v19-kicker')?.textContent||'').trim().toUpperCase();
   const title=(document.querySelector('.v19-page-head h1')?.textContent||'').trim().toUpperCase();
   if(kicker.includes('ADMIN')||title==='ADMINISTRATION'||title==='ADMINISTRATEUR')window.app?.go?.('home');

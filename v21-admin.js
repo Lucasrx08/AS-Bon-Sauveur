@@ -14,6 +14,9 @@ const ORDER_RECIPIENTS=[
 ];
 const PAYMENTS=['Espèces','Virement','Chèque'];
 const sb=window.__BS_SUPABASE_CLIENT||null;
+const client=()=>window.__BS_SUPABASE_CLIENT||sb;
+const request=query=>window.__BS_REQUEST?window.__BS_REQUEST(query):Promise.resolve(query);
+const canManageOrders=()=>['admin','teacher_as'].includes(window.app?.role?.())&&sessionStorage.getItem('bs-v20-verified-role')===window.app.role();
 const PRODUCT_IMAGE_BUCKET='public-assets';
 const PRODUCT_IMAGE_FALLBACK='assets/logo-as.png';
 const MAX_SOURCE_IMAGE_SIZE=15*1024*1024;
@@ -36,8 +39,8 @@ function modal(title,body,wide=true){
 }
 function close(){document.getElementById('v21-admin-modal')?.remove()}
 function opts(list,current=''){return list.map(x=>`<option value="${esc(x)}" ${x===current?'selected':''}>${esc(x)}</option>`).join('')}
-async function remoteUpsert(table,row){if(!sb)return null;const {error}=await sb.from(table).upsert(row);if(error)throw error;return true}
-async function remoteDelete(table,id){if(!sb)return null;const {error}=await sb.from(table).delete().eq('id',id);if(error)throw error;return true}
+async function remoteUpsert(table,row){const c=client();if(!c)throw Error('Connexion à la base indisponible.');const {data,error}=await request(c.from(table).upsert(row).select('id').single());if(error)throw error;if(data?.id!==row.id)throw Error('Enregistrement non confirmé par le serveur.');return data}
+async function remoteDelete(table,id){const c=client();if(!c)throw Error('Connexion à la base indisponible.');const {data,error}=await request(c.from(table).delete().eq('id',id).select('id'));if(error)throw error;if(!data?.some(r=>r.id===id))throw Error('Suppression non confirmée par le serveur.');return true}
 function refresh(route){close();window.app?.go?.(route)}
 
 function normalizeProductImageUrl(value=''){
@@ -135,17 +138,17 @@ function productForm(id=''){
  bindProductImagePreview(w,currentImage);
  w.querySelector('[data-back]').onclick=productsManager;w.querySelector('#v21-product-form').onsubmit=async e=>{
   e.preventDefault();const form=e.currentTarget,fd=new FormData(form),productId=p?.id||uid('p'),file=fd.get('imageFile');
-  const btn=form.querySelector('[type="submit"]');btn.disabled=true;let uploaded=null,saved=false;
+  const btn=form.querySelector('[type="submit"]');btn.disabled=true;let uploaded=null,saved=false,writeStarted=false;
   try{
    let image=normalizeProductImageUrl(fd.get('image'));
    if(file instanceof File&&file.size){btn.textContent='Envoi de la photo…';uploaded=await uploadProductImage(file,productId);image=uploaded.url}
    const row={id:productId,name:String(fd.get('name')||'').trim(),description:String(fd.get('description')||'').trim(),price:Number(fd.get('price')||0),deadline:String(fd.get('deadline')||'')||null,active:fd.get('active')==='on',image,color:String(fd.get('color')||'').trim()};
    if(!row.name)throw new Error('Le nom du produit est obligatoire.');
-   btn.textContent='Enregistrement…';await remoteUpsert('v20_products',{id:row.id,name:row.name,description:row.description,price:row.price,deadline:row.deadline,active:row.active,image:row.image,color:row.color||null});saved=true;
+   btn.textContent='Enregistrement…';writeStarted=true;await remoteUpsert('v20_products',{id:row.id,name:row.name,description:row.description,price:row.price,deadline:row.deadline,active:row.active,image:row.image,color:row.color||null});saved=true;
    const data=read();data.products=data.products||[];const old=data.products.find(x=>x.id===row.id);old?Object.assign(old,row):data.products.push(row);persist(data);
    if(uploaded&&storedProductImagePath(p?.image)!==uploaded.path)removeStoredProductImage(p?.image).catch(()=>{});
    (window.__BS_SAVED?window.__BS_SAVED('Produit et photo enregistrés'):toast('Produit enregistré'));setTimeout(()=>refresh('shop'),120);
-  }catch(err){if(uploaded&&!saved)removeStoredProductImage(uploaded.url).catch(()=>{});toast('Erreur : '+(err?.message||err));btn.disabled=false;btn.textContent='Enregistrer'}
+  }catch(err){if(uploaded&&!saved&&!writeStarted)removeStoredProductImage(uploaded.url).catch(()=>{});toast('Erreur : '+(err?.message||err));btn.disabled=false;btn.textContent='Enregistrer'}
  };
 }
 async function deleteProduct(id){
@@ -156,19 +159,43 @@ async function deleteProduct(id){
 
 function ordersManager(scrollTop=0){
  if(!isAdmin())return toast('Accès administrateur requis.');
- const data=read();const rows=(data.orders||[]).slice().sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+ const data=read();const rows=(data.orders||[]).map(o=>window.ASOrderIdentity?window.ASOrderIdentity.order(o,data):o).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
  const body=`<div class="v21-admin-manager" data-order-manager><div class="v21-admin-toolbar"><div><strong>${rows.length} commande(s)</strong><div class="v19-meta">Créer une commande manuelle, la modifier ou la supprimer.</div></div><button class="v19-btn" type="button" data-add>+ Commande</button></div><div class="v21-admin-list">${rows.map(o=>{const p=(data.products||[]).find(x=>x.id===o.productId);return `<div class="v21-admin-row"><div class="v21-admin-row-main"><strong>${esc(o.studentName||'—')} · ${esc(o.productName||p?.name||'Ancien article — nom non disponible')}</strong><small>${esc(o.className||'')} · ${esc(o.size||'—')} · Qté ${Number(o.quantity||1)} · ${o.paid?'Payé':'À payer'} · ${o.distributed?'Distribué':'À distribuer'}</small></div><div class="v21-admin-row-actions"><button class="v19-btn small secondary" data-edit="${esc(o.id)}">Modifier</button><button class="v19-btn small v21-danger" data-delete="${esc(o.id)}">Supprimer</button></div></div>`}).join('')||'<div class="v19-empty">Aucune commande.</div>'}</div></div>`;
  const w=modal('Gérer les commandes',body);w.querySelector('[data-add]').onclick=()=>orderForm();w.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>orderForm(b.dataset.edit));w.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>deleteOrder(b.dataset.delete));
  w.querySelector('.v19-modal-body').scrollTop=Number(scrollTop)||0;
 }
 function orderForm(id=''){
+ if(!canManageOrders())return toast('Accès gestion requis.');
  const managerBody=document.querySelector('#v21-admin-modal [data-order-manager]')?.closest('.v19-modal-body'),returnToManager=!!managerBody,managerScroll=managerBody?.scrollTop||0;
  const data=read(),o=(data.orders||[]).find(x=>x.id===id),products=(data.products||[]).filter(p=>p.active!==false||p.id===o?.productId);
  if(o&&!products.some(p=>p.id===o.productId))products.push({id:o.productId,name:o.productName||'Ancien article — nom non disponible',price:o.unitPrice??0,active:false});
  if(!products.length)return toast('Ajoutez d’abord un produit.');
- const currentRecipient=o?.className||ORDER_RECIPIENTS[0],recipientOptions=ORDER_RECIPIENTS.includes(currentRecipient)?ORDER_RECIPIENTS:[currentRecipient,...ORDER_RECIPIENTS];
- const w=modal(o?'Modifier la commande':'Ajouter une commande',`<form id="v21-order-form" class="v19-form"><label class="full"><span>Produit</span><select name="productId">${products.map(p=>`<option value="${esc(p.id)}" ${p.id===o?.productId?'selected':''}>${esc(p.name)} — ${money(p.price)}</option>`).join('')}</select></label><label><span>Nom & prénom</span><input required name="studentName" value="${esc(o?.studentName||'')}"></label><label><span>Classe / profil</span><select required name="className">${opts(recipientOptions,currentRecipient)}</select></label><label><span>Taille</span><select name="size">${opts(SIZES,o?.size||'M')}</select></label><label><span>Quantité</span><input type="number" min="1" max="10" name="quantity" value="${Number(o?.quantity||1)}"></label><label><span>Paiement</span><select name="paymentMethod">${opts(PAYMENTS,o?.paymentMethod||'Chèque')}</select></label><label><span>Couleur / modèle</span><input name="color" value="${esc(o?.color||'')}"></label><label class="full v19-switch"><input type="checkbox" name="paid" ${o?.paid?'checked':''}><span>Commande payée</span></label><label class="full v19-switch"><input type="checkbox" name="distributed" ${o?.distributed?'checked':''}><span>Article distribué</span></label><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back>Retour</button><button class="v19-btn" type="submit">Enregistrer</button></div></form>`,false);
- w.querySelector('[data-back]').onclick=()=>{if(returnToManager)ordersManager(managerScroll);else w.remove()};w.querySelector('#v21-order-form').onsubmit=async e=>{e.preventDefault();const fd=new FormData(e.currentTarget);const row={id:o?.id||uid('o'),productId:String(fd.get('productId')||''),studentName:String(fd.get('studentName')||'').trim(),className:String(fd.get('className')||'').trim(),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')||1),paymentMethod:String(fd.get('paymentMethod')||''),paid:fd.get('paid')==='on',distributed:fd.get('distributed')==='on',color:String(fd.get('color')||'').trim(),createdAt:o?.createdAt||new Date().toISOString()};const btn=e.currentTarget.querySelector('[type="submit"]');btn.disabled=true;try{if(!sb)throw new Error('Connexion à la base indisponible.');await remoteUpsert('v20_orders',{id:row.id,product_id:row.productId,student_name:row.studentName,class_name:row.className,size:row.size,quantity:row.quantity,payment_method:row.paymentMethod,paid:row.paid,distributed:row.distributed,color:row.color||null,created_at:row.createdAt});const selectedProduct=products.find(p=>p.id===row.productId);row.productName=o&&o.productId===row.productId?o.productName:selectedProduct?.name;row.unitPrice=o&&o.productId===row.productId?o.unitPrice:selectedProduct?.price;const d=read();d.orders=d.orders||[];const old=d.orders.find(x=>x.id===row.id);old?Object.assign(old,row):d.orders.push(row);persist(d);(window.__BS_SAVED?window.__BS_SAVED('Commande enregistrée'):toast('Commande enregistrée'));if(w.isConnected){if(returnToManager)ordersManager(managerScroll);else{w.remove();window.app?.refreshView?.('orders')}}}catch(err){toast('Erreur : '+(err?.message||err));btn.disabled=false}};
+ const initialOrder=o?{...o}:null;
+ const identity=window.ASOrderIdentity?.identity(o?.studentName||'',o?.className||'',data),formId=o?.id||uid('o');
+ const currentRecipient=(window.ASOrderIdentity?.className(o?.className)||o?.className)||ORDER_RECIPIENTS[0],recipientOptions=ORDER_RECIPIENTS.includes(currentRecipient)?ORDER_RECIPIENTS:[currentRecipient,...ORDER_RECIPIENTS];
+ const w=modal(o?'Modifier la commande':'Ajouter une commande',`<form id="v21-order-form" class="v19-form"><label class="full"><span>Produit</span><select name="productId">${products.map(p=>`<option value="${esc(p.id)}" ${p.id===o?.productId?'selected':''}>${esc(p.name)} — ${money(o&&p.id===o.productId?o.unitPrice??p.price:p.price)}</option>`).join('')}</select></label><label><span>Nom</span><input required maxlength="80" autocomplete="family-name" name="lastName" value="${esc(identity?.last||o?.studentName||'')}"></label><label><span>Prénom</span><input required maxlength="80" autocomplete="given-name" name="firstName" value="${esc(identity?.first||'')}"></label><label><span>Classe / profil</span><select required name="className">${opts(recipientOptions,currentRecipient)}</select></label><label><span>Taille</span><select name="size">${opts(SIZES,o?.size||'M')}</select></label><label><span>Quantité</span><input type="number" min="1" max="10" name="quantity" value="${Number(o?.quantity||1)}"></label><label><span>Paiement</span><select name="paymentMethod">${opts(PAYMENTS,o?.paymentMethod||'Chèque')}</select></label><label><span>Couleur / modèle</span><input name="color" value="${esc(o?.color||'')}"></label><label class="full v19-switch"><input type="checkbox" name="paid" ${o?.paid?'checked':''}><span>Commande payée</span></label><label class="full v19-switch"><input type="checkbox" name="distributed" ${o?.distributed?'checked':''}><span>Article distribué</span></label><p class="full" role="alert" aria-live="polite" data-order-status></p><div class="full v19-modal-actions"><button type="button" class="v19-btn secondary" data-back>Retour</button><button class="v19-btn" type="submit">Enregistrer</button></div></form>`,false);
+ w.querySelector('[data-back]').onclick=()=>{if(returnToManager)ordersManager(managerScroll);else w.remove()};let saving=false;w.querySelector('#v21-order-form').onsubmit=async e=>{
+ e.preventDefault();if(saving)return;const form=e.currentTarget,fd=new FormData(form),btn=form.querySelector('[type="submit"]'),status=form.querySelector('[data-order-status]');
+ const lastName=String(fd.get('lastName')||'').trim(),firstName=String(fd.get('firstName')||'').trim();
+ const row={id:formId,productId:String(fd.get('productId')||''),studentName:window.ASOrderIdentity?window.ASOrderIdentity.full(lastName,firstName):lastName.toLocaleUpperCase('fr')+' '+firstName,className:String(fd.get('className')||''),size:String(fd.get('size')||''),quantity:Number(fd.get('quantity')),paymentMethod:String(fd.get('paymentMethod')||''),paid:fd.get('paid')==='on',distributed:fd.get('distributed')==='on',color:String(fd.get('color')||'').trim()};
+ if(!canManageOrders()){status.textContent='Session expirée. Reconnectez-vous pour modifier cette commande.';return}
+ if(!lastName||!firstName||row.studentName.length>120||!recipientOptions.includes(row.className)||!SIZES.includes(row.size)||!PAYMENTS.includes(row.paymentMethod)||!Number.isInteger(row.quantity)||row.quantity<1||row.quantity>10||!products.some(p=>String(p.id||'')===row.productId)||!o&&!row.productId){status.textContent='Vérifiez le nom, le prénom, la classe, le produit et la quantité (1 à 10 par ligne).';return}
+ saving=true;btn.disabled=true;btn.textContent='Enregistrement…';status.textContent='Enregistrement en cours…';
+ try{
+  const c=client();if(!c)throw Error('Connexion à la base indisponible.');
+  const payload={product_id:row.productId||null,student_name:row.studentName,class_name:row.className,size:row.size,quantity:row.quantity,payment_method:row.paymentMethod,paid:row.paid,distributed:row.distributed,color:row.color||null};
+  // An edit must UPDATE the existing row: preserve checkout, date and historical price.
+  let query;if(o){const before={product_id:initialOrder.productId||null,student_name:initialOrder.studentName,class_name:initialOrder.className,size:initialOrder.size,quantity:Number(initialOrder.quantity||1),payment_method:initialOrder.paymentMethod,paid:!!initialOrder.paid,distributed:!!initialOrder.distributed,color:initialOrder.color||null};const changes=Object.fromEntries(Object.entries(payload).filter(([k,v])=>v!==before[k]));query=Object.keys(changes).length?c.from('v20_orders').update(changes).eq('id',o.id):c.from('v20_orders').select('*').eq('id',o.id)}else query=c.from('v20_orders').upsert({id:formId,...payload});
+  const result=await request(query.select('*').single());if(result.error)throw result.error;
+  if(result.data?.id!==formId)throw Error('Commande non confirmée par le serveur.');
+  const confirmed=Object.fromEntries(Object.entries(result.data).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
+  const d=read();d.orders=d.orders||[];const old=d.orders.find(x=>x.id===formId);old?Object.assign(old,confirmed):d.orders.push(confirmed);persist(d);
+  (window.__BS_SAVED?window.__BS_SAVED('Commande enregistrée'):toast('Commande enregistrée'));
+  if(w.isConnected){if(returnToManager)ordersManager(managerScroll);else{w.remove();window.app?.refreshView?.('orders')}}
+ }catch(err){status.textContent='Modification non confirmée : '+(err?.message||err);}
+ finally{saving=false;if(btn.isConnected){btn.disabled=false;btn.textContent='Enregistrer'}}
+ };
+
 }
 async function deleteOrder(id){if(!confirm('Supprimer définitivement cette commande ?'))return;try{await remoteDelete('v20_orders',id);const data=read();data.orders=(data.orders||[]).filter(x=>x.id!==id);persist(data);toast('Commande supprimée');ordersManager()}catch(err){toast('Suppression impossible : '+(err?.message||err))}}
 

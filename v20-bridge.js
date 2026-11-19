@@ -19,11 +19,11 @@ let userHydration=null,signedOutHydration=null,lastHydratedUserId='',lastHydrate
 const camel=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/_([a-z])/g,(_,c)=>c.toUpperCase()),v]));
 const snake=o=>Object.fromEntries(Object.entries(o||{}).map(([k,v])=>[k.replace(/[A-Z]/g,m=>'_'+m.toLowerCase()),v]));
 const safeJson=(s,f)=>{try{const value=JSON.parse(s);return value&&typeof value==='object'?value:f}catch{return f}};
-const selectAll=async table=>{try{return await sb.from(table).select('*')}catch(error){return{data:null,error}}};
+const selectAll=async table=>{try{return await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from(table).select('*'))}catch(error){return{data:null,error}}};
 const emptyData=()=>({events:[],documents:[],products:[],students:[],appreciations:[],licenses:[],convocations:[],reports:[],orders:[],eventRegistrations:[],specialtyNotes:{},termSettings:{}});
 const uid=(p='x')=>p+Math.random().toString(36).slice(2,10);
 const toast=msg=>{const el=document.createElement('div');el.className='v19-toast';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),3200)};
-function clearPrivateCache(){const data=safeJson(localStorage.getItem(STORE),{});data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);localStorage.setItem(STORE,JSON.stringify(data))}
+function clearPrivateCache(){const data=safeJson(localStorage.getItem(STORE),{});data.orders=[];data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);localStorage.setItem(STORE,JSON.stringify(data))}
 
 function modal(title,body){
  document.getElementById('v20-modal')?.remove();
@@ -67,10 +67,12 @@ async function logout(){
 
 async function authenticateSession(){
  if(!hasSupabase){sessionStorage.removeItem(VERIFIED);localStorage.setItem(ROLE_KEY,'public');return}
- sb.auth.onAuthStateChange(async(evt,session)=>{
-  if(evt==='SIGNED_OUT'||!session?.user){await applySignedOut();return}
-  if(evt==='PASSWORD_RECOVERY'){sessionStorage.setItem(PASSWORD_SETUP,'1');await hydrateUser(session.user);setTimeout(passwordModal,60);return}
-  if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(evt)){await hydrateUser(session.user);if(passwordSetupFlow())setTimeout(passwordModal,60)}
+ sb.auth.onAuthStateChange((evt,session)=>{
+  setTimeout(()=>{(async()=>{
+   if(evt==='SIGNED_OUT'||!session?.user){await applySignedOut();return}
+   if(evt==='PASSWORD_RECOVERY'){sessionStorage.setItem(PASSWORD_SETUP,'1');await hydrateUser(session.user);setTimeout(passwordModal,60);return}
+   if(['SIGNED_IN','USER_UPDATED','TOKEN_REFRESHED'].includes(evt)){await hydrateUser(session.user);if(passwordSetupFlow())setTimeout(passwordModal,60)}
+  })().catch(error=>{console.warn('Actualisation de session',error);toast('La session n’a pas pu être actualisée. Vérifiez votre connexion.');})},0);
  });
  const {data:{session}}=await sb.auth.getSession();
  if(!session?.user){await applySignedOut();return}
@@ -83,8 +85,10 @@ async function hydrateUser(user){
  if(lastHydratedUserId===String(user.id)&&Date.now()-lastHydratedAt<2000&&sessionStorage.getItem(VERIFIED)===currentRole)return{user:currentUser,role:currentRole};
  const promise=(async()=>{
   const epoch=++authEpoch;
-  const {data:profile,error}=await sb.from('profiles').select('display_name,email,role').eq('id',user.id).single();
+  const {data:profile,error}=await (window.__BS_REQUEST?window.__BS_REQUEST(sb.from('profiles').select('display_name,email,role').eq('id',user.id).single()):sb.from('profiles').select('display_name,email,role').eq('id',user.id).single());
   if(error){toast('Profil utilisateur inaccessible');throw error}
+  if(epoch!==authEpoch)return{stale:true};
+  if(currentUser?.id&&currentUser.id!==user.id)clearPrivateCache();
   currentUser={id:user.id,email:profile.email||user.email,name:profile.display_name||user.email};currentRole=profile.role||'public';
   if(currentRole==='admin'&&!window.__BS_ADMIN_MFA_DISABLED&&sb?.auth?.mfa){
    const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -104,12 +108,12 @@ async function hydrateUser(user){
 }
 async function hydratePublic(expectedEpoch=authEpoch){
  const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};hydrating=true;
- data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
+ data.orders=[];data.students=[];data.licenses=[];data.appreciations=[];data.reports=[];data.eventRegistrations=[];data.convocations=(data.convocations||[]).map(({studentIds,...convocation})=>convocation);
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['convocations','v20_convocations'],['specialtyNotes','v20_specialty_notes']];
  const results=await Promise.all(maps.map(async([key,table])=>[key,await selectAll(table)]));
  for(const [key,{data:rows,error}] of results){if(!error&&Array.isArray(rows)){if(key==='specialtyNotes'){data.specialtyNotes={};rows.map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}else data[key]=rows.map(camel)}}
  // Public: the database provides only first name and surname initial for published future invitations.
- const {data:publicRoster,error:rosterError}=await sb.rpc('v3184_public_convocation_roster');
+ const {data:publicRoster,error:rosterError}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.rpc('v3184_public_convocation_roster')).catch(error=>({data:null,error}));
  if(!rosterError&&Array.isArray(publicRoster)){
   const byConvocation=new Map();
   for(const entry of publicRoster){
@@ -124,7 +128,7 @@ async function hydratePublic(expectedEpoch=authEpoch){
  localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;window.app?.hydrateFromServer?.(data,'public');setupRealtime().catch(()=>{});
  return data;
 }
-async function hydrateAll(apply=true){
+async function hydrateAll(apply=true,expectedEpoch=authEpoch){
  hydrating=true;const data={...emptyData(),...safeJson(localStorage.getItem(STORE),{})};
  const maps=[['events','v20_events'],['documents','v20_documents'],['products','v20_products'],['students','v20_students'],['licenses','v20_licenses'],['convocations','v20_convocations'],['reports','v20_reports'],['orders','v20_orders']];
  if(currentRole==='admin'||currentRole.startsWith('educator_'))maps.push(['appreciations','v20_appreciations']);else data.appreciations=[];
@@ -139,6 +143,7 @@ async function hydrateAll(apply=true){
  const {data:links,error:linkErr}=linksResult;if(!linkErr&&Array.isArray(links)){const ls=links.map(camel);data.convocations=(data.convocations||[]).map(c=>({...c,studentIds:ls.filter(x=>x.convocationId===c.id).map(x=>x.studentId)}))}
  const {data:notes,error:nErr}=notesResult;if(!nErr){data.specialtyNotes={};(notes||[]).map(camel).forEach(r=>data.specialtyNotes[r.specialty]={message:r.message||'',expiresAt:r.expiresAt||'',active:!!r.active})}
  const {data:terms,error:tErr}=termsResult;if(!tErr){data.termSettings={};(terms||[]).map(camel).forEach(r=>data.termSettings[r.term]={deadline:r.deadline||'',end:r.termEnd||''})}
+ if(expectedEpoch!==authEpoch){hydrating=false;return data}
  localStorage.setItem(STORE,JSON.stringify(data));hydrating=false;if(apply)window.app?.hydrateFromServer?.(data,currentRole);
  return data;
 }
@@ -148,10 +153,10 @@ window.__BS_SIGN_OUT=logout;
 window.__BS_AUTH_STATE=()=>({user:currentUser?{...currentUser}:null,role:currentRole});
 
 function cleanRow(row){const x=snake(row);for(const k of Object.keys(x))if(x[k]==='')x[k]=null;delete x.student_ids;delete x.image;delete x.registration_count;return x}
-async function upsertTable(table,rows){if(!rows?.length)return;const {error}=await sb.from(table).upsert(rows.map(cleanRow));if(error)console.warn(table,error.message)}
+async function upsertTable(table,rows){if(!rows?.length)return;const {error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from(table).upsert(rows.map(cleanRow)));if(error)console.warn(table,error.message)}
 async function persistEvent(event){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
- const {data,error}=await sb.from('v20_events').upsert(cleanRow({...event,publicVisible:true})).select('*').single();
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_events').upsert(cleanRow({...event,publicVisible:true})).select('*').single());
  if(error)throw error;
  return camel(data);
 }
@@ -160,7 +165,7 @@ window.__BS_PERSIST_EVENT=persistEvent;
 async function persistReport(report){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
  const payload=cleanRow({...report,updatedAt:new Date().toISOString()});
- const {data,error}=await sb.from('v20_reports').upsert(payload).select('*').single();
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_reports').upsert(payload).select('*').single());
  if(error)throw error;
  return camel(data);
 }
@@ -169,10 +174,10 @@ window.__BS_PERSIST_REPORT=persistReport;
 async function persistConvocation(convocation,eventId=''){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
  const studentIds=[...new Set((convocation.studentIds||[]).map(String))],base={...convocation};delete base.studentIds;
- const {data,error}=await sb.rpc('v3181_save_convocation',{
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.rpc('v3181_save_convocation',{
   p_convocation:cleanRow({...base,status:base.status||'published'}),
   p_student_ids:studentIds,p_event_id:eventId?String(eventId):null
- });
+ }));
  if(error)throw error;
  if(!data?.convocation?.id||String(data.convocation.id)!==String(convocation.id))throw new Error('CONVOCATION_SAVE_UNCONFIRMED');
  if(eventId&&String(data.event?.id||'')!==String(eventId))throw new Error('CONVOCATION_EVENT_UNCONFIRMED');
@@ -183,7 +188,7 @@ window.__BS_PERSIST_CONVOCATION=persistConvocation;
 async function persistAppreciation(appreciation){
  if(!sb||!currentUser)throw new Error('SERVICE_UNAVAILABLE');
  const payload=cleanRow({...appreciation,educatorId:appreciation.educatorId||currentUser.id,updatedAt:new Date().toISOString()});
- const {data,error}=await sb.from('v20_appreciations').upsert(payload).select('*').single();if(error)throw error;
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_appreciations').upsert(payload).select('*').single());if(error)throw error;
  return camel(data);
 }
 window.__BS_PERSIST_APPRECIATION=persistAppreciation;
@@ -191,7 +196,7 @@ window.__BS_PERSIST_APPRECIATION=persistAppreciation;
 async function persistSpecialtyNote(specialty,note){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
  const payload={specialty,message:note.message||null,expires_at:note.expiresAt||null,active:!!note.active,public_visible:true,updated_at:new Date().toISOString()};
- const {data,error}=await sb.from('v20_specialty_notes').upsert(payload).select('*').single();if(error)throw error;
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_specialty_notes').upsert(payload).select('*').single());if(error)throw error;
  return camel(data);
 }
 window.__BS_PERSIST_SPECIALTY_NOTE=persistSpecialtyNote;
@@ -199,7 +204,7 @@ window.__BS_PERSIST_SPECIALTY_NOTE=persistSpecialtyNote;
 async function persistTerms(settings){
  if(!sb)throw new Error('SERVICE_UNAVAILABLE');
  const rows=Object.entries(settings||{}).map(([t,v])=>({term:Number(t),deadline:v.deadline||null,term_end:v.end||null,updated_at:new Date().toISOString()}));
- const {data,error}=await sb.from('v20_term_settings').upsert(rows).select('*');if(error)throw error;
+ const {data,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_term_settings').upsert(rows).select('*'));if(error)throw error;
  return (data||[]).map(camel);
 }
 window.__BS_PERSIST_TERMS=persistTerms;
@@ -244,7 +249,7 @@ async function syncSnapshot(){
 }
 async function submitPublicOrders(orders){
  if(!hasSupabase||!orders.length)return;const sent=new Set(safeJson(localStorage.getItem(SENT_ORDERS),'[]'));
- for(const o of orders){if(sent.has(o.id))continue;const payload=snake({...o,id:o.id||uid('o'),createdAt:o.createdAt||new Date().toISOString()});const {error}=await sb.from('v20_orders').insert(payload);if(!error){sent.add(o.id);localStorage.setItem(SENT_ORDERS,JSON.stringify([...sent]))}}
+ for(const o of orders){if(sent.has(o.id))continue;const payload=snake({...o,id:o.id||uid('o'),createdAt:o.createdAt||new Date().toISOString()});const {error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(sb.from('v20_orders').insert(payload));if(!error){sent.add(o.id);localStorage.setItem(SENT_ORDERS,JSON.stringify([...sent]))}}
 }
 
 function installStorageSync(){
@@ -256,7 +261,7 @@ function wrapLazyDependencies(){
  if(!window.app)return;
  const xlsx=()=>loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js','XLSX','sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw');
  const excel=()=>loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js','ExcelJS','sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz');
- const pdf=()=>loadScript('assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'34.1.0'),'jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/');
+ const pdf=()=>loadScript('assets/vendor/jspdf.umd.min.js?v='+(window.__BS_RELEASE?.version||'34.1.1'),'jspdf','sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/');
  for(const name of ['openLicenseImport']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await xlsx();return orig(...a)}}
  for(const name of ['downloadLicenseTemplate','exportExcel','exportRegistrationsExcel']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await excel();return orig(...a)}}
  for(const name of ['exportConvocation','exportCalendarPDF']){const orig=window.app[name];if(orig)window.app[name]=async(...a)=>{await pdf();return orig(...a)}}

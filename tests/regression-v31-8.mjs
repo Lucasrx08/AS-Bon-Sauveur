@@ -9,7 +9,7 @@ function setup(role='admin'){
   const w=dom.window;
   w.localStorage.setItem('bs-demo-role-v4',role);w.sessionStorage.setItem('bs-v20-verified-role',role);
   w.scrollTo=({top=0,left=0})=>{w.scrollY=top;w.scrollX=left};w.alert=()=>{};w.confirm=()=>true;
-  w.__BS_SAVED=()=>{};w.eval(source('v19-app.js'));
+  w.__BS_SAVED=()=>{};w.eval(source('v34-order-identity.js'));w.eval(source('v19-app.js'));
   return {dom,w,app:w.app,run:file=>w.eval(source(file))};
 }
 const event={id:'event-test',title:'Escalade découverte',date:'2099-01-14',startTime:'13:00',endTime:'16:00',specialty:'Association Sportive',specialties:['Association Sportive','Option Escalade'],place:'Salle de test',registrationMode:'open',registrationOpen:true,registrationCapacity:2,registrationCount:1};
@@ -76,7 +76,7 @@ const event={id:'event-test',title:'Escalade découverte',date:'2099-01-14',star
 {
   const {dom,w,app,run}=setup();const data=app.readData();data.products=[{id:'product-test',name:'Sweat fictif',price:20,active:true}];
   data.orders=[{id:'order-test',studentName:'ÉLÈVE TEST',className:'6e AVIGNON',productId:'product-test',quantity:1,size:'M',paid:false,createdAt:'2099-01-01'}];
-  let fail=false;w.__BS_SUPABASE_CLIENT={from(){return{async upsert(){return fail?{error:{message:'refus de test'}}:{error:null}}}}};run('v21-admin.js');app.go('admin');app.v21Orders();
+  let fail=false;w.__BS_SUPABASE_CLIENT={from(){return{update(payload){return{eq(_,id){return{select(){return{async single(){return fail?{error:{message:'refus de test'}}:{data:{id,...payload,product_name:'Sweat fictif',unit_price:20,created_at:'2099-01-01'},error:null}}}}}}}}}}};run('v21-admin.js');app.go('admin');app.v21Orders();
   w.document.querySelector('#v21-admin-modal .v19-modal-body').scrollTop=220;w.document.querySelector('[data-edit="order-test"]').click();
   let form=w.document.querySelector('#v21-order-form');form.elements.paid.checked=true;await form.onsubmit({preventDefault(){},currentTarget:form});
   assert.equal(app.route(),'admin');assert.match(w.document.querySelector('#v21-admin-modal h2').textContent,/Gérer les commandes/);

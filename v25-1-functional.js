@@ -40,13 +40,13 @@ async function persistLicenseRows(student,license,isNewStudent=false,previousStu
  const client=sb();if(!client)throw new Error('Connexion à la base indisponible.');
  const studentRow={id:student.id,full_name:student.fullName,class_name:student.className,specialty:student.specialty,active:true};
  const licenseRow={id:license.id,student_id:license.studentId,full_name:license.fullName,class_name:license.className,category:license.category||null,contribution:license.contribution||null,payment_status:license.paymentStatus||'En attente',amount:Number(license.amount||0),charter_signed:license.charterSigned||'Non',section_option:license.sectionOption};
- const {error:studentError}=await client.from('v20_students').upsert(studentRow);if(studentError)throw studentError;
- const {error:licenseError}=await client.from('v20_licenses').upsert(licenseRow);
+ const {error:studentError}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_students').upsert(studentRow));if(studentError)throw studentError;
+ const {error:licenseError}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_licenses').upsert(licenseRow));
  if(licenseError){
   try{if(!isNewStudent&&previousStudent)await client.from('v20_students').upsert({id:previousStudent.id,full_name:previousStudent.fullName,class_name:previousStudent.className,specialty:previousStudent.specialty,active:true})}catch{}
   throw licenseError;
  }
- const {data:check,error:checkError}=await client.from('v20_licenses').select('id').eq('id',license.id).limit(1);if(checkError)throw checkError;if(!check?.length)throw new Error('La licence n’a pas été confirmée par le serveur.');
+ const {data:check,error:checkError}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_licenses').select('id').eq('id',license.id).limit(1));if(checkError)throw checkError;if(!check?.length)throw new Error('La licence n’a pas été confirmée par le serveur.');
 }
 function editLicense(id){
  if(!manager())return toast('Accès gestion requis.');const data=app()?.readData?.();if(!data)return;
@@ -77,7 +77,7 @@ async function updateLicenseField(id,column,localKey,next){
  if(!manager())return toast('Accès gestion requis.');const data=app()?.readData?.(),license=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!license)return;
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');
  const key=String(id)+':'+column;if(licenseUpdates.has(key))return;licenseUpdates.add(key);
- try{const payload={[column]:next};const {data:confirmed,error}=await client.from('v20_licenses').update(payload).eq('id',String(id)).select('id,'+column).single();if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const currentData=app()?.readData?.()||data,current=(currentData.licenses||[]).find(l=>String(l.id)===String(id));if(current)current[localKey]=confirmed[column];persist(currentData);app()?.refreshView?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licence mise à jour')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{licenseUpdates.delete(key)}
+ try{const payload={[column]:next};const {data:confirmed,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_licenses').update(payload).eq('id',String(id)).select('id,'+column).single());if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const currentData=app()?.readData?.()||data,current=(currentData.licenses||[]).find(l=>String(l.id)===String(id));if(current)current[localKey]=confirmed[column];persist(currentData);app()?.refreshView?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licence mise à jour')}catch(error){console.error('V25.1 licence update',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{licenseUpdates.delete(key)}
 }
 function toggleLicensePayment(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'payment_status','paymentStatus',l.paymentStatus==='Payé'?'En attente':'Payé')}
 function toggleLicenseCharter(id){const data=app()?.readData?.(),l=(data?.licenses||[]).find(x=>String(x.id)===String(id));if(!l)return;return updateLicenseField(id,'charter_signed','charterSigned',l.charterSigned==='Oui'?'Non':'Oui')}
@@ -107,7 +107,7 @@ async function bulkLicensePaymentMode(){
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');
  const button=document.querySelector('.v19-license-bulk .v19-btn');if(button){button.disabled=true;button.textContent='Mise à jour…'}
  try{
-  const {error}=await client.from('v20_licenses').update({contribution:mode}).in('id',ids);if(error)throw error;
+  const {error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_licenses').update({contribution:mode}).in('id',ids));if(error)throw error;
   const data=app()?.readData?.();if(data){(data.licenses||[]).forEach(l=>{if(ids.includes(String(l.id)))l.contribution=mode});persist(data)}
   app()?.go?.('licenses');if(window.__BS_SAVED)window.__BS_SAVED('Licences mises à jour',`${ids.length} licence(s) · ${mode} · base centrale synchronisée.`);else toast(`${ids.length} licence(s) mises à jour : ${mode}.`);
  }catch(error){console.error('V27.8 paiement licences en masse',error);if(button){button.disabled=false;button.textContent=`Appliquer à ${ids.length} licence(s)`}toast('Mise à jour impossible : '+(error?.message||'erreur serveur'),4800)}
@@ -119,7 +119,7 @@ const orderUpdates=new Set();
 async function toggleOrder(id,kind){
  if(!manager()||!['paid','distributed'].includes(kind))return;const data=app()?.readData?.(),order=(data?.orders||[]).find(x=>String(x.id)===String(id));if(!order)return;
  const client=sb();if(!client)return toast('Connexion à la base indisponible.');const key=id+':'+kind;if(orderUpdates.has(key))return;orderUpdates.add(key);const next=!order[kind],payload={};payload[kind]=next;
- try{const {data:confirmed,error}=await client.from('v20_orders').update(payload).eq('id',String(id)).select('id,'+kind).single();if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const current=app()?.readData?.()||data,updated=(current.orders||[]).find(x=>String(x.id)===String(id));if(updated)updated[kind]=confirmed[kind];persist(current);app()?.refreshView?.('orders');if(window.__BS_SAVED)window.__BS_SAVED('Commande mise à jour')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{orderUpdates.delete(key)}
+ try{const {data:confirmed,error}=await (globalThis.__BS_REQUEST||Promise.resolve.bind(Promise))(client.from('v20_orders').update(payload).eq('id',String(id)).select('id,'+kind).single());if(error)throw error;if(!confirmed)throw new Error('La modification n’a pas été confirmée.');const current=app()?.readData?.()||data,updated=(current.orders||[]).find(x=>String(x.id)===String(id));if(updated)updated[kind]=confirmed[kind];persist(current);app()?.refreshView?.('orders');if(window.__BS_SAVED)window.__BS_SAVED('Commande mise à jour')}catch(error){console.error('V25.1 commande',error);toast('Modification non enregistrée : '+(error?.message||'erreur serveur'),4800)}finally{orderUpdates.delete(key)}
 }
 
 /* ---------- Interface ---------- */

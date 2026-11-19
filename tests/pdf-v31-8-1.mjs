@@ -53,8 +53,8 @@ for(let n=1;n<=5;n++){
  assert.ok(doc.__texts.some(t=>t.text==='OCTOBRE'&&t.size>=16));
  if(n===5){
   assert.equal(doc.__texts.filter(t=>t.text==='CONVOCATION').length,3);
-  assert.ok(closeColor(doc.__texts.find(t=>t.text==='INSCRIPTION LIBRE').fill,'#ffd61a'));
-  assert.ok(doc.__texts.filter(t=>t.text==='CONVOCATION').every(t=>t.color==='#ffffff'&&closeColor(t.fill,'#0757c9')));
+  assert.ok(closeColor(doc.__texts.find(t=>t.text==='INSCRIPTION LIBRE').fill,'#ffd502'));
+  assert.ok(doc.__texts.filter(t=>t.text==='CONVOCATION').every(t=>t.color==='#ffffff'&&closeColor(t.fill,'#004aad')));
   assert.ok(doc.__texts.filter(t=>t.text==='TRISPORT').every(t=>t.font==='Anton'&&t.size>=16&&t.size<=19&&t.spacing>0));
  }
  writeFileSync(new URL(`programme-${n}.pdf`,out),Buffer.from(doc.output('arraybuffer')));
