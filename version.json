@@ -1,6 +1,6 @@
 {
-  "version": "34.2.1",
-  "build": "20261123-shop-batch-column",
+  "version": "34.2.2",
+  "build": "20261123-shop-layout",
   "channel": "stable",
   "releasedAt": "2026-11-23",
   "message": "Exports harmonisés, convocations robustes, notice actualisée et commandes adaptées aux réseaux partagés",
