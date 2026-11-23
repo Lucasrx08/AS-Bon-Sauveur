@@ -123,7 +123,7 @@ console.log('Personnel : règlements sans redirection ni bandeau ; statut confir
 {
  const source=read('v19-app.js'),body=source.slice(source.indexOf('function ordersPage(){'),source.indexOf('function editOrderIdentity'));
  const orders=[1,2,3,4].map(i=>({id:'o'+i,studentName:'Test Lucas',className:'6e AVIGNON',productName:'Sweat '+i,size:'M',quantity:1,unitPrice:22,paymentMethod:'Chèque',createdAt:'2026-11-04'}));orders.push({...orders[0],id:'other',className:'5e BOLLAND'});
- const state={filters:{orders:{}},data:{orders,products:[]}};
+ const state={filters:{orders:{batch:'all'}},data:{orders,products:[]}};
  const render=new Function('window','state','isManager','denied','productName','pageTitle','esc','money','icon','fmtShort','norm','SHOP_SIZES',body+';return ordersPage;')({},state,()=>true,()=>'',()=>'',()=>'',String,n=>n+' €',()=>'',String,s=>String(s).toLowerCase(),['M']);
  const dom=new JSDOM(render());assert.equal(dom.window.document.querySelectorAll('[data-order-id]').length,5);assert.equal(dom.window.document.querySelectorAll('.v32-order-person').length,0);assert.equal(dom.window.document.querySelectorAll('[onclick*="toggleOrder"]').length,10);assert.doesNotMatch(dom.window.document.body.textContent,/Modifier|Trier par/);
  state.filters.orders.search='Sweat 2';const filtered=new JSDOM(render());assert.equal(filtered.window.document.querySelectorAll('[data-order-id]').length,1);dom.window.close();filtered.window.close();

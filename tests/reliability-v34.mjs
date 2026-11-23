@@ -23,7 +23,7 @@ function setup(role='admin'){
  dom.window.close();
 }
 {
- const {dom,w,app,data}=setup('teacher_as');data.products=[{id:'p',name:'Article fictif',price:10}];data.orders=[{id:'legacy',productId:'p',studentName:'FICTIF Jean',className:'6e AVIGNON',size:'M',quantity:1,paymentMethod:'Espèces'}];w.eval(read('v21-admin.js'));w.eval(read('v21-role-guard.js'));app.go('orders');assert.doesNotMatch(w.document.body.textContent,/Modifier la commande|Modifier le nom/);app.v21OrderForm('legacy');assert.equal(w.document.querySelector('#v21-order-form'),null);dom.window.close();
+ const {dom,w,app,data}=setup('teacher_as');data.products=[{id:'p',name:'Article fictif',price:10}];data.orders=[{id:'legacy',productId:'p',studentName:'FICTIF Jean',className:'6e AVIGNON',size:'M',quantity:1,paymentMethod:'Espèces'}];w.eval(read('v21-admin.js'));w.eval(read('v21-role-guard.js'));app.go('orders');app.orderFilter('batch','all');assert.doesNotMatch(w.document.body.textContent,/Modifier la commande|Modifier le nom/);app.v21OrderForm('legacy');assert.equal(w.document.querySelector('#v21-order-form'),null);dom.window.close();
 }
 // Timeout aborts the request transport when its builder supports abortSignal.
 {
