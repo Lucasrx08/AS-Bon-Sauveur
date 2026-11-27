@@ -1,8 +1,8 @@
 {
-  "version": "34.2.2",
-  "build": "20261123-shop-layout",
+  "version": "34.2.3",
+  "build": "20261127-import-prices",
   "channel": "stable",
-  "releasedAt": "2026-11-23",
-  "message": "Exports harmonisés, convocations robustes, notice actualisée et commandes adaptées aux réseaux partagés",
+  "releasedAt": "2026-11-27",
+  "message": "Prix unitaires et totaux dans le modèle Excel et contrôle des montants à l’import",
   "serviceWorker": "sw.js"
 }

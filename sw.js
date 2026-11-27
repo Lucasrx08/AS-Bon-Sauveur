@@ -1,5 +1,5 @@
-const APP_VERSION='34.2.2';
-const BUILD_ID='20261123-shop-layout';
+const APP_VERSION='34.2.3';
+const BUILD_ID='20261127-import-prices';
 const CACHE_PREFIX='as-bon-sauveur-build-';
 const CACHE_NAME=`${CACHE_PREFIX}${APP_VERSION}-${BUILD_ID}`;
 const META_KEY='./__bs_build_meta__';
@@ -13,34 +13,34 @@ const CDN_ASSETS=[
 const PRECACHE=[
   APP_SHELL_URL,
   OFFLINE_URL,
-  './v34-reliability.js?v=34.2.2',
-  './v34-order-identity.js?v=34.2.2',
-  './v34-order-import.js?v=34.2.2',
+  './v34-reliability.js?v=34.2.3',
+  './v34-order-identity.js?v=34.2.3',
+  './v34-order-import.js?v=34.2.3',
   './assets/shop-2026-rose.png','./assets/shop-2026-bleu.png','./assets/shop-2026-gris.png','./assets/shop-2026-tee.png',
-  './v32-shop.js?v=34.2.2','./v32-shop.css?v=34.2.2',
-  './manifest.webmanifest?v=34.2.2',
-  './assets/logo-as.png?v=34.2.2','./assets/logo-as.png',
+  './v32-shop.js?v=34.2.3','./v32-shop.css?v=34.2.3',
+  './manifest.webmanifest?v=34.2.3',
+  './assets/logo-as.png?v=34.2.3','./assets/logo-as.png',
   './assets/logo-football.png','./assets/logo-escalade.png','./assets/logo-gymnastique.png','./assets/logo-ecoledirecte.svg',
   './assets/shop-sweat-sapphire.webp','./assets/shop-tshirt-skyblue.webp',
   './assets/programme-v21-14-hd.png','./assets/programme-tv-v24-hd.png','./assets/convocation-v21-14-hd.png',
   './assets/fonts/Anton-Regular.ttf','./assets/fonts/BroshK.ttf',
   './assets/fonts/DejaVuSans-Latin-Regular.ttf','./assets/fonts/DejaVuSans-Latin-Bold.ttf',
-  './assets/vendor/jspdf.umd.min.js?v=34.2.2',
-  './v19.css?v=34.2.2','./v20.css?v=34.2.2','./v21.css?v=34.2.2','./v21-8-design.css?v=34.2.2',
-  './v21-9-polish.css?v=34.2.2','./v21-10-ui.css?v=34.2.2','./v21-12-pdf.css?v=34.2.2',
-  './v21-15.css?v=34.2.2','./v22.css?v=34.2.2','./v22-1.css?v=34.2.2','./v27.css?v=34.2.2',
-  './v30-specialty-colors.css?v=34.2.2','./v31-mobile.css?v=34.2.2',
-  './v31-release.js?v=34.2.2','./v31-runtime.js?v=34.2.2','./config.js?v=34.2.2',
-  './v29-bootstrap.js?v=34.2.2','./v22-preflight.js?v=34.2.2','./v20-stability.js?v=34.2.2',
-  './v20-preflight.js?v=34.2.2','./v19-app.js?v=34.2.2','./v24-time.js?v=34.2.2',
-  './v20-exports.js?v=34.2.2','./v30-auth-simple.js?v=34.2.2','./v20-bridge.js?v=34.2.2',
-  './v20-admin.js?v=34.2.2','./v20-postboot.js?v=34.2.2','./v21-admin.js?v=34.2.2',
-  './v21-role-guard.js?v=34.2.2','./v21-instagram-button.js?v=34.2.2','./v21-pin-auth.js?v=34.2.2',
-  './v21-8-finance.js?v=34.2.2','./v21-9-admin-icons.js?v=34.2.2','./v21-9-finance.js?v=34.2.2',
-  './v21-10.js?v=34.2.2','./v21-11-reports.js?v=34.2.2','./v21-12-pdf.js?v=34.2.2',
-  './v22-runtime.js?v=34.2.2','./v22-1-privacy.js?v=34.2.2','./v25-1-functional.js?v=34.2.2','./v25-audit-fixes.js?v=34.2.2',
-  './v27.js?v=34.2.2','./v28.js?v=34.2.2','./v29.js?v=34.2.2','./v30-multispecialty.js?v=34.2.2',
-  './v31-mobile-lock.js?v=34.2.2','./v31-6-table-sort.js?v=34.2.2',
+  './assets/vendor/jspdf.umd.min.js?v=34.2.3',
+  './v19.css?v=34.2.3','./v20.css?v=34.2.3','./v21.css?v=34.2.3','./v21-8-design.css?v=34.2.3',
+  './v21-9-polish.css?v=34.2.3','./v21-10-ui.css?v=34.2.3','./v21-12-pdf.css?v=34.2.3',
+  './v21-15.css?v=34.2.3','./v22.css?v=34.2.3','./v22-1.css?v=34.2.3','./v27.css?v=34.2.3',
+  './v30-specialty-colors.css?v=34.2.3','./v31-mobile.css?v=34.2.3',
+  './v31-release.js?v=34.2.3','./v31-runtime.js?v=34.2.3','./config.js?v=34.2.3',
+  './v29-bootstrap.js?v=34.2.3','./v22-preflight.js?v=34.2.3','./v20-stability.js?v=34.2.3',
+  './v20-preflight.js?v=34.2.3','./v19-app.js?v=34.2.3','./v24-time.js?v=34.2.3',
+  './v20-exports.js?v=34.2.3','./v30-auth-simple.js?v=34.2.3','./v20-bridge.js?v=34.2.3',
+  './v20-admin.js?v=34.2.3','./v20-postboot.js?v=34.2.3','./v21-admin.js?v=34.2.3',
+  './v21-role-guard.js?v=34.2.3','./v21-instagram-button.js?v=34.2.3','./v21-pin-auth.js?v=34.2.3',
+  './v21-8-finance.js?v=34.2.3','./v21-9-admin-icons.js?v=34.2.3','./v21-9-finance.js?v=34.2.3',
+  './v21-10.js?v=34.2.3','./v21-11-reports.js?v=34.2.3','./v21-12-pdf.js?v=34.2.3',
+  './v22-runtime.js?v=34.2.3','./v22-1-privacy.js?v=34.2.3','./v25-1-functional.js?v=34.2.3','./v25-audit-fixes.js?v=34.2.3',
+  './v27.js?v=34.2.3','./v28.js?v=34.2.3','./v29.js?v=34.2.3','./v30-multispecialty.js?v=34.2.3',
+  './v31-mobile-lock.js?v=34.2.3','./v31-6-table-sort.js?v=34.2.3',
   ...CDN_ASSETS
 ];
 
