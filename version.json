@@ -1,8 +1,8 @@
 {
-  "version": "34.2.4",
-  "build": "20261127-import-empty-rows",
+  "version": "34.2.5",
+  "build": "20261127-import-validation",
   "channel": "stable",
   "releasedAt": "2026-11-27",
-  "message": "Prix unitaires et totaux dans le modèle Excel et contrôle des montants à l’import",
+  "message": "Import Excel : reconnaissance de la feuille, contrôle des doublons par lots et validation des commandes",
   "serviceWorker": "sw.js"
 }
