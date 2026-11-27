@@ -1,6 +1,6 @@
 {
-  "version": "34.2.3",
-  "build": "20261127-import-prices",
+  "version": "34.2.4",
+  "build": "20261127-import-empty-rows",
   "channel": "stable",
   "releasedAt": "2026-11-27",
   "message": "Prix unitaires et totaux dans le modèle Excel et contrôle des montants à l’import",
