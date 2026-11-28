@@ -1,6 +1,6 @@
 {
-  "version": "34.2.5",
-  "build": "20261127-import-validation",
+  "version": "34.2.6",
+  "build": "20261128-import-reasons",
   "channel": "stable",
   "releasedAt": "2026-11-27",
   "message": "Import Excel : reconnaissance de la feuille, contrôle des doublons par lots et validation des commandes",
